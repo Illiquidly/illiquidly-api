@@ -3,13 +3,14 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import fs from "fs";
+import "dotenv/config"
 
 
 
 async function bootstrap() {
-
+  console.log(process.env.ENVIRONMENT)
   let httpsOptions: any;
-  if(process.env.EXECUTION == 'PRODUCTION'){
+  if(process.env.ENVIRONMENT == 'PRODUCTION'){
     httpsOptions = {
       key: fs.readFileSync('./secrets/private-key.pem'),
       cert: fs.readFileSync('./secrets/public-certificate.pem'),
