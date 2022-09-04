@@ -10,8 +10,8 @@ async function bootstrap() {
   let httpsOptions: any;
   if (process.env.ENVIRONMENT == "PRODUCTION") {
     httpsOptions = {
-      key: fs.readFileSync("./secrets/private-key.pem"),
-      cert: fs.readFileSync("./secrets/public-certificate.pem"),
+	cert: fs.readFileSync('/home/illiquidly/identity/fullchain.pem'),
+        key: fs.readFileSync('/home/illiquidly/identity/privkey.pem')
     };
   }
 
