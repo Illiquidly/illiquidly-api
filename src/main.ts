@@ -10,14 +10,15 @@ async function bootstrap() {
   let httpsOptions: any;
   if (process.env.ENVIRONMENT == "PRODUCTION") {
     httpsOptions = {
-	cert: fs.readFileSync('/home/illiquidly/identity/fullchain.pem'),
+	       cert: fs.readFileSync('/home/illiquidly/identity/fullchain.pem'),
         key: fs.readFileSync('/home/illiquidly/identity/privkey.pem')
     };
   }
 
-  const app = await NestFactory.create(AppModule, {
-    ...httpsOptions,
-    logger: ['error', 'warn', 'log']
+  console.log()
+
+  const app = await NestFactory.create(AppModule,{
+    httpsOptions
   });
 
   const config = new DocumentBuilder()
