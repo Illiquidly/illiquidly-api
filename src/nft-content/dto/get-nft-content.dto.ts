@@ -72,15 +72,14 @@ export enum UpdateMode {
   FORCE_UPDATE = "force_update",
 }
 
-
-export class GetNFTWalletContent{
+export class GetNFTWalletContent {
   network: Network;
 
   @IsAddress()
   address: string;
 }
 
-export class UpdateNFTWalletContent{
+export class UpdateNFTWalletContent {
   network: Network;
 
   @IsAddress()

@@ -6,6 +6,19 @@ import {
   UpdateState,
 } from "../nft-content/dto/get-nft-content.dto";
 
+
+function createRedisClient() {
+  // We start the db
+  return new Redis();
+}
+
+async function quitDB(db: Redis) {
+  // We stop the db
+  db.end();
+}
+
+export { createRedisClient };
+
 export function defaultContractsApiStructure(): ContractsInteracted {
   return {
     interactedContracts: new Set(),
@@ -27,7 +40,6 @@ export function defaultContractsApiStructure(): ContractsInteracted {
 
 type Nullable<T> = T | null;
 
-
 function fillEmpty(currentData: Nullable<ContractsInteracted>): ContractsInteracted {
   if (!currentData || Object.keys(currentData).length === 0) {
     return defaultContractsApiStructure();
@@ -36,12 +48,12 @@ function fillEmpty(currentData: Nullable<ContractsInteracted>): ContractsInterac
   }
 }
 
-function saveNFTContentToDb(key: string, currentData: ContractsInteracted) {
+function saveNFTContentToDb(db: Redis, key: string, currentData: ContractsInteracted) {
   const serialisedData = serialise(currentData);
   return db.set(key, JSON.stringify(serialisedData));
 }
 
-async function getNFTContentFromDb(key: string): Promise<ContractsInteracted> {
+async function getNFTContentFromDb(db: Redis, key: string): Promise<ContractsInteracted> {
   const serialisedData = await db.get(key);
   const currentData = deserialise(JSON.parse(serialisedData));
   return fillEmpty(currentData);
@@ -66,18 +78,6 @@ function deserialise(serialisedData: SerializableContractsInteracted): Contracts
   }
 }
 
-let db: Redis;
-initDB();
-async function initDB() {
-  // We start the db
-  db = new Redis();
-}
-
-async function quitDB() {
-  // We stop the db
-  await db.quit();
-}
-
 // Redis Lock functions
 
 // We defined some time constants for the api queries
@@ -92,7 +92,7 @@ const IDLE_UPDATE_INTERVAL = parseInt(process.env.IDLE_UPDATE_INTERVAL);
 
 let redlock: Redlock;
 
-async function initMutex() {
+async function initMutex(db: Redis) {
   redlock = new Redlock(
     // You should have one client for each independent redis node
     // or cluster.
@@ -132,18 +132,18 @@ export async function releaseUpdateLock(lock: any) {
   await lock.release().catch((_error: any) => console.log("Lock already released"));
 }
 
-async function lastUpdateStartTime(key: string): Promise<number> {
+async function lastUpdateStartTime(db: Redis, key: string): Promise<number> {
   let updateTime = await db.get(`${key}_updateStartTime${process.env.DB_VERSION!}`);
   return parseInt(updateTime);
 }
 
-async function setLastUpdateStartTime(key: string, time: number) {
+async function setLastUpdateStartTime(db: Redis, key: string, time: number) {
   await db.set(`${key}_updateStartTime${process.env.DB_VERSION!}`, time);
 }
 
-async function canUpdate(dbKey: string): Promise<void | Lock> {
+async function canUpdate(db: Redis, dbKey: string): Promise<void | Lock> {
   // First we check that the we don't update too often
-  if (Date.now() < (await lastUpdateStartTime(dbKey)) + IDLE_UPDATE_INTERVAL) {
+  if (Date.now() < (await lastUpdateStartTime(db, dbKey)) + IDLE_UPDATE_INTERVAL) {
     console.log("Too much requests my girl");
     return;
   }
@@ -160,15 +160,15 @@ async function canUpdate(dbKey: string): Promise<void | Lock> {
     return;
   }
 
-  await setLastUpdateStartTime(dbKey, Date.now());
+  await setLastUpdateStartTime(db, dbKey, Date.now());
   return lock;
 }
 
-function saveJSONToDb(key: string, currentData: any) {
+function saveJSONToDb(db: Redis, key: string, currentData: any) {
   return db.set(key, JSON.stringify(currentData));
 }
 
-async function getJSONFromDb(key: string): Promise<any> {
+async function getJSONFromDb(db: Redis, key: string): Promise<any> {
   const dbData = await db.get(key);
   return JSON.parse(dbData);
 }

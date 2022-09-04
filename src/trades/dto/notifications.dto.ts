@@ -1,29 +1,32 @@
 import { Transform } from "class-transformer";
-import { IsInt } from "class-validator";
+import { IsInt, IsOptional } from "class-validator";
 import { Network } from "src/utils/blockchain/dto/network.dto";
 import { IsAddress } from "../../utils/nest/addressValidator";
 
-export class NotificationsQuery{
-	network: Network;
+export class NotificationsQuery {
+  network: Network;
 
-  	@IsAddress()
-	user: string;
+  @IsAddress()
+  user: string;
 
-	@IsInt()
-	@Transform(({value}) => Number.parseInt(value))
-	limit: number;
+  @IsOptional()
+  @IsInt()
+  @Transform(({ value }) => Number.parseInt(value))
+  limit?: number;
 
-	@IsInt()
-	@Transform(({value}) => Number.parseInt(value))
-	offset: number;
+  @IsOptional()
+  @IsInt()
+  @Transform(({ value }) => Number.parseInt(value))
+  offset?: number;
 }
 
-export class NotificationsRead{
-	network: Network;
+export class NotificationsRead {
+  network: Network;
 
-  	@IsAddress()
-	user?: string;
+  @IsOptional()
+  @IsAddress()
+  user?: string;
 
-	notificationId?: string;
+  @IsOptional()
+  notificationId?: string;
 }
-

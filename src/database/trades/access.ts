@@ -1,87 +1,10 @@
 import { Knex } from "knex";
-import { Network } from "src/utils/blockchain/dto/network.dto";
+import { QueryParameters, Trade, TradeInfo, TradeNotification } from "../../trades/dto/getTrades.dto";
+import { Network } from "../../utils/blockchain/dto/network.dto";
+import { getNftInfoByPartialName } from "../nft_info/access";
 
-import { getNftInfoByPartialName } from "../../utils/mysql_db_accessor";
-import { getTradeDB } from "./structure.js";
-const DATE_FORMATER = async (date, format) => await import("dateformat").then((dateformat: any) => dateformat(date, format))
-export type Asset = {
-  [asset: string]: {
-    address: string;
-    amount?: number;
-    tokenId?: string;
-    denom?: string;
-  };
-};
-interface TradeInfo {
-  network: Network;
-  acceptedInfo?: any; // TODO correct this type
-  assetsWithdrawn: boolean;
-  associatedAssets: Asset[];
-  lastCounterId?: number;
-  additionalInfo: {
-    ownerComment: {
-      comment: string;
-      time: string;
-    };
-    time: string;
-    nftsWanted: string[];
-    traderComment?: {
-      comment: string;
-      time: string;
-    };
-  };
-  owner: string;
-  state: string;
-  whitelistedUsers: string[];
-}
-
-interface Trade {
-  network: Network;
-  tradeId: number;
-  counterId?: number;
-  tradeInfo: TradeInfo;
-}
-
-enum TradeNotificationType {
-  newCounterTrade = "new_counter_trade",
-  counterTradeReview = "counter_trade_review",
-  counterTradeAccepted = "counter_trade_accepted",
-  counterTradeCancelled = "counter_trade_cancelled",
-}
-
-enum TradeNotificationStatus {
-  unread = "unread",
-  read = "read",
-}
-
-interface TradeNotification {
-  id?: number;
-  time: string;
-  user: string;
-  tradeId: number;
-  counterId: number;
-  notificationType: TradeNotificationType;
-  status?: TradeNotificationStatus;
-}
-
-interface QueryParameters {
-  /* Filters section */
-  "filters.globalSearch"?: string;
-  "filters.trade_id"?: number[];
-  "filters.state"?: string[];
-  "filters.collections"?: string[];
-  "filters.lookingFor"?: string[];
-  "filters.counteredBy"?: string;
-  "filters.whitelistedUsers"?: string[];
-
-  /* Pagination section */
-  "pagination.offset"?: number;
-  "pagination.limit"?: number;
-
-  /* Sorters section */
-  "sorters.parameter"?: string;
-  "sorters.direction"?: string;
-}
+const DATE_FORMATER = async (date, format) =>
+  await import("dateformat").then((dateformat: any) => dateformat(date, format));
 
 function getDBFields(tradeInfo: TradeInfo) {
   return {
@@ -102,8 +25,7 @@ function getDBFields(tradeInfo: TradeInfo) {
   };
 }
 
-async function addToTradeDB(trades: Trade[]) {
-  let knexDB = getTradeDB();
+async function addToTradeDB(knexDB: Knex, trades: Trade[]) {
   let insertToken = await knexDB("trades")
     .insert(
       trades.map(trade => ({
@@ -117,8 +39,7 @@ async function addToTradeDB(trades: Trade[]) {
   return insertToken;
 }
 
-async function addToCounterTradeDB(counterTrades: Trade[]) {
-  let knexDB = getTradeDB();
+async function addToCounterTradeDB(knexDB: Knex, counterTrades: Trade[]) {
   let insertToken = await knexDB("counter-trades")
     .insert(
       counterTrades.map(counterTrade => ({
@@ -133,8 +54,7 @@ async function addToCounterTradeDB(counterTrades: Trade[]) {
   return insertToken;
 }
 
-async function addToNotificationDB(notifications: TradeNotification[]) {
-  let knexDB = getTradeDB();
+async function addToNotificationDB(knexDB: Knex, notifications: TradeNotification[]) {
   let insertToken = await knexDB("notifications").insert(
     notifications.map((notification: TradeNotification) => ({
       time: DATE_FORMATER(new Date(notification.time), "yyyy-mm-dd HH:MM:ss"),
@@ -149,18 +69,19 @@ async function addToNotificationDB(notifications: TradeNotification[]) {
   return insertToken;
 }
 
-async function markNotificationsRead({
-  network,
-  notificationId,
-  user,
-}: {
-  network: Network,
-  notificationId?: string;
-  user?: string;
-}) {
-  let knexDB = getTradeDB();
-  let updateRequest = knexDB("notifications")
-    .where("network",network);
+async function markNotificationsRead(
+  knexDB: Knex,
+  {
+    network,
+    notificationId,
+    user,
+  }: {
+    network: Network;
+    notificationId?: string;
+    user?: string;
+  },
+) {
+  let updateRequest = knexDB("notifications").where("network", network);
   if (notificationId) {
     updateRequest.where("id", notificationId);
   }
@@ -202,6 +123,7 @@ function parseFromDB(db_result: any): TradeInfo {
 
 function parseFromNotificationDB(notification: any): TradeNotification {
   return {
+    network: notification.network,
     id: notification.id,
     time: notification.time,
     user: notification.user,
@@ -212,12 +134,17 @@ function parseFromNotificationDB(notification: any): TradeNotification {
   };
 }
 
-async function applyQueryParameters(currentQuery: Knex.QueryBuilder, parameters?: QueryParameters) {
+async function applyQueryParameters(
+  knexDB: Knex,
+  currentQuery: Knex.QueryBuilder,
+  parameters?: QueryParameters,
+) {
   // Filters
   currentQuery.where("network", parameters["filters.network"]);
 
   if (parameters?.["filters.globalSearch"]) {
     let nfts = await getNftInfoByPartialName(
+      knexDB,
       process.env.CHAIN!,
       parameters["filters.globalSearch"]!,
     );
@@ -288,11 +215,12 @@ async function applyQueryParameters(currentQuery: Knex.QueryBuilder, parameters?
   );
 }
 
-async function getTrades(parameters?: QueryParameters) {
-  let knexDB = getTradeDB();
+async function getTrades(knexDB: Knex, parameters?: QueryParameters) {
   let tradeInfoQuery = knexDB("trades").select("*");
 
-  await applyQueryParameters(tradeInfoQuery, parameters);
+  console.log(await tradeInfoQuery)
+
+  await applyQueryParameters(knexDB, tradeInfoQuery, parameters);
 
   let tradeInfo = await tradeInfoQuery;
 
@@ -302,11 +230,10 @@ async function getTrades(parameters?: QueryParameters) {
   }));
 }
 
-async function getCounterTrades(parameters?: QueryParameters) {
-  let knexDB = getTradeDB();
+async function getCounterTrades(knexDB: Knex, parameters?: QueryParameters) {
   let counterTradeInfoQuery = knexDB("counter-trades").select("*");
 
-  await applyQueryParameters(counterTradeInfoQuery, parameters);
+  await applyQueryParameters(knexDB, counterTradeInfoQuery, parameters);
 
   let counterTradeInfo = await counterTradeInfoQuery;
 
@@ -317,8 +244,7 @@ async function getCounterTrades(parameters?: QueryParameters) {
   }));
 }
 
-async function getTrade(network: Network, tradeId: number): Promise<Trade> {
-  let knexDB = getTradeDB();
+async function getTrade(knexDB: Knex, network: Network, tradeId: number): Promise<Trade> {
   let tradeInfo = await knexDB("trades").select("*").where({
     network: network,
     trade_id: tradeId,
@@ -330,8 +256,12 @@ async function getTrade(network: Network, tradeId: number): Promise<Trade> {
   };
 }
 
-async function getCounterTrade(network: Network, tradeId: number, counterId: number): Promise<Trade> {
-  let knexDB = getTradeDB();
+async function getCounterTrade(
+  knexDB: Knex,
+  network: Network,
+  tradeId: number,
+  counterId: number,
+): Promise<Trade> {
   let counterTradeInfo = await knexDB("counter-trades").select("*").where({
     network: network,
     trade_id: tradeId,
@@ -345,25 +275,27 @@ async function getCounterTrade(network: Network, tradeId: number, counterId: num
   };
 }
 
-async function getNotifications({
-  network,
-  user,
-  limit,
-  offset,
-}: {
-  network: Network,
-  user?: string;
-  limit?: number;
-  offset?: number;
-}): Promise<TradeNotification[]> {
-  let knexDB = getTradeDB();
+async function getNotifications(
+  knexDB: Knex,
+  {
+    network,
+    user,
+    limit,
+    offset,
+  }: {
+    network: Network;
+    user?: string;
+    limit?: number;
+    offset?: number;
+  },
+): Promise<TradeNotification[]> {
   let notificationInfoQuery = knexDB("notifications")
     .select("*")
     .orderBy([
       { column: "time", order: "desc" },
       { column: "id", order: "desc" },
     ])
-    .where("network",network)
+    .where("network", network)
     .offset(offset ?? 0)
     .limit(
       Math.min(

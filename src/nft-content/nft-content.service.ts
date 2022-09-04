@@ -14,8 +14,9 @@ import {
 } from "../utils/redis_db_accessor";
 import { validateRequest } from "../utils/js/validateRequests";
 import { Network } from "../utils/blockchain/dto/network.dto";
-import { initNFTDB, quitNFTDB } from "../utils/mysql_db_accessor";
-import { parseNFTSet, updateInteractedNfts } from "../utils/blockchain/queryNFTContent";
+import { NftContentQuerierService } from "./nft-content-querier.service";
+import { RedisService } from 'nestjs-redis';
+import Redis from "ioredis";
 
 const _ = require("lodash");
 
@@ -25,12 +26,23 @@ function toNFTKey(network: string, address: string) {
 
 @Injectable()
 export class NftContentService {
+
+
+  redisDB: Redis;
+
+  constructor(
+    private readonly nftContentQuerierService: NftContentQuerierService,
+    private readonly redisService: RedisService,
+  ) {
+    this.redisDB = redisService.getClient();
+  }
+
   async findNfts(network: Network, address: string): Promise<SerializableContractsInteracted> {
     validateRequest(network);
 
     // We get the db data
     let dbKey = toNFTKey(network, address);
-    let currentData: ContractsInteracted = await getNFTContentFromDb(dbKey);
+    let currentData: ContractsInteracted = await getNFTContentFromDb(this.redisDB, dbKey);
 
     return serialise(currentData);
   }
@@ -70,7 +82,7 @@ async function _internal_update(
   // Here we want to update the database
 
   let dbKey = toNFTKey(network, address);
-  let lock = await canUpdate(dbKey);
+  let lock = await canUpdate(this.redisDB, dbKey);
 
   if (!lock) {
     return;
@@ -91,21 +103,19 @@ async function _internal_update(
     data = defaultContractsApiStructure();
   }
 
-  await initNFTDB();
   data = await updateAddress(
     dbKey,
     network,
     address,
     { ...data },
     hasTimedOut,
-    updateInteractedNfts,
-    parseNFTSet,
+    this.nftContentQuerierService.updateInteractedNfts,
+    this.nftContentQuerierService.parseNFTSet,
   );
-  await quitNFTDB();
   clearTimeout(timeout);
 
   // We save the updated object to db and release the Lock on the database
-  await saveNFTContentToDb(dbKey, data);
+  await saveNFTContentToDb(this.redisDB, dbKey, data);
   await releaseUpdateLock(lock);
 }
 
@@ -116,12 +126,12 @@ async function updateAddress(
   currentData: ContractsInteracted,
   hasTimedOut: any,
   queryNewInteractedContracts: any,
-  parseTokenSet: typeof parseNFTSet,
+  parseTokenSet: typeof this.nftContentQuerierService.parseNFTSet,
 ) {
   const willQueryBefore = currentData.state != UpdateState.Full;
   // We update currentData to prevent multiple updates
   currentData.state = UpdateState.isUpdating;
-  await saveNFTContentToDb(dbKey, currentData);
+  await saveNFTContentToDb(this.redisDB, dbKey, currentData);
 
   const queryCallback = async (newContracts: Set<string>, txSeen: TxInterval) => {
     if (!network || !address || !currentData) {
@@ -136,7 +146,7 @@ async function updateAddress(
       parseTokenSet,
     );
     currentData.state = UpdateState.isUpdating;
-    await saveNFTContentToDb(dbKey, currentData);
+    await saveNFTContentToDb(this.redisDB, dbKey, currentData);
   };
 
   // We start by querying data in the possible interval (between the latests transactions queried and the oldest ones)

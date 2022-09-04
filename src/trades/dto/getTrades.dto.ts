@@ -9,8 +9,9 @@ export class Asset {
     tokenId?: string;
     denom?: string;
   };
-};
+}
 export class TradeInfo {
+  network: Network;
   acceptedInfo?: any; // TODO correct this type
   assetsWithdrawn: boolean;
   associatedAssets: Asset[];
@@ -83,11 +84,10 @@ export class QueryParameters {
 }
 
 export class SingleTradeParameters {
-
   network: Network;
 
   @IsInt()
-  @Transform(({value}) => Number.parseInt(value))
+  @Transform(({ value }) => Number.parseInt(value))
   tradeId: number;
 }
 
@@ -95,20 +95,20 @@ export class SingleCounterTradeParameters {
   network: Network;
 
   @IsInt()
-  @Transform(({value}) => Number.parseInt(value))
+  @Transform(({ value }) => Number.parseInt(value))
   tradeId: number;
 
   @IsInt()
-  @Transform(({value}) => Number.parseInt(value))
+  @Transform(({ value }) => Number.parseInt(value))
   counterId: number;
 }
 
-export class MultipleTradeResponse{
-  data : Trade[];
-  next_offset: number | null;
+export class MultipleTradeResponse {
+  data: Trade[];
+  nextOffset: number | null;
 }
 
-export class MultipleNotificationsResponse{
-  data : TradeNotification[];
-  next_offset: number | null;
+export class MultipleNotificationsResponse {
+  data: TradeNotification[];
+  nextOffset: number | null;
 }

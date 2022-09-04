@@ -9,26 +9,29 @@ import {
   getCounterTrades,
   getTrade,
   getTrades,
-} from "./mysql_db/access";
+} from "../database/trades/access";
 const camelCaseObjectDeep = require("camelcase-object-deep");
 import { Network } from "../utils/blockchain/dto/network.dto";
+import { InjectKnex, Knex } from "nestjs-knex";
 
 @Injectable()
 export class TradesService {
+  constructor(@InjectKnex() private readonly knexDB: Knex) {}
+
   async getMultipleTrades(params: QueryParameters): Promise<MultipleTradeResponse> {
-    let [err, tradeInfo] = await asyncAction(getTrades(params));
+    let [err, tradeInfo] = await asyncAction(getTrades(this.knexDB, params));
     if (err || !tradeInfo.length) {
       throw new NotFoundException("Trades Not Found");
     }
     let offset = params?.["pagination.offset"];
     return {
       data: tradeInfo,
-      next_offset: offset ?? 0 + tradeInfo.length,
+      nextOffset: offset ?? 0 + tradeInfo.length,
     };
   }
 
-  async getMultipleCounterTrades(params: QueryParameters) : Promise<MultipleTradeResponse> {
-    let [err, tradeInfo] = await asyncAction(getCounterTrades(params));
+  async getMultipleCounterTrades(params: QueryParameters): Promise<MultipleTradeResponse> {
+    let [err, tradeInfo] = await asyncAction(getCounterTrades(this.knexDB, params));
     if (err || !tradeInfo.length) {
       throw new NotFoundException("Counter Trades Not Found");
     }
@@ -36,7 +39,7 @@ export class TradesService {
   }
 
   async getSingleTrade(network: Network, tradeId: number): Promise<Trade> {
-    let [err, tradeInfo] = await asyncAction(getTrade(network, tradeId));
+    let [err, tradeInfo] = await asyncAction(getTrade(this.knexDB, network, tradeId));
     if (err) {
       // We try to query the trade on_chain directly :
       let queryErr: any;
@@ -45,34 +48,42 @@ export class TradesService {
         throw new NotFoundException("Trade Not Found");
       }
       tradeInfo = {
-      	network,
+        network,
         tradeId,
         counterId: undefined,
         tradeInfo: camelCaseObjectDeep(tradeInfo),
       };
       // We add it to the database
-      await addToTradeDB([tradeInfo]);
+      await addToTradeDB(this.knexDB, [tradeInfo]);
     }
     return tradeInfo;
   }
 
-  async getSingleCounterTrade(network: Network, tradeId: number, counterId: number): Promise<Trade> {
-    let [err, counterTradeInfo] = await asyncAction(getCounterTrade(network, tradeId, counterId));
+  async getSingleCounterTrade(
+    network: Network,
+    tradeId: number,
+    counterId: number,
+  ): Promise<Trade> {
+    let [err, counterTradeInfo] = await asyncAction(
+      getCounterTrade(this.knexDB, network, tradeId, counterId),
+    );
     if (err) {
       // We try to query the counter_trade on_chain directly :
       let queryErr: any;
-      [queryErr, counterTradeInfo] = await asyncAction(getCounterTradeInfo(network, tradeId, counterId));
+      [queryErr, counterTradeInfo] = await asyncAction(
+        getCounterTradeInfo(network, tradeId, counterId),
+      );
       if (queryErr) {
         throw new NotFoundException("Counter Trade Not Found");
       }
       counterTradeInfo = {
-      	network,
+        network,
         tradeId,
         counterId: counterId,
         tradeInfo: camelCaseObjectDeep(counterTradeInfo),
       };
       // We add it to the database
-      await addToCounterTradeDB([counterTradeInfo]);
+      await addToCounterTradeDB(this.knexDB, [counterTradeInfo]);
     }
     return counterTradeInfo;
   }

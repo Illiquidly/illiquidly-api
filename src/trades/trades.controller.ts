@@ -1,8 +1,8 @@
 import { Controller, Get, Post, Query } from "@nestjs/common";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import {
-    MultipleNotificationsResponse,
-    MultipleTradeResponse,
+  MultipleNotificationsResponse,
+  MultipleTradeResponse,
   QueryParameters,
   SingleCounterTradeParameters,
   SingleTradeParameters,
@@ -15,7 +15,10 @@ import { TradesService } from "./trades.service";
 @ApiTags("Trades")
 @Controller("trades")
 export class TradesController {
-  constructor(private readonly tradesService: TradesService,private readonly notificationService: NotificationsService) {}
+  constructor(
+    private readonly tradesService: TradesService,
+    private readonly notificationService: NotificationsService,
+  ) {}
 
   @Get("")
   @ApiResponse({
@@ -44,7 +47,11 @@ export class TradesController {
     description: "Queries the information about a posted counter trade",
   })
   async getSingleCounterTrade(@Query() params: SingleCounterTradeParameters) {
-    return this.tradesService.getSingleCounterTrade(params.network, params.tradeId, params.counterId);
+    return this.tradesService.getSingleCounterTrade(
+      params.network,
+      params.tradeId,
+      params.counterId,
+    );
   }
 
   @Get("counter_trades/all")
@@ -64,7 +71,12 @@ export class TradesController {
   })
   @Get("notifications")
   async queryNotifications(@Query() params: NotificationsQuery) {
-    return this.notificationService.queryNotifications(params.network, params.user, params.limit, params.offset,);
+    return this.notificationService.queryNotifications(
+      params.network,
+      params.user,
+      params.limit,
+      params.offset,
+    );
   }
 
   @ApiResponse({
@@ -73,6 +85,10 @@ export class TradesController {
   })
   @Post("notifications/read")
   async readNotifications(@Query() params: NotificationsRead) {
-    return this.notificationService.readNotifications(params.network, params.user, params.notificationId);
+    return this.notificationService.readNotifications(
+      params.network,
+      params.user,
+      params.notificationId,
+    );
   }
 }

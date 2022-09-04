@@ -1,32 +1,27 @@
 import knex, { Knex } from "knex";
+import { TradeNotificationType } from "../../trades/dto/getTrades.dto";
 import { Network } from "../../utils/blockchain/dto/network.dto";
-import { TradeNotificationType } from "../dto/getTrades.dto";
 
-let knexDB: Knex;
-initTradeDB();
-async function initTradeDB() {
-  knexDB = knex({
-    client: "mysql2",
-    connection: {
-      host: "127.0.0.1",
-      user: "illiquidly",
-      password: "illiquidly",
-      database: "TRADES",
-    },
-  });
-  await flushTradeDB();
-  await createTradeDB();
+
+const tradeDBKnexArgs = {
+  client: "mysql2",
+  connection: {
+    host: "127.0.0.1",
+    user: "illiquidly",
+    password: "illiquidly",
+    database: "ILLIQUIDLY",
+  },
+};
+
+function initDB() {
+  return knex(tradeDBKnexArgs);
 }
 
-function getTradeDB(): Knex {
-  return knexDB;
+async function quitDB(db: Knex) {
+  return await db.destroy();
 }
 
-async function quitDB(knexDB: Knex) {
-  knexDB.destroy();
-}
-
-async function _createTradeInfo(table: any) {
+function _createTradeInfo(table: any) {
   table.increments("id").primary();
   table.integer("last_counter_id");
   table.string("owner_comment");
@@ -44,14 +39,13 @@ async function _createTradeInfo(table: any) {
   table.text("whole_data");
 }
 
-async function createTradeDB() {
-  let knexDB = getTradeDB();
+async function createTradeDB(knexDB: Knex) {
   await knexDB.schema
     .createTable("trades", (table: any) => {
       _createTradeInfo(table);
       table.enu("network", Object.values(Network)).notNullable();
       table.integer("trade_id").notNullable();
-      table.unique(["network","trade_id"]);
+      table.unique(["network", "trade_id"]);
     })
     .catch(() => console.log("Trade table exists already"));
 
@@ -61,19 +55,18 @@ async function createTradeDB() {
       table.enu("network", Object.values(Network)).notNullable();
       table.integer("trade_id").notNullable();
       table.integer("counter_id").notNullable();
-      table.unique(["network","trade_id", "counter_id"]);
+      table.unique(["network", "trade_id", "counter_id"]);
     })
     .catch(() => console.log("Counter Trade table exists already"));
 }
 
-async function createNotificationDB() {
-  let knexDB = getTradeDB();
+async function createNotificationDB(knexDB: Knex) {
   await knexDB.schema
     .createTable("notifications", (table: any) => {
       table.increments("id").primary();
       table.datetime("time");
       table.string("user");
-      table.integer("network");
+      table.enu("network", Object.values(Network)).notNullable();
       table.integer("trade_id");
       table.integer("counter_id");
       table.enu("notification_type", Object.values(TradeNotificationType));
@@ -82,22 +75,13 @@ async function createNotificationDB() {
     .catch(() => console.log("Trade notification table exists already"));
 }
 
-async function flushNotificationDB() {
-  let knexDB = getTradeDB();
+async function flushNotificationDB(knexDB: Knex) {
   await knexDB.schema.dropTable("notifications").catch(() => {});
 }
 
-async function flushTradeDB() {
-  let knexDB = getTradeDB();
+async function flushTradeDB(knexDB: Knex) {
   await knexDB.schema.dropTable("trades").catch(() => {});
   await knexDB.schema.dropTable("counter-trades").catch(() => {});
 }
 
-export {
-  getTradeDB,
-  quitDB,
-  createTradeDB,
-  createNotificationDB,
-  flushTradeDB,
-  flushNotificationDB,
-};
+export { initDB, quitDB, createTradeDB, createNotificationDB, flushTradeDB, flushNotificationDB };

@@ -80,19 +80,16 @@ async function getNftInfoByName(network: string, nft_name: string) {
   }));
 }
 
-async function getNftInfoByPartialName(
-  network: string,
-  nftPartialName: string
-) {
+async function getNftInfoByPartialName(network: string, nftPartialName: string) {
   return (
-    await knexDB('nft_info')
-      .select('*')
-      .where('network', network)
-      .whereRaw('name like ?', nftPartialName ?? '')
-  ).map((info) => ({
+    await knexDB("nft_info")
+      .select("*")
+      .where("network", network)
+      .whereRaw("name like ?", nftPartialName ?? "")
+  ).map(info => ({
     nftAddress: info.nft_address,
     name: info.name,
-    symbol: info.symbol
+    symbol: info.symbol,
   }));
 }
 
@@ -104,5 +101,5 @@ export {
   getNftInfo,
   getAllNftInfo,
   getNftInfoByName,
-  getNftInfoByPartialName
+  getNftInfoByPartialName,
 };

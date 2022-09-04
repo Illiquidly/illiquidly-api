@@ -8,6 +8,10 @@ import { getJSONFromDb, saveJSONToDb } from "../utils/redis_db_accessor";
 
 import { getAllNFTInfo } from "../utils/blockchain/nft_query.js";
 import { sendBackError } from "../utils/js/sendBackError";
+import { Knex } from "knex";
+import { InjectKnex } from "nestjs-knex";
+import { RedisService } from 'nestjs-redis';
+import Redis from "ioredis";
 
 export function toAllNFTInfoKey(network: string) {
   return `all_nft_info:${network}`;
@@ -19,10 +23,20 @@ export function toExistingTokenKey(network: string) {
 
 @Injectable()
 export class UtilsService {
+
+  redisDB: Redis;
+
+  constructor(
+    @InjectKnex() private readonly knexDB: Knex,
+    private readonly redisService: RedisService,
+  ) {
+    this.redisDB = redisService.getClient();
+  }
+
   async registeredNfts(network: Network) {
     validateRequest(network);
 
-    return await registeredNFTs(network);
+    return await registeredNFTs(this.knexDB, network);
   }
 
   async nftInfo(network: Network, address: string, tokenId: string) {
@@ -30,7 +44,7 @@ export class UtilsService {
 
     const allNFTInfoKey = toAllNFTInfoKey(network);
 
-    let [_, allNFTInfo] = await asyncAction(getJSONFromDb(allNFTInfoKey));
+    let [_, allNFTInfo] = await asyncAction(getJSONFromDb(this.redisDB, allNFTInfoKey));
 
     // If the nftInfo was saved in the db, we return it directly
     if (allNFTInfo?.[address]?.[tokenId]) {
@@ -54,7 +68,7 @@ export class UtilsService {
     const allNFTInfoKey = toAllNFTInfoKey(network);
 
     console.log(allNFTInfoKey);
-    let dbContent = await getJSONFromDb(allNFTInfoKey);
+    let dbContent = await getJSONFromDb(this.redisDB, allNFTInfoKey);
     console.log(dbContent);
     let returnObject: any;
     if (address) {
@@ -83,10 +97,10 @@ export class UtilsService {
       allNFTInfo[address] = {};
     }
     allNFTInfo[address][tokenId] = nftInfo.info;
-    await saveJSONToDb(allNFTInfoKey, allNFTInfo);
+    await saveJSONToDb(this.redisDB, allNFTInfoKey, allNFTInfo);
     console.log(allNFTInfoKey);
     // We save all tokens names from a contract in a single array
-    let [__, allTokens] = await asyncAction(getJSONFromDb(existingNFTKey));
+    let [__, allTokens] = await asyncAction(getJSONFromDb(this.redisDB, existingNFTKey));
     if (!allTokens) {
       allTokens = {};
     }
@@ -94,6 +108,6 @@ export class UtilsService {
       allTokens[address] = [];
     }
     allTokens[address].push(tokenId);
-    await saveJSONToDb(existingNFTKey, allTokens);
+    await saveJSONToDb(this.redisDB, existingNFTKey, allTokens);
   }
 }
