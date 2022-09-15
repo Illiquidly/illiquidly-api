@@ -2,8 +2,8 @@ import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
-const fs = require("fs");
 import "dotenv/config";
+const fs = require("fs");
 
 async function bootstrap() {
   console.log(process.env.ENVIRONMENT);

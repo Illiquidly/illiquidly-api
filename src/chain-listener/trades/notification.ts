@@ -1,7 +1,6 @@
 import "dotenv/config";
 import Redis from "ioredis";
 import Axios from "axios";
-const pMap = require("p-map");
 import { TxLog } from "@terra-money/terra.js";
 
 import { asyncAction } from "../../utils/js/asyncAction";
@@ -16,6 +15,7 @@ import { sleep } from "../../utils/js/sleep";
 import { RedisService } from "nestjs-redis";
 import { TradeNotification } from "../../trades/dto/getTrades.dto";
 import { NFTInfoService } from "src/database/nft_info/access";
+const pMap = require("p-map");
 
 const redisHashSetName: string = process.env.REDIS_NOTIFICATION_TXHASH_SET;
 const redisDB = createRedisClient();
@@ -31,7 +31,7 @@ const nftInfoService = new NFTInfoService(knexDB);
 const databaseTradeService = new TradeDatabaseService(knexDB, redisService, nftInfoService);
 
 async function getHashSetCardinal(db: Redis) {
-  return db.scard(redisHashSetName);
+  return await db.scard(redisHashSetName);
 }
 
 async function hasTx(db: Redis, txHash: string): Promise<boolean> {
@@ -170,7 +170,7 @@ async function queryNewTransaction(network: Network) {
     ).flat();
 
     // And we add the notifications in a bunch in the database
-    if (notifications.length) {
+    if (notifications.length > 0) {
       await databaseTradeService.addToNotificationDB(notifications);
     }
 
@@ -200,7 +200,7 @@ async function launchReceiver() {
     } else {
       // `count` represents the number of channels this client are currently subscribed to.
       console.log(
-        `Subscribed successfully! This client is currently subscribed to the trade channel.`,
+        "Subscribed successfully! This client is currently subscribed to the trade channel.",
       );
     }
   });
@@ -245,17 +245,17 @@ async function testQuery() {
 */
 
 /* For testing purposes only */
-//resetDB().then((_)=>queryNewTransaction())
-//testQuery()
+// resetDB().then((_)=>queryNewTransaction())
+// testQuery()
 
 /* Actual event loop */
 if (process.env.FLUSH_DB_ON_STARTUP == "true") {
   resetDB()
-    .then(() => launchReceiver())
+    .then(async () => await launchReceiver())
     // Then query the new transcations for the first time
-    .then(() => queryNewTransaction(Network["testnet"]));
+    .then(async () => await queryNewTransaction(Network.testnet));
 } else {
   launchReceiver()
     // Then query the new transcations for the first time
-    .then(() => queryNewTransaction(Network["testnet"]));
+    .then(async () => await queryNewTransaction(Network.testnet));
 }

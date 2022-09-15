@@ -10,7 +10,7 @@ let network: Network;
 if (process.argv[2]) {
   network = Network[process.argv[2]];
 } else {
-  network = Network["devnet"];
+  network = Network.devnet;
 }
 
 async function main() {

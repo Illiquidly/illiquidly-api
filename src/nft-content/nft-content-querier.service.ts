@@ -1,7 +1,15 @@
 import { LCDClient, TxLog } from "@terra-money/terra.js";
 import axios from "axios";
-const pLimit = require("p-limit");
 import { TokenInteracted } from "./dto/get-nft-content.dto";
+
+import { chains, fcds } from "../utils/blockchain/chains";
+import { asyncAction } from "../utils/js/asyncAction.js";
+import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
+import { Network } from "../utils/blockchain/dto/network.dto";
+import { Injectable } from "@nestjs/common";
+import { UtilsService } from "../utils-api/utils.service";
+import { getAllNFTInfo } from "../utils/blockchain/nft_query";
+const pLimit = require("p-limit");
 
 const cloudscraper = require("cloudscraper");
 const camelCaseObjectDeep = require("camelcase-object-deep");
@@ -11,42 +19,34 @@ const limitNFT = pLimit(10);
 const limitToken = pLimit(50);
 const AXIOS_TIMEOUT = 10_000;
 
-import { chains, fcds } from "../utils/blockchain/chains";
-import { asyncAction } from "../utils/js/asyncAction.js";
-import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
-import { Network } from "../utils/blockchain/dto/network.dto";
-import { Injectable } from "@nestjs/common";
-import { UtilsService } from "../utils-api/utils.service";
-import { getAllNFTInfo } from "../utils/blockchain/nft_query";
-
 @Injectable()
 export class NftContentQuerierService {
   constructor(private readonly utilsService: UtilsService) {}
 
-  addFromWasmEvents(tx: any, nftsInteracted: any, chain_type: string) {
+  addFromWasmEvents(tx: any, nftsInteracted: any, chainType: string) {
     for (const log of tx?.logs) {
-      if (chain_type == "classic") {
+      if (chainType == "classic") {
         const parsedLog = new TxLog(log.msg_index, log.log, log.events);
-        const from_contract = parsedLog.eventsByType.from_contract;
-        if (from_contract?.action) {
+        const fromContract = parsedLog.eventsByType.from_contract;
+        if (fromContract?.action) {
           if (
-            from_contract.action.includes("transfer_nft") ||
-            from_contract.action.includes("send_nft") ||
-            from_contract.action.includes("mint")
+            fromContract.action.includes("transfer_nft") ||
+            fromContract.action.includes("send_nft") ||
+            fromContract.action.includes("mint")
           ) {
-            from_contract.contract_address.forEach(nftsInteracted.add, nftsInteracted);
+            fromContract.contract_address.forEach(nftsInteracted.add, nftsInteracted);
           }
         }
       } else {
         const parsedLog = new TxLog(log.msg_index, log.log, log.events);
-        const from_contract = parsedLog.eventsByType.wasm;
-        if (from_contract?.action) {
+        const fromContract = parsedLog.eventsByType.wasm;
+        if (fromContract?.action) {
           if (
-            from_contract.action.includes("transfer_nft") ||
-            from_contract.action.includes("send_nft") ||
-            from_contract.action.includes("mint")
+            fromContract.action.includes("transfer_nft") ||
+            fromContract.action.includes("send_nft") ||
+            fromContract.action.includes("mint")
           ) {
-            from_contract._contract_address.forEach(nftsInteracted.add, nftsInteracted);
+            fromContract._contract_address.forEach(nftsInteracted.add, nftsInteracted);
           }
         }
       }
@@ -54,14 +54,14 @@ export class NftContentQuerierService {
     return nftsInteracted;
   }
 
-  getNftsFromTxList(txData: any, chain_type: string): [Set<string>, number, number] {
+  getNftsFromTxList(txData: any, chainType: string): [Set<string>, number, number] {
     let nftsInteracted: Set<string> = new Set();
     let lastTxIdSeen = 0;
     let newestTxIdSeen = 0;
     // In case we are using cloudscraper to get rid of cloudflare
     for (const tx of txData) {
       // We add NFTS interacted with
-      nftsInteracted = this.addFromWasmEvents(tx, nftsInteracted, chain_type);
+      nftsInteracted = this.addFromWasmEvents(tx, nftsInteracted, chainType);
 
       // We update the block and id info
       if (lastTxIdSeen === 0 || tx.id < lastTxIdSeen) {
@@ -82,12 +82,12 @@ export class NftContentQuerierService {
     callback: any,
     hasTimedOut: any = { timeout: false },
   ) {
-    let query_next = true;
+    let queryNext = true;
     const limit = 100;
     let offset: number = start ?? 0;
     let newestTxIdSeen: number | null = null;
     let lastTxIdSeen: number | null = null;
-    while (query_next) {
+    while (queryNext) {
       if (hasTimedOut.timeout) {
         return;
       }
@@ -96,7 +96,7 @@ export class NftContentQuerierService {
         source.cancel();
       }, AXIOS_TIMEOUT);
 
-      const [error, tx_data] = await asyncAction(
+      const [error, txData] = await asyncAction(
         cloudscraper.get(
           `${fcds[network]}/v1/txs?offset=${offset}&limit=${limit}&account=${address}`,
           { cancelToken: source.token },
@@ -107,10 +107,10 @@ export class NftContentQuerierService {
       if (error) {
         console.log(error.toJSON());
       }
-      if (tx_data == null) {
+      if (txData == null) {
         break;
       }
-      const responseData = JSON.parse(tx_data);
+      const responseData = JSON.parse(txData);
 
       const txToAnalyse = responseData.txs;
 
@@ -137,7 +137,7 @@ export class NftContentQuerierService {
       if (lastTxId != 0) {
         offset = lastTxId;
       } else {
-        query_next = false;
+        queryNext = false;
       }
       if (newestTxIdSeen == null || newestTxId > newestTxIdSeen) {
         newestTxIdSeen = newestTxId;
@@ -147,7 +147,7 @@ export class NftContentQuerierService {
       }
       // Stopping tests
       if (stop != null && stop > lastTxIdSeen) {
-        query_next = false;
+        queryNext = false;
       }
     }
 
@@ -158,7 +158,7 @@ export class NftContentQuerierService {
     network: Network,
     address: string,
     nft: string,
-    start_after: string | undefined = undefined,
+    startAfter: string | undefined = undefined,
   ) {
     const lcdClient = new LCDClient(chains[network]);
 
@@ -166,7 +166,7 @@ export class NftContentQuerierService {
       lcdClient.wasm.contractQuery(nft, {
         tokens: {
           owner: address,
-          start_after: start_after,
+          startAfter,
           limit: 100,
         },
       }),
@@ -176,15 +176,15 @@ export class NftContentQuerierService {
       const [infoError, tokenInfos] = await asyncAction(
         Promise.all(
           tokenBatch.tokens.map(async (id: string) => {
-            const tokenInfo = (await limitToken)(() => getAllNFTInfo(network, nft, id));
+            const tokenInfo = (await limitToken)(async () => await getAllNFTInfo(network, nft, id));
             return tokenInfo.info;
           }),
         ),
       );
       if (infoError) {
         console.log(infoError);
-        return tokenBatch.tokens.map((token_id: any) => ({
-          tokenId: token_id,
+        return tokenBatch.tokens.map((tokenId: any) => ({
+          tokenId: tokenId,
           nftInfo: {},
         }));
       }
@@ -194,20 +194,20 @@ export class NftContentQuerierService {
 
   async parseTokensFromOneNft(network: Network, address: string, nft: string) {
     let tokens: any;
-    let start_after: string | undefined = undefined;
-    let last_tokens: any;
+    let startAfter: string | undefined;
+    let lastTokens: any;
     let allTokens: any = [];
     do {
-      tokens = await this.getOneTokenBatchFromNFT(network, address, nft, start_after);
+      tokens = await this.getOneTokenBatchFromNFT(network, address, nft, startAfter);
       if (tokens && tokens.length > 0) {
-        start_after = tokens[tokens.length - 1].tokenId;
+        startAfter = tokens[tokens.length - 1].tokenId;
         allTokens = [...allTokens, ...tokens];
       }
-      if (_.isEqual(last_tokens, tokens) && tokens) {
+      if (_.isEqual(lastTokens, tokens) && tokens) {
         // If we have the same response twice, we stop, it's not right
         tokens = undefined;
       }
-      last_tokens = tokens;
+      lastTokens = tokens;
     } while (tokens && tokens.length > 0);
 
     if (Object.keys(allTokens).length === 0) {
@@ -227,7 +227,9 @@ export class NftContentQuerierService {
     const [, nftsOwned] = await asyncAction(
       Promise.all(
         nftsArray.map(async nft => {
-          return (await limitNFT)(() => this.parseTokensFromOneNft(network, address, nft));
+          return (await limitNFT)(
+            async () => await this.parseTokensFromOneNft(network, address, nft),
+          );
         }),
       ),
     );
@@ -235,7 +237,9 @@ export class NftContentQuerierService {
     const [, nftsInfo] = await asyncAction(
       Promise.all(
         nftsArray.map(async nft => {
-          return (await limitNFT)(() => this.utilsService.getCachedNFTContractInfo(network, nft));
+          return (await limitNFT)(
+            async () => await this.utilsService.getCachedNFTContractInfo(network, nft),
+          );
         }),
       ),
     );

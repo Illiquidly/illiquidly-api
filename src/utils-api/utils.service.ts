@@ -68,7 +68,7 @@ export class UtilsService {
     }
 
     const newInfoToSave = {
-      network: network,
+      network,
       collectionAddress: nft,
       collectionName: newInfo.name,
       symbol: newInfo.symbol,

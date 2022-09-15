@@ -27,7 +27,7 @@ export class TradesController {
     description: "Queries the information about a posted trade",
   })
   async getSingleTrade(@Query() params: SingleTradeParameters) {
-    return this.tradesService.getSingleTrade(params.network, params.tradeId);
+    return await this.tradesService.getSingleTrade(params.network, params.tradeId);
   }
 
   @Get("all")
@@ -37,7 +37,7 @@ export class TradesController {
     description: "Queries multiple trade information at once",
   })
   async getTrades(@Query() params: QueryParameters) {
-    return this.tradesService.getMultipleTrades(params);
+    return await this.tradesService.getMultipleTrades(params);
   }
 
   @Get("counter_trades")
@@ -47,7 +47,7 @@ export class TradesController {
     description: "Queries the information about a posted counter trade",
   })
   async getSingleCounterTrade(@Query() params: SingleCounterTradeParameters) {
-    return this.tradesService.getSingleCounterTrade(
+    return await this.tradesService.getSingleCounterTrade(
       params.network,
       params.tradeId,
       params.counterId,
@@ -61,7 +61,7 @@ export class TradesController {
     description: "Queries multiple counter trade information at once",
   })
   async getCounterTrades(@Query() params: QueryParameters) {
-    return this.tradesService.getMultipleCounterTrades(params);
+    return await this.tradesService.getMultipleCounterTrades(params);
   }
 
   @ApiResponse({
@@ -71,7 +71,7 @@ export class TradesController {
   })
   @Get("notifications")
   async queryNotifications(@Query() params: NotificationsQuery) {
-    return this.notificationService.queryNotifications(
+    return await this.notificationService.queryNotifications(
       params.network,
       params.user,
       params.limit,
@@ -85,7 +85,7 @@ export class TradesController {
   })
   @Post("notifications/read")
   async readNotifications(@Query() params: NotificationsRead) {
-    return this.notificationService.readNotifications(
+    return await this.notificationService.readNotifications(
       params.network,
       params.user,
       params.notificationId,

@@ -22,12 +22,12 @@ export class NFTInfoService {
       .merge(); // We erase if the data is already present
   }
 
-  async getNftInfo(network: Network, nft_address: string): Promise<NftContractInfo[]> {
+  async getNftInfo(network: Network, nftAddress: string): Promise<NftContractInfo[]> {
     return (
       await this.knexDB("nft_info")
         .select("*")
         .where("network", network)
-        .where("nft_address", nft_address)
+        .where("nft_address", nftAddress)
     ).map(info => ({
       network,
       collectionAddress: info.nft_address,
@@ -36,9 +36,9 @@ export class NFTInfoService {
     }));
   }
 
-  async getNftInfoByName(network: string, nft_name: string) {
+  async getNftInfoByName(network: string, nftName: string) {
     return (
-      await this.knexDB("nft_info").select("*").where("network", network).where("name", nft_name)
+      await this.knexDB("nft_info").select("*").where("network", network).where("name", nftName)
     ).map(info => ({
       nftAddress: info.nft_address,
       name: info.name,

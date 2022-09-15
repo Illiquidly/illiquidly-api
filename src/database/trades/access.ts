@@ -3,7 +3,6 @@ import Redis from "ioredis";
 import { Knex } from "knex";
 import { InjectKnex } from "nestjs-knex";
 import { RedisService } from "nestjs-redis";
-const pMap = require("p-map");
 import {
   QueryParameters,
   Trade,
@@ -12,6 +11,7 @@ import {
 } from "../../trades/dto/getTrades.dto";
 import { Network } from "../../utils/blockchain/dto/network.dto";
 import { NFTInfoService } from "../nft_info/access";
+const pMap = require("p-map");
 
 @Injectable()
 export class TradeDatabaseService {
@@ -86,7 +86,7 @@ export class TradeDatabaseService {
         counter_id: notification.counterId,
         notification_type: notification.notificationType,
         status: "unread",
-        //status: notification.status ?? TradeNotificationStatus.unread,
+        // status: notification.status ?? TradeNotificationStatus.unread,
       })),
     );
     return insertToken;
@@ -114,32 +114,32 @@ export class TradeDatabaseService {
     return requestToken;
   }
 
-  parseFromDB(db_result: any): TradeInfo {
+  parseFromDB(dbResult: any): TradeInfo {
     return {
-      network: db_result.network,
+      network: dbResult.network,
       acceptedInfo: {
-        counterId: db_result.accepted_counter_trade_id,
+        counterId: dbResult.accepted_counter_trade_id,
       },
-      assetsWithdrawn: db_result.assets_withdrawn,
-      lastCounterId: db_result.last_counter_id,
-      associatedAssets: JSON.parse(db_result.associated_assets),
+      assetsWithdrawn: dbResult.assets_withdrawn,
+      lastCounterId: dbResult.last_counter_id,
+      associatedAssets: JSON.parse(dbResult.associated_assets),
       additionalInfo: {
         ownerComment: {
-          comment: db_result.owner_comment,
-          time: db_result.owner_comment_time,
+          comment: dbResult.owner_comment,
+          time: dbResult.owner_comment_time,
         },
-        time: db_result.time,
-        nftsWanted: JSON.parse(db_result.nfts_wanted),
-        tokensWanted: JSON.parse(db_result.tokens_wanted),
-        tradePreview: JSON.parse(db_result.trade_preview),
+        time: dbResult.time,
+        nftsWanted: JSON.parse(dbResult.nfts_wanted),
+        tokensWanted: JSON.parse(dbResult.tokens_wanted),
+        tradePreview: JSON.parse(dbResult.trade_preview),
         traderComment: {
-          comment: db_result.trader_comment,
-          time: db_result.trader_comment_time,
+          comment: dbResult.trader_comment,
+          time: dbResult.trader_comment_time,
         },
       },
-      owner: db_result.owner,
-      state: db_result.state,
-      whitelistedUsers: JSON.parse(db_result.whitelisted_users),
+      owner: dbResult.owner,
+      state: dbResult.state,
+      whitelistedUsers: JSON.parse(dbResult.whitelisted_users),
     };
   }
 
@@ -311,7 +311,7 @@ export class TradeDatabaseService {
 
   async getTrade(network: Network, tradeId: number): Promise<Trade> {
     const tradeInfo = await this.knexDB("trades").select("*").where({
-      network: network,
+      network,
       trade_id: tradeId,
     });
     return {
@@ -323,7 +323,7 @@ export class TradeDatabaseService {
 
   async getCounterTrade(network: Network, tradeId: number, counterId: number): Promise<Trade> {
     const counterTradeInfo = await this.knexDB("counter-trades").select("*").where({
-      network: network,
+      network,
       trade_id: tradeId,
       counter_id: counterId,
     });

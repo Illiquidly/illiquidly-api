@@ -1,10 +1,7 @@
 import "dotenv/config";
 import Redis from "ioredis";
 import Axios from "axios";
-const _ = require("lodash");
-const pMap = require("p-map");
 import { TxLog } from "@terra-money/terra.js";
-const camelcaseObjectDeep = require("camelcase-object-deep");
 
 import { chains, contracts } from "../../utils/blockchain/chains";
 import { getCounterTradeInfo, getTradeInfo } from "../../utils/blockchain/p2pTradeQuery";
@@ -18,11 +15,14 @@ import { sleep } from "../../utils/js/sleep";
 import { RedisService } from "nestjs-redis";
 import { Trade } from "../../trades/dto/getTrades.dto";
 import { NFTInfoService } from "../../database/nft_info/access";
+const _ = require("lodash");
+const pMap = require("p-map");
+const camelcaseObjectDeep = require("camelcase-object-deep");
 
 const redisHashSetName: string = process.env.REDIS_TXHASH_SET;
 
 async function getHashSetCardinal(db: Redis) {
-  return db.scard(redisHashSetName);
+  return await db.scard(redisHashSetName);
 }
 
 async function hasTx(db: Redis, txHash: string): Promise<boolean> {
@@ -84,11 +84,11 @@ async function queryNewTransaction(network: Network) {
         return tx.logs
           .map((log: any): number[][] => {
             const txLog = new TxLog(log.msg_index, log.log, log.events);
-            const trade_ids = txLog.eventsByType.wasm.trade_id?.map((id: string) => parseInt(id));
-            const counter_ids = txLog.eventsByType.wasm.counter_id?.map((id: string) =>
+            const tradeIds = txLog.eventsByType.wasm.trade_id?.map((id: string) => parseInt(id));
+            const counterIds = txLog.eventsByType.wasm.counter_id?.map((id: string) =>
               parseInt(id),
             );
-            return _.unzip([trade_ids, counter_ids]);
+            return _.unzip([tradeIds, counterIds]);
           })
           .flat();
       })
@@ -189,13 +189,13 @@ async function queryNewTransaction(network: Network) {
     // And we add them in a bunch to the database
     // First the trades
     const tradesToAdd = toAdd.filter((trade: Trade) => trade.counterId === undefined);
-    if (tradesToAdd.length) {
+    if (tradesToAdd.length > 0) {
       await databaseTradeService.addToTradeDB(tradesToAdd);
     }
 
     // Then the counter trades
     const counterTradesToAdd = toAdd.filter((trade: Trade) => trade.counterId !== undefined);
-    if (counterTradesToAdd.length) {
+    if (counterTradesToAdd.length > 0) {
       await databaseTradeService.addToCounterTradeDB(counterTradesToAdd);
     }
 
@@ -223,7 +223,7 @@ async function launchReceiver() {
     } else {
       // `count` represents the number of channels this client are currently subscribed to.
       console.log(
-        `Subscribed successfully! This client is currently subscribed to the trade channel.`,
+        "Subscribed successfully! This client is currently subscribed to the trade channel.",
       );
     }
   });
@@ -264,17 +264,17 @@ async function testQuery() {
 */
 
 /* For testing purposes only */
-//resetDB().then((_)=>queryNewTransaction())
-//testQuery()
+// resetDB().then((_)=>queryNewTransaction())
+// testQuery()
 
 /* Actual event loop */
 if (process.env.FLUSH_DB_ON_STARTUP == "true") {
   resetDB()
-    .then(() => launchReceiver())
+    .then(async () => await launchReceiver())
     // Then query the new transcations for the first time
-    .then(() => queryNewTransaction(Network.devnet));
+    .then(async () => await queryNewTransaction(Network.devnet));
 } else {
   launchReceiver()
     // Then query the new transcations for the first time
-    .then(() => queryNewTransaction(Network.devnet));
+    .then(async () => await queryNewTransaction(Network.devnet));
 }

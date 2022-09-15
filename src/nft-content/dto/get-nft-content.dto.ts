@@ -58,7 +58,6 @@ export class RawTokenInteracted {
   otherNFTInfo?: any;
 }
 
-
 export class TokenInteracted {
   tokenId: string;
   collectionName: string;

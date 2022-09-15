@@ -10,11 +10,11 @@ import {
   TradeInfo,
 } from "./dto/getTrades.dto";
 import { TradeDatabaseService } from "../database/trades/access";
-const camelCaseObjectDeep = require("camelcase-object-deep");
 import { Network } from "../utils/blockchain/dto/network.dto";
 import { UtilsService } from "../utils-api/utils.service";
-import { RawTokenInteracted} from "../nft-content/dto/get-nft-content.dto";
+import { RawTokenInteracted } from "../nft-content/dto/get-nft-content.dto";
 import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
+const camelCaseObjectDeep = require("camelcase-object-deep");
 const pMap = require("p-map");
 
 @Injectable()
@@ -104,7 +104,7 @@ export class TradesService {
     const newCounterTradeInfo = {
       network,
       tradeId,
-      counterId: counterId,
+      counterId,
       tradeInfo: camelCaseObjectDeep(distantCounterTradeInfo),
     };
     // We add it to the database
@@ -134,42 +134,56 @@ export class TradesService {
           tradeInfo.additionalInfo.nftsWanted ?? [],
           async (nft: string): Promise<Collection> =>
             // We get the collection name
-            this.utilsService.getCachedNFTContractInfo(tradeInfo.network, nft),
+            await this.utilsService.getCachedNFTContractInfo(tradeInfo.network, nft),
         ),
       );
     // We fetch metadata for the associated assets :
     tradeInfo.associatedAssets = await pMap(tradeInfo.associatedAssets, async asset => {
       if (asset.cw721Coin) {
-        const address = asset.cw721Coin.address;
-        const tokenId = asset.cw721Coin.tokenId;
-
-        const collectionInfo = await this.utilsService.getCachedNFTContractInfo(
-          tradeInfo.network,
-          address,
-        );
-        const tokenInfo = await this.utilsService.nftInfo(tradeInfo.network, address, tokenId);
-
-        console.log(tokenInfo)
-        const returnToken: RawTokenInteracted = {
-          tokenId,
-          imageUrl: fromIPFSImageURLtoImageURL(tokenInfo?.extension?.image),
-          name: tokenInfo?.extension?.name,
-          attributes: tokenInfo?.extension?.attributes,
-          description: tokenInfo?.extension?.description,
-          traits: (tokenInfo?.extension?.attributes ?? []).map(
-            ({ traitType, value }: { traitType: string; value: string }) => [traitType, value],
-          ),
-        };
-
-        return {
-          cw721Coin: {
-            ...collectionInfo,
-            ...returnToken,
-          },
-        };
+        return await this.addCW721Info(tradeInfo, asset);
+      } else {
+        return asset;
       }
     });
 
+    // We now do the same for the preview NFT
+    if (tradeInfo?.additionalInfo?.tradePreview?.cw721Coin) {
+      tradeInfo.additionalInfo.tradePreview = await this.addCW721Info(
+        tradeInfo,
+        tradeInfo.additionalInfo.tradePreview,
+      );
+    }
+
     return tradeInfo;
+  }
+
+  async addCW721Info(tradeInfo: TradeInfo, asset) {
+    const address = asset.cw721Coin.address;
+    const tokenId = asset.cw721Coin.tokenId;
+
+    const collectionInfo = await this.utilsService.getCachedNFTContractInfo(
+      tradeInfo.network,
+      address,
+    );
+    const tokenInfo = await this.utilsService.nftInfo(tradeInfo.network, address, tokenId);
+
+    console.log(tokenInfo);
+    const returnToken: RawTokenInteracted = {
+      tokenId,
+      imageUrl: fromIPFSImageURLtoImageURL(tokenInfo?.extension?.image),
+      name: tokenInfo?.extension?.name,
+      attributes: tokenInfo?.extension?.attributes,
+      description: tokenInfo?.extension?.description,
+      traits: (tokenInfo?.extension?.attributes ?? []).map(
+        ({ traitType, value }: { traitType: string; value: string }) => [traitType, value],
+      ),
+    };
+
+    return {
+      cw721Coin: {
+        ...collectionInfo,
+        ...returnToken,
+      },
+    };
   }
 }

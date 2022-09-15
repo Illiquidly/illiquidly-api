@@ -11,16 +11,16 @@ export class UtilsController {
 
   @Get("registered-nfts/:network/")
   async registeredNftsEntryPoint(@Param() params: NetworkParam) {
-    return this.utilsService.registeredNFTs(params.network);
+    return await this.utilsService.registeredNFTs(params.network);
   }
 
   @Get("nft-info/:network/:address/:tokenId")
   async nftInfo(@Param() params: TokenDescription) {
-    return this.utilsService.nftInfo(params.network, params.address, params.tokenId);
+    return await this.utilsService.nftInfo(params.network, params.address, params.tokenId);
   }
 
   @Get("nft-info/:network/:address?")
   async allNftInfo(@Param() params: NFTDescription) {
-    return this.utilsService.allNFTInfo(params.network, params.address);
+    return await this.utilsService.allNFTInfo(params.network, params.address);
   }
 }

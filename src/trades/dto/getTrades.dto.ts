@@ -34,8 +34,8 @@ export class TradeInfo {
     time: string;
     nftsWanted: string[];
     tokensWanted: Asset[];
-    lookingFor?: (Partial<Collection> & Coin)[];
-    tradePreview?: Asset;
+    lookingFor?: Array<Partial<Collection> & Coin>;
+    tradePreview?: any;
     traderComment?: {
       comment: string;
       time: string;

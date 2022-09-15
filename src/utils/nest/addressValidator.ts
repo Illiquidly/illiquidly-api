@@ -6,7 +6,7 @@ export function IsAddress() {
     registerDecorator({
       name: "isAddress",
       target: object.constructor,
-      propertyName: propertyName,
+      propertyName,
       options: {
         message: "The address should be a valid Terra Address",
       },

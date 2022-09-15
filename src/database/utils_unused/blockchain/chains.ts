@@ -6,7 +6,7 @@ export const chains: any = {
     chainId: "localterra",
   },
   testnet: {
-    //URL: 'https://pisco-lcd.terra.dev/',
+    // URL: 'https://pisco-lcd.terra.dev/',
     URL: `https://lcd.pisco.terra.setten.io/${settenConfig.settenProject}?key=${settenConfig.settenKey}`,
     chainID: "pisco-1",
     axiosObject: {
@@ -21,7 +21,7 @@ export const chains: any = {
     chainID: "columbus-5",
   },
   mainnet: {
-    //URL: 'https://phoenix-lcd.terra.dev',
+    // URL: 'https://phoenix-lcd.terra.dev',
     URL: `https://lcd.phoenix.terra.setten.io/${settenConfig.settenProject}?key=${settenConfig.settenKey}`,
     chainID: "phoenix-1",
   },

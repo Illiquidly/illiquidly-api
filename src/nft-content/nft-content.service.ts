@@ -58,8 +58,8 @@ export class NftContentService {
       returnData = serialise(defaultContractsApiStructure());
       returnData.state = UpdateState.isUpdating;
     }
-    //Then we process the updateFunction
-    _internal_update(network, address, mode, deserialise(currentData));
+    // Then we process the updateFunction
+    _internalUpdate(network, address, mode, deserialise(currentData));
 
     // And without waiting for the end of execution, we return the data
     return returnData;
@@ -71,7 +71,7 @@ if (process.env.QUERY_TIMEOUT == undefined) {
 }
 const QUERY_TIMEOUT = parseInt(process.env.QUERY_TIMEOUT);
 
-async function _internal_update(
+async function _internalUpdate(
   network: Network,
   address: string,
   mode: UpdateMode,
@@ -82,7 +82,7 @@ async function _internal_update(
   const dbKey = toNFTKey(network, address);
   const lock = await canUpdate(this.redisDB, dbKey);
 
-  if (!lock) {
+  if (lock == null) {
     return;
   }
 
@@ -153,7 +153,7 @@ async function updateAddress(
     currentData.txs.internal.oldest != null &&
     currentData.txs.internal.oldest < currentData.txs.internal.newest
   ) {
-    //Here we can query interval transactions
+    // Here we can query interval transactions
     await queryNewInteractedContracts(
       network,
       address,

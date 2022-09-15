@@ -47,9 +47,9 @@ function fillEmpty(currentData: Nullable<ContractsInteracted>): ContractsInterac
   }
 }
 
-function saveNFTContentToDb(db: Redis, key: string, currentData: ContractsInteracted) {
+async function saveNFTContentToDb(db: Redis, key: string, currentData: ContractsInteracted) {
   const serialisedData = serialise(currentData);
-  return db.set(key, JSON.stringify(serialisedData));
+  return await db.set(key, JSON.stringify(serialisedData));
 }
 
 async function getNFTContentFromDb(db: Redis, key: string): Promise<ContractsInteracted> {
@@ -121,7 +121,10 @@ async function initMutex(db: Redis) {
 }
 
 async function acquireUpdateLock(key: string): Promise<Lock> {
-  return redlock.acquire([`${key}_updateLock_${process.env.DB_VERSION}`], UPDATE_DESPITE_LOCK_TIME);
+  return await redlock.acquire(
+    [`${key}_updateLock_${process.env.DB_VERSION}`],
+    UPDATE_DESPITE_LOCK_TIME,
+  );
 }
 
 export async function releaseUpdateLock(lock: any) {
@@ -160,8 +163,8 @@ async function canUpdate(db: Redis, dbKey: string): Promise<void | Lock> {
   return lock;
 }
 
-function saveJSONToDb(db: Redis, key: string, currentData: any) {
-  return db.set(key, JSON.stringify(currentData));
+async function saveJSONToDb(db: Redis, key: string, currentData: any) {
+  return await db.set(key, JSON.stringify(currentData));
 }
 
 async function getJSONFromDb(db: Redis, key: string): Promise<any> {

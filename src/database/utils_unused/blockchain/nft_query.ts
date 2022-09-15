@@ -9,7 +9,7 @@ async function sendIndependentQuery(
 ): Promise<any> {
   const lcdClient = new LCDClient(chains[networkId]);
 
-  return lcdClient.wasm.contractQuery(contractAddress, query);
+  return await lcdClient.wasm.contractQuery(contractAddress, query);
 }
 
 async function getAllNFTInfo(

@@ -1,8 +1,11 @@
 import { Controller, Get, Patch, Param } from "@nestjs/common";
 import { NftContentService } from "./nft-content.service";
-import { GetNFTWalletContent, UpdateNFTWalletContent } from "./dto/get-nft-content.dto";
+import {
+  GetNFTWalletContent,
+  UpdateNFTWalletContent,
+  SerializableContractsInteracted,
+} from "./dto/get-nft-content.dto";
 import { IsEnum } from "class-validator";
-import { SerializableContractsInteracted } from "./dto/get-nft-content.dto";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Network } from "../utils/blockchain/dto/network.dto";
 
@@ -18,9 +21,9 @@ export class NftContentController {
     type: () => SerializableContractsInteracted,
     description: "Returns the content of a wallet",
   })
-  findNfts(@Param() params: GetNFTWalletContent): Promise<SerializableContractsInteracted> {
+  async findNfts(@Param() params: GetNFTWalletContent): Promise<SerializableContractsInteracted> {
     // Need to validate that network enum
-    return this.nftContentService.findNfts(params.network, params.address);
+    return await this.nftContentService.findNfts(params.network, params.address);
   }
 
   @Patch(":network/:address/:mode")
@@ -29,7 +32,7 @@ export class NftContentController {
     type: () => SerializableContractsInteracted,
     description: "Updates and Returns the content of a wallet",
   })
-  update(@Param() params: UpdateNFTWalletContent) {
-    return this.nftContentService.update(params.network, params.address, params.mode);
+  async update(@Param() params: UpdateNFTWalletContent) {
+    return await this.nftContentService.update(params.network, params.address, params.mode);
   }
 }
