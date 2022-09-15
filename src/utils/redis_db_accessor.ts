@@ -6,7 +6,6 @@ import {
   UpdateState,
 } from "../nft-content/dto/get-nft-content.dto";
 
-
 function createRedisClient() {
   // We start the db
   return new Redis();
@@ -122,23 +121,20 @@ async function initMutex(db: Redis) {
 }
 
 async function acquireUpdateLock(key: string): Promise<Lock> {
-  return redlock.acquire(
-    [`${key}_updateLock_${process.env.DB_VERSION!}`],
-    UPDATE_DESPITE_LOCK_TIME,
-  );
+  return redlock.acquire([`${key}_updateLock_${process.env.DB_VERSION}`], UPDATE_DESPITE_LOCK_TIME);
 }
 
 export async function releaseUpdateLock(lock: any) {
-  await lock.release().catch((_error: any) => console.log("Lock already released"));
+  await lock.release().catch(() => console.log("Lock already released"));
 }
 
 async function lastUpdateStartTime(db: Redis, key: string): Promise<number> {
-  let updateTime = await db.get(`${key}_updateStartTime${process.env.DB_VERSION!}`);
+  const updateTime = await db.get(`${key}_updateStartTime${process.env.DB_VERSION}`);
   return parseInt(updateTime);
 }
 
 async function setLastUpdateStartTime(db: Redis, key: string, time: number) {
-  await db.set(`${key}_updateStartTime${process.env.DB_VERSION!}`, time);
+  await db.set(`${key}_updateStartTime${process.env.DB_VERSION}`, time);
 }
 
 async function canUpdate(db: Redis, dbKey: string): Promise<void | Lock> {
@@ -151,7 +147,7 @@ async function canUpdate(db: Redis, dbKey: string): Promise<void | Lock> {
   // Then we check that we can update the records (and someone is not doing the same thing simultaneously)
   // We do that my using a Redis Redlock. This Redlock lasts at most UPDATE_DESPITE_LOCK_TIME, to not be blocking in case of program crash
   let isLocked = false;
-  let lock = await acquireUpdateLock(dbKey).catch(_error => {
+  const lock = await acquireUpdateLock(dbKey).catch(_error => {
     console.log(_error);
     console.log("islocked");
     isLocked = true;

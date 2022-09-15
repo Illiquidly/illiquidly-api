@@ -7,15 +7,19 @@ import { TxLog } from "@terra-money/terra.js";
 const camelcaseObjectDeep = require("camelcase-object-deep");
 
 import { chains, contracts } from "../../utils/blockchain/chains";
-import { getCounterTradeInfo, getTradeInfo} from "../../utils/blockchain/p2pTradeQuery";
+import { getCounterTradeInfo, getTradeInfo } from "../../utils/blockchain/p2pTradeQuery";
 import { createRedisClient } from "../../utils/redis_db_accessor";
 import { asyncAction } from "../../utils/js/asyncAction";
-import { addToTradeDB, addToCounterTradeDB, getCounterTrades, Trade, getTrades } from "../../database/trades/access";
+import { TradeDatabaseService } from "../../database/trades/access";
 import { createTradeDB, flushTradeDB, initDB } from "../../database/trades/structure";
 import { Network } from "../../utils/blockchain/dto/network.dto";
 import { QueueMessage } from "./websocket-server";
+import { sleep } from "../../utils/js/sleep";
+import { RedisService } from "nestjs-redis";
+import { Trade } from "../../trades/dto/getTrades.dto";
+import { NFTInfoService } from "../../database/nft_info/access";
 
-let redisHashSetName: string = process.env.REDIS_TXHASH_SET!;
+const redisHashSetName: string = process.env.REDIS_TXHASH_SET;
 
 async function getHashSetCardinal(db: Redis) {
   return db.scard(redisHashSetName);
@@ -25,8 +29,16 @@ async function hasTx(db: Redis, txHash: string): Promise<boolean> {
   return (await db.sismember(redisHashSetName, txHash)) == 1;
 }
 
-let txHashClient = createRedisClient();
+const txHashClient = createRedisClient();
 const knexDB = initDB();
+
+const redisService = new RedisService({
+  defaultKey: "client",
+  clients: new Map().set("client", txHashClient),
+  size: 1,
+});
+const nftInfoService = new NFTInfoService(knexDB);
+const databaseTradeService = new TradeDatabaseService(knexDB, redisService, nftInfoService);
 
 async function resetDB() {
   await txHashClient.del(redisHashSetName);
@@ -44,8 +56,8 @@ async function queryNewTransaction(network: Network) {
   let continueQuerying = true;
   do {
     // We start querying after we left off
-    let offset = await getHashSetCardinal(txHashClient);
-    let [err, response] = await asyncAction(
+    const offset = await getHashSetCardinal(txHashClient);
+    const [err, response] = await asyncAction(
       lcd.get("/cosmos/tx/v1beta1/txs", {
         params: {
           events: `wasm._contract_address='${contracts[network].p2pTrade}'`,
@@ -53,6 +65,7 @@ async function queryNewTransaction(network: Network) {
         },
       }),
     );
+    console.log(offset, response.data);
     // If we get no lcd tx result
     if (err) {
       console.log(err);
@@ -60,50 +73,50 @@ async function queryNewTransaction(network: Network) {
     }
 
     // We start by querying only new transactions (We do this in two steps, as the filter function doesn't wait for async results)
-    let txFilter = await Promise.all(
-      response.data.tx_responses.map(
-        async (tx: any) => !(await hasTx(txHashClient, tx.txhash)),
-      ),
+    const txFilter = await Promise.all(
+      response.data.tx_responses.map(async (tx: any) => !(await hasTx(txHashClient, tx.txhash))),
     );
-    let txToAnalyse = response.data.tx_responses.filter((_1: any, i: number) => txFilter[i]);
+    const txToAnalyse = response.data.tx_responses.filter((_1: any, i: number) => txFilter[i]);
 
     // Then we iterate over the transactions and get the trade_id and/or (trade_id, counter_id)
-    let idsToQuery: number[][] = txToAnalyse
+    const idsToQuery: number[][] = txToAnalyse
       .map((tx: any) => {
         return tx.logs
           .map((log: any): number[][] => {
-            let txLog = new TxLog(log.msg_index, log.log, log.events);
-            let trade_ids = txLog.eventsByType.wasm.trade_id?.map((id: string) => parseInt(id));
-            let counter_ids = txLog.eventsByType.wasm.counter_id?.map((id: string) => parseInt(id));
+            const txLog = new TxLog(log.msg_index, log.log, log.events);
+            const trade_ids = txLog.eventsByType.wasm.trade_id?.map((id: string) => parseInt(id));
+            const counter_ids = txLog.eventsByType.wasm.counter_id?.map((id: string) =>
+              parseInt(id),
+            );
             return _.unzip([trade_ids, counter_ids]);
           })
           .flat();
       })
       .flat();
 
+    console.log(idsToQuery);
+
     // The we query the blockchain for trade info and put it into the database
-    let toAdd: Trade[] = (
+    const toAdd: Trade[] = (
       await pMap(
         _.compact(idsToQuery),
         async (id: number[]) => {
           if (id.length == 1) {
-            let [tradeId] = id;
+            const [tradeId] = id;
             // We query the trade_info
-            let tradeInfo = await getTradeInfo(network, tradeId);
+            const tradeInfo = await getTradeInfo(network, tradeId);
 
             // We query all counters associated with this trade in the db and update them here
-            let counterIds = (
-              await getCounterTrades(
-                knexDB,
-                {
-                  "filters.network":network,
-                  "filters.trade_id": [tradeId],
+            const counterIds = (
+              await databaseTradeService.getCounterTrades({
+                "filters.network": network,
+                "filters.tradeId": [tradeId],
               })
             ).map(counterInfo => counterInfo.counterId);
-            let counterTradeInfos = await pMap(
+            const counterTradeInfos = await pMap(
               counterIds,
               async (counterId: number) => {
-                let counterTradeInfo = await getCounterTradeInfo(network, tradeId, counterId);
+                const counterTradeInfo = await getCounterTradeInfo(network, tradeId, counterId);
                 return {
                   network,
                   tradeId,
@@ -125,23 +138,22 @@ async function queryNewTransaction(network: Network) {
               ...counterTradeInfos,
             ];
           } else {
-            let [tradeId, counterId] = id;
+            const [tradeId, counterId] = id;
             // We query the tradeInfo and counterTradeInfo
-            let tradeInfo: any = await getTradeInfo(network, tradeId);
-            let counterTradeInfo = await getCounterTradeInfo(network, tradeId, counterId);
+            const tradeInfo: any = await getTradeInfo(network, tradeId);
+            const counterTradeInfo = await getCounterTradeInfo(network, tradeId, counterId);
 
             // We query all counters associated with this trade in the db and update them here
-            let counterIds = (
-              await getCounterTrades(knexDB,
-                {
-                  "filters.network":network,
-                  "filters.trade_id": [tradeId],
+            const counterIds = (
+              await databaseTradeService.getCounterTrades({
+                "filters.network": network,
+                "filters.tradeId": [tradeId],
               })
             ).map(counterInfo => counterInfo.counterId);
-            let allCounterTradeInfos = await pMap(
+            const allCounterTradeInfos = await pMap(
               counterIds,
               async (counterId: number) => {
-                let counterTradeInfo = await getCounterTradeInfo(network, tradeId, counterId);
+                const counterTradeInfo = await getCounterTradeInfo(network, tradeId, counterId);
                 return {
                   network,
                   tradeId,
@@ -176,35 +188,34 @@ async function queryNewTransaction(network: Network) {
 
     // And we add them in a bunch to the database
     // First the trades
-    let tradesToAdd = toAdd.filter((trade: Trade) => trade.counterId === undefined);
+    const tradesToAdd = toAdd.filter((trade: Trade) => trade.counterId === undefined);
     if (tradesToAdd.length) {
-      await addToTradeDB(knexDB, tradesToAdd);
+      await databaseTradeService.addToTradeDB(tradesToAdd);
     }
 
     // Then the counter trades
-    let counterTradesToAdd = toAdd.filter((trade: Trade) => trade.counterId !== undefined);
+    const counterTradesToAdd = toAdd.filter((trade: Trade) => trade.counterId !== undefined);
     if (counterTradesToAdd.length) {
-      await addToCounterTradeDB(knexDB, counterTradesToAdd);
+      await databaseTradeService.addToCounterTradeDB(counterTradesToAdd);
     }
 
     // We add the transaction hashes to the redis set :
     await txHashClient.sadd(
-        redisHashSetName,
-        response.data.tx_responses.map((tx: any) => tx.txhash),
-      );
+      redisHashSetName,
+      response.data.tx_responses.map((tx: any) => tx.txhash),
+    );
 
     // If no transactions queried were a analyzed, we return
     if (!txToAnalyse.length) {
       continueQuerying = false;
     }
-
   } while (continueQuerying);
 }
 
 async function launchReceiver() {
-  let db = createRedisClient();
+  const db = createRedisClient();
 
-  db.subscribe(process.env.P2P_QUEUE_NAME!, (err: any, _) => {
+  db.subscribe(process.env.P2P_QUEUE_NAME, (err: any) => {
     if (err) {
       // Just like other commands, subscribe() can fail for some reasons,
       // ex network issues.
@@ -217,40 +228,40 @@ async function launchReceiver() {
     }
   });
 
-  let isAlreadyQuerying = {
-
-  };
+  const isAlreadyQuerying = {};
   db.on("message", async (channel, message) => {
-    if (
-      channel == process.env.P2P_QUEUE_NAME!
-    ) {
-      let parsedMessage: QueueMessage = JSON.parse(message);
-      if(
+    if (channel == process.env.P2P_QUEUE_NAME) {
+      const parsedMessage: QueueMessage = JSON.parse(message);
+      if (
         parsedMessage.message == process.env.TRIGGER_P2P_TRADE_QUERY_MSG &&
         !isAlreadyQuerying[parsedMessage.network]
-      ){
+      ) {
         console.log("New Trade Message Received", new Date().toLocaleString(), parsedMessage);
         isAlreadyQuerying[parsedMessage.network] = true;
+        // We await 2 seconds for the fcd to update
+        await sleep(2000);
         await queryNewTransaction(parsedMessage.network);
         isAlreadyQuerying[parsedMessage.network] = false;
       }
     }
   });
 }
-
+/*
 async function testQuery() {
   const lcd = Axios.create(
-    chains[process.env.CHAIN!].axiosObject ?? {
+    chains[process.env.CHAIN].axiosObject ?? {
       baseURL: chains["testnet"].URL,
     },
   );
-  let response = await lcd.get("/cosmos/tx/v1beta1/txs", {
+  const response = await lcd.get("/cosmos/tx/v1beta1/txs", {
     params: {
       events: `wasm._contract_address='${contracts["testnet"].p2pTrade}'`,
       "pagination.offset": 200,
     },
   });
+  console.log(response)
 }
+*/
 
 /* For testing purposes only */
 //resetDB().then((_)=>queryNewTransaction())
@@ -259,11 +270,11 @@ async function testQuery() {
 /* Actual event loop */
 if (process.env.FLUSH_DB_ON_STARTUP == "true") {
   resetDB()
-    .then(_ => launchReceiver())
+    .then(() => launchReceiver())
     // Then query the new transcations for the first time
-    .then(() => queryNewTransaction(Network.testnet));
+    .then(() => queryNewTransaction(Network.devnet));
 } else {
   launchReceiver()
     // Then query the new transcations for the first time
-    .then(() => queryNewTransaction(Network.testnet));
+    .then(() => queryNewTransaction(Network.devnet));
 }

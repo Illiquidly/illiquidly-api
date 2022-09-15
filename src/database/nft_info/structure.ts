@@ -1,4 +1,4 @@
-import knex, { Knex } from "knex";
+import { Knex } from "knex";
 
 async function createNFTInfoDB(knexDB: Knex) {
   await knexDB.schema
@@ -14,8 +14,9 @@ async function createNFTInfoDB(knexDB: Knex) {
 }
 
 async function flushNFTInfoDB(knexDB: Knex) {
-  await knexDB.schema.dropTable("token_info").catch(() => {});
-  await knexDB.schema.dropTable("nft_info").catch(() => {});
+  await knexDB.schema.dropTable("nft_info").catch(() => {
+    console.log("Couldn't delete the nft_info table");
+  });
 }
 
 export { createNFTInfoDB, flushNFTInfoDB };

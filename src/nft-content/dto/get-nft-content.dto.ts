@@ -37,13 +37,12 @@ class NFTAttribute {
 
 type Traits = [string, string];
 
-export class TokenInteracted {
+export class RawTokenInteracted {
   tokenId: string;
-  collectionName: string;
-  contractAddress: string;
-  imageUrl: string;
+  imageUrl?: string[] | string;
   name?: string;
   attributes?: NFTAttribute[];
+  description?: string;
   @ApiProperty({
     type: "array",
     items: {
@@ -57,6 +56,31 @@ export class TokenInteracted {
   })
   traits?: Traits[];
   otherNFTInfo?: any;
+}
+
+
+export class TokenInteracted {
+  tokenId: string;
+  collectionName: string;
+  collectionAddress: string;
+  symbol: string;
+  imageUrl?: string[] | string;
+  name?: string;
+  attributes?: NFTAttribute[];
+  description?: string;
+  @ApiProperty({
+    type: "array",
+    items: {
+      type: "array",
+      items: {
+        type: "string",
+      },
+      minItems: 2,
+      maxItems: 2,
+    },
+  })
+  traits?: Traits[];
+  allNFTInfo?: any;
 }
 
 export class SerializableContractsInteracted {

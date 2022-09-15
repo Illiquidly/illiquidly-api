@@ -10,7 +10,7 @@ export enum Network {
 }
 
 async function getTradeInfo(network: Network, tradeId: number): Promise<any> {
-  let terra = new LCDClient(chains[network]);
+  const terra = new LCDClient(chains[network]);
   return terra.wasm.contractQuery(contracts[network].p2pTrade, {
     trade_info: {
       trade_id: tradeId,
@@ -23,7 +23,7 @@ async function getCounterTradeInfo(
   tradeId: number,
   counterId: number,
 ): Promise<any> {
-  let terra = new LCDClient(chains[network]);
+  const terra = new LCDClient(chains[network]);
   return terra.wasm.contractQuery(contracts[network].p2pTrade, {
     counter_trade_info: {
       trade_id: tradeId,

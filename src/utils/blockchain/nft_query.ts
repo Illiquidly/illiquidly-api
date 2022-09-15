@@ -12,6 +12,14 @@ async function sendIndependentQuery(
   return lcdClient.wasm.contractQuery(contractAddress, query);
 }
 
+async function getContractInfo(network: string, nftContractAddress: string): Promise<any> {
+  const nftInfo = await sendIndependentQuery(network, nftContractAddress, {
+    contract_info: {},
+  });
+
+  return nftInfo;
+}
+
 async function getAllNFTInfo(
   network: string,
   nftContractAddress: string,
@@ -70,4 +78,4 @@ const getAllTokens = async (network: string, address: string, limit = 100) => {
   return response.flat();
 };
 
-export { getAllNFTInfo, getNumTokens, getAllTokens };
+export { getAllNFTInfo, getContractInfo, getNumTokens, getAllTokens };

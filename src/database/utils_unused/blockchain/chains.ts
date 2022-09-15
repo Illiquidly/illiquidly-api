@@ -42,7 +42,7 @@ export const contracts: any = {
   },
 };
 
-export let fcds: any = {
+export const fcds: any = {
   testnet: "https://pisco-fcd.terra.dev",
   classic: "https://columbus-fcd.terra.dev",
   mainnet: "https://phoenix-fcd.terra.dev",

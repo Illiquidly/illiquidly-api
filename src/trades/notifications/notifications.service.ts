@@ -2,12 +2,11 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Network } from "../../utils/blockchain/dto/network.dto";
 import { asyncAction } from "../../utils/js/asyncAction";
 import { MultipleNotificationsResponse } from "../dto/getTrades.dto";
-import { getNotifications, markNotificationsRead } from "../../database/trades/access";
-import { InjectKnex, Knex } from "nestjs-knex";
+import { TradeDatabaseService } from "../../database/trades/access";
 
 @Injectable()
 export class NotificationsService {
-  constructor(@InjectKnex() private readonly knex: Knex) {}
+  constructor(private readonly tradeDatabaseService: TradeDatabaseService) {}
 
   async queryNotifications(
     network: Network,
@@ -16,7 +15,7 @@ export class NotificationsService {
     offset: number,
   ): Promise<MultipleNotificationsResponse> {
     const [err, userNotifications] = await asyncAction(
-      getNotifications(this.knex, {
+      this.tradeDatabaseService.getNotifications({
         network,
         user,
         limit,
@@ -28,9 +27,21 @@ export class NotificationsService {
       throw new NotFoundException("Notifications Not Found");
     }
 
+    const [nbErr, notificationNumber] = await asyncAction(
+      this.tradeDatabaseService.getNotificationNumber({
+        network,
+        user,
+      }),
+    );
+
+    if (nbErr) {
+      throw new NotFoundException("Error getting total number of Notifications");
+    }
+
     return {
       data: userNotifications,
       nextOffset: offset ?? 0 + userNotifications.length,
+      totalNumber: notificationNumber,
     };
   }
 
@@ -38,8 +49,8 @@ export class NotificationsService {
     if (!notificationId && !user) {
       throw new BadRequestException("You must indicate a user address or a notification id");
     }
-    let [err, _userNotifications] = await asyncAction(
-      markNotificationsRead(this.knex, {
+    const [err] = await asyncAction(
+      this.tradeDatabaseService.markNotificationsRead({
         network,
         notificationId,
         user,

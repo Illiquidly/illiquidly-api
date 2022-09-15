@@ -3,7 +3,7 @@ import { NftContentModule } from "./nft-content/nft-content.module";
 import { UtilsModule } from "./utils-api/utils.module";
 import { TradesModule } from "./trades/trades.module";
 import { KnexModule } from "nestjs-knex";
-import { RedisModule} from 'nestjs-redis'
+import { RedisModule } from "nestjs-redis";
 
 @Module({
   imports: [
@@ -22,7 +22,7 @@ import { RedisModule} from 'nestjs-redis'
         },
       },
     }),
-    RedisModule.register({})
+    RedisModule.register({}),
   ],
   controllers: [],
   providers: [],

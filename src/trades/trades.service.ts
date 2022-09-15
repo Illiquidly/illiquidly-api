@@ -1,37 +1,55 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { getCounterTradeInfo, getTradeInfo } from "../utils/blockchain/p2pTradeQuery";
 import { asyncAction } from "../utils/js/asyncAction";
-import { MultipleTradeResponse, QueryParameters, Trade } from "./dto/getTrades.dto";
 import {
-  addToCounterTradeDB,
-  addToTradeDB,
-  getCounterTrade,
-  getCounterTrades,
-  getTrade,
-  getTrades,
-} from "../database/trades/access";
+  Coin,
+  Collection,
+  MultipleTradeResponse,
+  QueryParameters,
+  Trade,
+  TradeInfo,
+} from "./dto/getTrades.dto";
+import { TradeDatabaseService } from "../database/trades/access";
 const camelCaseObjectDeep = require("camelcase-object-deep");
 import { Network } from "../utils/blockchain/dto/network.dto";
-import { InjectKnex, Knex } from "nestjs-knex";
+import { UtilsService } from "../utils-api/utils.service";
+import { RawTokenInteracted} from "../nft-content/dto/get-nft-content.dto";
+import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
+const pMap = require("p-map");
 
 @Injectable()
 export class TradesService {
-  constructor(@InjectKnex() private readonly knexDB: Knex) {}
+  constructor(
+    private readonly tradeDatabaseService: TradeDatabaseService,
+    private readonly utilsService: UtilsService,
+  ) {}
 
   async getMultipleTrades(params: QueryParameters): Promise<MultipleTradeResponse> {
-    let [err, tradeInfo] = await asyncAction(getTrades(this.knexDB, params));
+    const [err, tradeInfo] = await asyncAction(this.tradeDatabaseService.getTrades(params));
     if (err || !tradeInfo.length) {
+      console.log(err);
       throw new NotFoundException("Trades Not Found");
     }
-    let offset = params?.["pagination.offset"];
+    const offset = params?.["pagination.offset"];
+
+    const [nbErr, tradeNumber] = await asyncAction(
+      this.tradeDatabaseService.getTradeNumber(params),
+    );
+
+    if (nbErr) {
+      console.log(nbErr);
+      throw new NotFoundException("Error getting total number of Trades");
+    }
+
     return {
       data: tradeInfo,
       nextOffset: offset ?? 0 + tradeInfo.length,
+      totalNumber: tradeNumber,
     };
   }
 
   async getMultipleCounterTrades(params: QueryParameters): Promise<MultipleTradeResponse> {
-    let [err, tradeInfo] = await asyncAction(getCounterTrades(this.knexDB, params));
+    const [err, tradeInfo] = await asyncAction(this.tradeDatabaseService.getCounterTrades(params));
     if (err || !tradeInfo.length) {
       throw new NotFoundException("Counter Trades Not Found");
     }
@@ -39,24 +57,28 @@ export class TradesService {
   }
 
   async getSingleTrade(network: Network, tradeId: number): Promise<Trade> {
-    let [err, tradeInfo] = await asyncAction(getTrade(this.knexDB, network, tradeId));
-    if (err) {
-      // We try to query the trade on_chain directly :
-      let queryErr: any;
-      [queryErr, tradeInfo] = await asyncAction(getTradeInfo(network, tradeId));
-      if (queryErr) {
-        throw new NotFoundException("Trade Not Found");
-      }
-      tradeInfo = {
-        network,
-        tradeId,
-        counterId: undefined,
-        tradeInfo: camelCaseObjectDeep(tradeInfo),
-      };
-      // We add it to the database
-      await addToTradeDB(this.knexDB, [tradeInfo]);
+    const [, tradeInfo] = await asyncAction(this.tradeDatabaseService.getTrade(network, tradeId));
+
+    if (tradeInfo) {
+      tradeInfo.tradeInfo = await this.addInfoToTradeInfo(tradeInfo.tradeInfo);
+      return tradeInfo;
     }
-    return tradeInfo;
+
+    // We try to query the trade on_chain directly :
+    const [queryErr, distantTradeInfo] = await asyncAction(getTradeInfo(network, tradeId));
+    if (queryErr) {
+      throw new NotFoundException("Trade Not Found");
+    }
+
+    const newTradeInfo = {
+      network,
+      tradeId,
+      counterId: undefined,
+      tradeInfo: camelCaseObjectDeep(await this.addInfoToTradeInfo(distantTradeInfo)),
+    };
+    // We add it to the database
+    await this.tradeDatabaseService.addToTradeDB([newTradeInfo]);
+    return newTradeInfo;
   }
 
   async getSingleCounterTrade(
@@ -64,27 +86,90 @@ export class TradesService {
     tradeId: number,
     counterId: number,
   ): Promise<Trade> {
-    let [err, counterTradeInfo] = await asyncAction(
-      getCounterTrade(this.knexDB, network, tradeId, counterId),
+    const [, counterTradeInfo] = await asyncAction(
+      this.tradeDatabaseService.getCounterTrade(network, tradeId, counterId),
     );
-    if (err) {
-      // We try to query the counter_trade on_chain directly :
-      let queryErr: any;
-      [queryErr, counterTradeInfo] = await asyncAction(
-        getCounterTradeInfo(network, tradeId, counterId),
-      );
-      if (queryErr) {
-        throw new NotFoundException("Counter Trade Not Found");
-      }
-      counterTradeInfo = {
-        network,
-        tradeId,
-        counterId: counterId,
-        tradeInfo: camelCaseObjectDeep(counterTradeInfo),
-      };
-      // We add it to the database
-      await addToCounterTradeDB(this.knexDB, [counterTradeInfo]);
+
+    if (counterTradeInfo) {
+      return counterTradeInfo;
     }
-    return counterTradeInfo;
+    // We try to query the counter_trade on_chain directly :
+    const [queryErr, distantCounterTradeInfo] = await asyncAction(
+      getCounterTradeInfo(network, tradeId, counterId),
+    );
+    if (queryErr) {
+      throw new NotFoundException("Counter Trade Not Found");
+    }
+
+    const newCounterTradeInfo = {
+      network,
+      tradeId,
+      counterId: counterId,
+      tradeInfo: camelCaseObjectDeep(distantCounterTradeInfo),
+    };
+    // We add it to the database
+    await this.tradeDatabaseService.addToCounterTradeDB([newCounterTradeInfo]);
+
+    return newCounterTradeInfo;
+  }
+
+  async addInfoToTradeInfo(tradeInfo: TradeInfo): Promise<TradeInfo> {
+    // We modify the tradeInfo lookingFor info. It merges nfts_wanted and tokens_wanted
+    tradeInfo.additionalInfo.lookingFor = (tradeInfo.additionalInfo.tokensWanted ?? [])
+      .map((token): Coin => {
+        if (token.coin) {
+          return {
+            currency: token.coin.denom,
+            amount: token.coin.amount,
+          };
+        } else {
+          return {
+            currency: token.cw20_coin.address,
+            amount: token.cw20_coin.amount,
+          };
+        }
+      })
+      .concat(
+        await pMap(
+          tradeInfo.additionalInfo.nftsWanted ?? [],
+          async (nft: string): Promise<Collection> =>
+            // We get the collection name
+            this.utilsService.getCachedNFTContractInfo(tradeInfo.network, nft),
+        ),
+      );
+    // We fetch metadata for the associated assets :
+    tradeInfo.associatedAssets = await pMap(tradeInfo.associatedAssets, async asset => {
+      if (asset.cw721Coin) {
+        const address = asset.cw721Coin.address;
+        const tokenId = asset.cw721Coin.tokenId;
+
+        const collectionInfo = await this.utilsService.getCachedNFTContractInfo(
+          tradeInfo.network,
+          address,
+        );
+        const tokenInfo = await this.utilsService.nftInfo(tradeInfo.network, address, tokenId);
+
+        console.log(tokenInfo)
+        const returnToken: RawTokenInteracted = {
+          tokenId,
+          imageUrl: fromIPFSImageURLtoImageURL(tokenInfo?.extension?.image),
+          name: tokenInfo?.extension?.name,
+          attributes: tokenInfo?.extension?.attributes,
+          description: tokenInfo?.extension?.description,
+          traits: (tokenInfo?.extension?.attributes ?? []).map(
+            ({ traitType, value }: { traitType: string; value: string }) => [traitType, value],
+          ),
+        };
+
+        return {
+          cw721Coin: {
+            ...collectionInfo,
+            ...returnToken,
+          },
+        };
+      }
+    });
+
+    return tradeInfo;
   }
 }

@@ -15,19 +15,17 @@ import {
 import { validateRequest } from "../utils/js/validateRequests";
 import { Network } from "../utils/blockchain/dto/network.dto";
 import { NftContentQuerierService } from "./nft-content-querier.service";
-import { RedisService } from 'nestjs-redis';
+import { RedisService } from "nestjs-redis";
 import Redis from "ioredis";
 
 const _ = require("lodash");
 
 function toNFTKey(network: string, address: string) {
-  return `nft:${address}@${network}_${process.env.DB_VERSION!}`;
+  return `nft:${address}@${network}_${process.env.DB_VERSION}`;
 }
 
 @Injectable()
 export class NftContentService {
-
-
   redisDB: Redis;
 
   constructor(
@@ -41,8 +39,8 @@ export class NftContentService {
     validateRequest(network);
 
     // We get the db data
-    let dbKey = toNFTKey(network, address);
-    let currentData: ContractsInteracted = await getNFTContentFromDb(this.redisDB, dbKey);
+    const dbKey = toNFTKey(network, address);
+    const currentData: ContractsInteracted = await getNFTContentFromDb(this.redisDB, dbKey);
 
     return serialise(currentData);
   }
@@ -51,7 +49,7 @@ export class NftContentService {
     validateRequest(network, mode);
 
     // First we get the current data
-    let currentData = await this.findNfts(network, address);
+    const currentData = await this.findNfts(network, address);
 
     let returnData = { ...currentData };
     if (mode == UpdateMode.UPDATE) {
@@ -81,16 +79,16 @@ async function _internal_update(
 ) {
   // Here we want to update the database
 
-  let dbKey = toNFTKey(network, address);
-  let lock = await canUpdate(this.redisDB, dbKey);
+  const dbKey = toNFTKey(network, address);
+  const lock = await canUpdate(this.redisDB, dbKey);
 
   if (!lock) {
     return;
   }
 
   // We deal with timeouts and shit
-  let hasTimedOut = { timeout: false };
-  let timeout = setTimeout(async () => {
+  const hasTimedOut = { timeout: false };
+  const timeout = setTimeout(async () => {
     hasTimedOut.timeout = true;
     console.log("has timed-out");
   }, QUERY_TIMEOUT);
@@ -220,9 +218,9 @@ async function updateOwnedTokensAndSave(
     // We update the owned tokens
     ownedTokens.forEach((token: TokenInteracted) => {
       // First we find if the token data already exists in the array
-      let existingIndex = currentData.ownedTokens.findIndex(
+      const existingIndex = currentData.ownedTokens.findIndex(
         element =>
-          element.tokenId == token.tokenId && element.contractAddress == token.contractAddress,
+          element.tokenId == token.tokenId && element.collectionAddress == token.collectionAddress,
       );
       if (existingIndex == -1) {
         currentData.ownedTokens.push(token);
@@ -235,7 +233,7 @@ async function updateOwnedTokensAndSave(
     currentData.ownedCollections = _.uniqBy(
       currentData.ownedTokens.map(token => ({
         collectionName: token.collectionName,
-        collectionAddress: token.contractAddress,
+        collectionAddress: token.collectionAddress,
       })),
       "collectionAddress",
     );

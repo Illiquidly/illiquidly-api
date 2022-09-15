@@ -1,9 +1,9 @@
-import { Controller, Get, Patch, Param, Logger } from "@nestjs/common";
+import { Controller, Get, Patch, Param } from "@nestjs/common";
 import { NftContentService } from "./nft-content.service";
-import { GetNFTWalletContent, UpdateMode, UpdateNFTWalletContent } from "./dto/get-nft-content.dto";
+import { GetNFTWalletContent, UpdateNFTWalletContent } from "./dto/get-nft-content.dto";
 import { IsEnum } from "class-validator";
 import { SerializableContractsInteracted } from "./dto/get-nft-content.dto";
-import { ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Network } from "../utils/blockchain/dto/network.dto";
 
 @ApiTags("NFT Content API")
@@ -11,8 +11,6 @@ import { Network } from "../utils/blockchain/dto/network.dto";
 export class NftContentController {
   constructor(private readonly nftContentService: NftContentService) {}
 
-
-  
   @Get(":network/:address")
   @IsEnum(Network)
   @ApiResponse({

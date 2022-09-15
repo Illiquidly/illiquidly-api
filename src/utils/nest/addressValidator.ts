@@ -1,8 +1,8 @@
-import { registerDecorator, ValidationArguments } from "class-validator";
+import { registerDecorator } from "class-validator";
 import { bech32 } from "bech32";
 
 export function IsAddress() {
-  return function (object: Object, propertyName: string) {
+  return function (object: any, propertyName: string) {
     registerDecorator({
       name: "isAddress",
       target: object.constructor,
@@ -11,7 +11,7 @@ export function IsAddress() {
         message: "The address should be a valid Terra Address",
       },
       validator: {
-        validate(value: any, _args: ValidationArguments) {
+        validate(value: any) {
           try {
             const { prefix: decodedPrefix } = bech32.decode(value); // throw error if checksum is invalid
             // verify address prefix

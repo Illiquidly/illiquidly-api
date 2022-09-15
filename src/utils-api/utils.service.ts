@@ -1,17 +1,17 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { Network } from "../utils/blockchain/dto/network.dto";
 import { validateRequest } from "../utils/js/validateRequests";
 
-import { registeredNFTs } from "../utils/blockchain/queryNFTInfo";
+import { getRegisteredNFTs } from "../utils/blockchain/queryNFTInfo";
 import { asyncAction } from "../utils/js/asyncAction";
 import { getJSONFromDb, saveJSONToDb } from "../utils/redis_db_accessor";
 
-import { getAllNFTInfo } from "../utils/blockchain/nft_query.js";
-import { sendBackError } from "../utils/js/sendBackError";
-import { Knex } from "knex";
-import { InjectKnex } from "nestjs-knex";
-import { RedisService } from 'nestjs-redis';
+import { getAllNFTInfo, getContractInfo } from "../utils/blockchain/nft_query.js";
+
+import { RedisService } from "nestjs-redis";
 import Redis from "ioredis";
+import { NFTInfoService } from "../database/nft_info/access";
+import { NftContractInfo } from "../database/nft_info/dto/nftInfo.dto";
 
 export function toAllNFTInfoKey(network: string) {
   return `all_nft_info:${network}`;
@@ -23,20 +23,59 @@ export function toExistingTokenKey(network: string) {
 
 @Injectable()
 export class UtilsService {
-
   redisDB: Redis;
 
   constructor(
-    @InjectKnex() private readonly knexDB: Knex,
     private readonly redisService: RedisService,
+    private readonly nftInfoService: NFTInfoService,
   ) {
     this.redisDB = redisService.getClient();
   }
 
-  async registeredNfts(network: Network) {
-    validateRequest(network);
+  async registeredNFTs(network: Network) {
+    const [err, knownNfts] = await asyncAction(getRegisteredNFTs(network));
 
-    return await registeredNFTs(this.knexDB, network);
+    if (!err) {
+      // We save those nft information to the NFT db if there was no error
+      await this.nftInfoService.addNftInfo(
+        Object.entries(knownNfts).map(([key, value]: [string, any]) => ({
+          network,
+          collectionAddress: key,
+          collectionName: value.name,
+          symbol: value.symbol,
+        })),
+      );
+    }
+
+    return knownNfts;
+  }
+
+  async registeredNFTAddresses(network: Network) {
+    return Object.keys(await this.registeredNFTs(network));
+  }
+
+  async getCachedNFTContractInfo(network: Network, nft: string): Promise<NftContractInfo> {
+    const [err, cachedInfo] = await asyncAction(this.nftInfoService.getNftInfo(network, nft));
+
+    if (!err && cachedInfo?.[0]) {
+      return cachedInfo[0];
+    }
+
+    // If there is no cached info, we get the distant info
+    const [lcdErr, newInfo] = await asyncAction(getContractInfo(network, nft));
+    if (lcdErr) {
+      throw new NotFoundException("Collection not found");
+    }
+
+    const newInfoToSave = {
+      network: network,
+      collectionAddress: nft,
+      collectionName: newInfo.name,
+      symbol: newInfo.symbol,
+    };
+    await this.nftInfoService.addNftInfo([newInfoToSave]);
+
+    return newInfoToSave;
   }
 
   async nftInfo(network: Network, address: string, tokenId: string) {
@@ -44,7 +83,7 @@ export class UtilsService {
 
     const allNFTInfoKey = toAllNFTInfoKey(network);
 
-    let [_, allNFTInfo] = await asyncAction(getJSONFromDb(this.redisDB, allNFTInfoKey));
+    const [, allNFTInfo] = await asyncAction(getJSONFromDb(this.redisDB, allNFTInfoKey));
 
     // If the nftInfo was saved in the db, we return it directly
     if (allNFTInfo?.[address]?.[tokenId]) {
@@ -54,7 +93,7 @@ export class UtilsService {
     // Else we query it from the lcd
     const [error, nftInfo] = await asyncAction(getAllNFTInfo(network, address, tokenId));
     if (error) {
-      return await sendBackError(error);
+      throw new NotFoundException("Token not found");
     }
 
     this._internalUpdateNftInfo(allNFTInfo, network, address, tokenId, nftInfo);
@@ -67,15 +106,20 @@ export class UtilsService {
 
     const allNFTInfoKey = toAllNFTInfoKey(network);
 
-    console.log(allNFTInfoKey);
-    let dbContent = await getJSONFromDb(this.redisDB, allNFTInfoKey);
-    console.log(dbContent);
+    const dbContent = await getJSONFromDb(this.redisDB, allNFTInfoKey);
     let returnObject: any;
     if (address) {
       returnObject = dbContent?.[address] ?? {};
     } else {
       returnObject = dbContent ?? {};
     }
+
+    // We add the contract Info from that NFT
+    const [, nftContractInfo] = await asyncAction(this.getCachedNFTContractInfo(network, address));
+    returnObject = {
+      ...returnObject,
+      nftContractInfo,
+    };
 
     return returnObject;
   }
@@ -100,7 +144,7 @@ export class UtilsService {
     await saveJSONToDb(this.redisDB, allNFTInfoKey, allNFTInfo);
     console.log(allNFTInfoKey);
     // We save all tokens names from a contract in a single array
-    let [__, allTokens] = await asyncAction(getJSONFromDb(this.redisDB, existingNFTKey));
+    let [, allTokens] = await asyncAction(getJSONFromDb(this.redisDB, existingNFTKey));
     if (!allTokens) {
       allTokens = {};
     }

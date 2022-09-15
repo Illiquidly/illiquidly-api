@@ -8,6 +8,7 @@
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "nest build",
+    "build:dev": "nest build --watch",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -38,8 +39,8 @@
     "knex": "^2.3.0",
     "lodash": "^4.17.21",
     "mysql2": "^2.3.3",
-    "nestjs-redis": "git+https://github.com/skunight/nestjs-redis.git",
     "nestjs-knex": "^2.0.0",
+    "nestjs-redis": "git+https://github.com/skunight/nestjs-redis.git",
     "p-limit": "^3.1.0",
     "p-map": "^4.0.0",
     "redlock": "^5.0.0-beta.2",
@@ -57,11 +58,15 @@
     "@types/lodash": "^4.14.184",
     "@types/node": "^16.0.0",
     "@types/supertest": "^2.0.11",
-    "@typescript-eslint/eslint-plugin": "^5.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.37.0",
     "@typescript-eslint/parser": "^5.0.0",
-    "eslint": "^8.0.1",
+    "eslint": "^8.23.1",
     "eslint-config-prettier": "^8.3.0",
+    "eslint-config-standard-with-typescript": "^23.0.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-n": "^15.2.5",
     "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-promise": "^6.0.1",
     "jest": "28.1.2",
     "prettier": "^2.3.2",
     "source-map-support": "^0.5.20",
@@ -70,7 +75,7 @@
     "ts-loader": "^9.2.3",
     "ts-node": "^10.0.0",
     "tsconfig-paths": "4.0.0",
-    "typescript": "^4.3.5"
+    "typescript": "^4.8.3"
   },
   "jest": {
     "moduleFileExtensions": [

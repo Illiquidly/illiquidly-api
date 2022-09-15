@@ -2,7 +2,6 @@ import knex, { Knex } from "knex";
 import { TradeNotificationType } from "../../trades/dto/getTrades.dto";
 import { Network } from "../../utils/blockchain/dto/network.dto";
 
-
 const tradeDBKnexArgs = {
   client: "mysql2",
   connection: {
@@ -33,9 +32,11 @@ function _createTradeInfo(table: any) {
   table.string("state");
   table.boolean("assets_withdrawn");
   table.integer("accepted_counter_trade_id");
-  table.string("associated_assets");
-  table.string("whitelisted_users");
-  table.string("nfts_wanted");
+  table.text("associated_assets");
+  table.text("whitelisted_users");
+  table.text("nfts_wanted");
+  table.text("tokens_wanted");
+  table.text("trade_preview");
   table.text("whole_data");
 }
 
@@ -76,12 +77,18 @@ async function createNotificationDB(knexDB: Knex) {
 }
 
 async function flushNotificationDB(knexDB: Knex) {
-  await knexDB.schema.dropTable("notifications").catch(() => {});
+  await knexDB.schema.dropTable("notifications").catch(() => {
+    console.log("Couldn't delete the notifications table");
+  });
 }
 
 async function flushTradeDB(knexDB: Knex) {
-  await knexDB.schema.dropTable("trades").catch(() => {});
-  await knexDB.schema.dropTable("counter-trades").catch(() => {});
+  await knexDB.schema.dropTable("trades").catch(() => {
+    console.log("Couldn't delete the trade table");
+  });
+  await knexDB.schema.dropTable("counter-trades").catch(() => {
+    console.log("Couldn't delete the counter_trade table");
+  });
 }
 
 export { initDB, quitDB, createTradeDB, createNotificationDB, flushTradeDB, flushNotificationDB };

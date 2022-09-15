@@ -2,11 +2,10 @@ import { LCDClient, TxLog } from "@terra-money/terra.js";
 import axios from "axios";
 const pLimit = require("p-limit");
 import { TokenInteracted } from "./dto/get-nft-content.dto";
-import { addNftInfo, getNftInfo } from "../database/nft_info/access";
 
-var cloudscraper = require("cloudscraper");
+const cloudscraper = require("cloudscraper");
 const camelCaseObjectDeep = require("camelcase-object-deep");
-var _ = require("lodash");
+const _ = require("lodash");
 
 const limitNFT = pLimit(10);
 const limitToken = pLimit(50);
@@ -15,20 +14,20 @@ const AXIOS_TIMEOUT = 10_000;
 import { chains, fcds } from "../utils/blockchain/chains";
 import { asyncAction } from "../utils/js/asyncAction.js";
 import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
-import { registeredNFTAddresses } from "../utils/blockchain/queryNFTInfo";
 import { Network } from "../utils/blockchain/dto/network.dto";
-import { InjectKnex, Knex } from "nestjs-knex";
 import { Injectable } from "@nestjs/common";
+import { UtilsService } from "../utils-api/utils.service";
+import { getAllNFTInfo } from "../utils/blockchain/nft_query";
 
 @Injectable()
 export class NftContentQuerierService {
-  constructor(@InjectKnex() private readonly knexDB: Knex) {}
+  constructor(private readonly utilsService: UtilsService) {}
 
   addFromWasmEvents(tx: any, nftsInteracted: any, chain_type: string) {
-    for (let log of tx?.logs) {
+    for (const log of tx?.logs) {
       if (chain_type == "classic") {
-        let parsedLog = new TxLog(log.msg_index, log.log, log.events);
-        let from_contract = parsedLog.eventsByType.from_contract;
+        const parsedLog = new TxLog(log.msg_index, log.log, log.events);
+        const from_contract = parsedLog.eventsByType.from_contract;
         if (from_contract?.action) {
           if (
             from_contract.action.includes("transfer_nft") ||
@@ -39,8 +38,8 @@ export class NftContentQuerierService {
           }
         }
       } else {
-        let parsedLog = new TxLog(log.msg_index, log.log, log.events);
-        let from_contract = parsedLog.eventsByType.wasm;
+        const parsedLog = new TxLog(log.msg_index, log.log, log.events);
+        const from_contract = parsedLog.eventsByType.wasm;
         if (from_contract?.action) {
           if (
             from_contract.action.includes("transfer_nft") ||
@@ -56,11 +55,11 @@ export class NftContentQuerierService {
   }
 
   getNftsFromTxList(txData: any, chain_type: string): [Set<string>, number, number] {
-    var nftsInteracted: Set<string> = new Set();
+    let nftsInteracted: Set<string> = new Set();
     let lastTxIdSeen = 0;
     let newestTxIdSeen = 0;
     // In case we are using cloudscraper to get rid of cloudflare
-    for (let tx of txData) {
+    for (const tx of txData) {
       // We add NFTS interacted with
       nftsInteracted = this.addFromWasmEvents(tx, nftsInteracted, chain_type);
 
@@ -83,8 +82,8 @@ export class NftContentQuerierService {
     callback: any,
     hasTimedOut: any = { timeout: false },
   ) {
-    let query_next: boolean = true;
-    let limit = 100;
+    let query_next = true;
+    const limit = 100;
     let offset: number = start ?? 0;
     let newestTxIdSeen: number | null = null;
     let lastTxIdSeen: number | null = null;
@@ -97,7 +96,7 @@ export class NftContentQuerierService {
         source.cancel();
       }, AXIOS_TIMEOUT);
 
-      let [error, tx_data] = await asyncAction(
+      const [error, tx_data] = await asyncAction(
         cloudscraper.get(
           `${fcds[network]}/v1/txs?offset=${offset}&limit=${limit}&account=${address}`,
           { cancelToken: source.token },
@@ -111,17 +110,17 @@ export class NftContentQuerierService {
       if (tx_data == null) {
         break;
       }
-      let responseData = JSON.parse(tx_data);
+      const responseData = JSON.parse(tx_data);
 
-      let txToAnalyse = responseData.txs;
+      const txToAnalyse = responseData.txs;
 
       // We analyse those transactions
       // We query the NFTs from the transaction result and messages
-      let [newNfts, lastTxId, newestTxId] = this.getNftsFromTxList(txToAnalyse, network);
+      const [newNfts, lastTxId, newestTxId] = this.getNftsFromTxList(txToAnalyse, network);
       // If it's the first time we query the fcd, we need to add recognized NFTs
       // This step is done because some minted NFTs don't get recognized in mint, the receiver address is not recorded in the events
       if (start == null && stop == null) {
-        let registered = await registeredNFTAddresses(this.knexDB, network);
+        const registered = await this.utilsService.registeredNFTAddresses(network);
         registered.forEach(nft => newNfts.add(nft));
       }
 
@@ -161,9 +160,9 @@ export class NftContentQuerierService {
     nft: string,
     start_after: string | undefined = undefined,
   ) {
-    let lcdClient = new LCDClient(chains[network]);
+    const lcdClient = new LCDClient(chains[network]);
 
-    let [_error, tokenBatch] = await asyncAction(
+    const [, tokenBatch] = await asyncAction(
       lcdClient.wasm.contractQuery(nft, {
         tokens: {
           owner: address,
@@ -174,13 +173,12 @@ export class NftContentQuerierService {
     );
 
     if (tokenBatch?.tokens) {
-      let [infoError, tokenInfos] = await asyncAction(
+      const [infoError, tokenInfos] = await asyncAction(
         Promise.all(
-          tokenBatch.tokens.map(async (id: string) =>
-            (
-              await limitToken
-            )(() => this.getOneTokenInfo(network, nft, id)),
-          ),
+          tokenBatch.tokens.map(async (id: string) => {
+            const tokenInfo = (await limitToken)(() => getAllNFTInfo(network, nft, id));
+            return tokenInfo.info;
+          }),
         ),
       );
       if (infoError) {
@@ -219,67 +217,14 @@ export class NftContentQuerierService {
     }
   }
 
-  async getCachedNFTInfo(network: Network, nft: string) {
-    let [_err, cachedInfo] = await asyncAction(getNftInfo(this.knexDB, network, nft));
-
-    if (cachedInfo?.[0]?.name) {
-      return {
-        name: cachedInfo[0]?.name,
-        symbol: cachedInfo[0]?.symbol,
-      };
-    }
-
-    // If there is no cached info, we get the distant info
-    let [_lcdErr, newInfo] = await asyncAction(this.getDistantNftInfo(network, nft));
-
-    if (newInfo) {
-      await addNftInfo(this.knexDB, [
-        {
-          network: network,
-          nftAddress: nft,
-          name: newInfo.name,
-          symbol: newInfo.symbol,
-        },
-      ]);
-    }
-    return newInfo;
-  }
-
-  async getDistantNftInfo(network: Network, nft: string) {
-    let lcdClient = new LCDClient(chains[network]);
-    let [_error, nftInfo] = await asyncAction(
-      lcdClient.wasm.contractQuery(nft, {
-        contract_info: {},
-      }),
-    );
-    return {
-      name: nftInfo.name,
-      symbol: nftInfo.symbol,
-    };
-  }
-
-  async getOneTokenInfo(network: Network, nft: string, id: string) {
-    let lcdClient = new LCDClient(chains[network]);
-    let [_error, tokenInfo] = await asyncAction(
-      lcdClient.wasm.contractQuery(nft, {
-        nft_info: { token_id: id },
-      }),
-    );
-
-    return {
-      tokenId: id,
-      nftInfo: tokenInfo,
-    };
-  }
-
   // We limit the request concurrency to 10 elements
   async parseNFTSet(
     network: Network,
     nfts: Set<string> | string[],
     address: string,
   ): Promise<TokenInteracted[]> {
-    let nftsArray = Array.from(nfts);
-    let [_error, nftsOwned] = await asyncAction(
+    const nftsArray = Array.from(nfts);
+    const [, nftsOwned] = await asyncAction(
       Promise.all(
         nftsArray.map(async nft => {
           return (await limitNFT)(() => this.parseTokensFromOneNft(network, address, nft));
@@ -287,23 +232,24 @@ export class NftContentQuerierService {
       ),
     );
 
-    let [_infoError, nftsInfo] = await asyncAction(
+    const [, nftsInfo] = await asyncAction(
       Promise.all(
         nftsArray.map(async nft => {
-          return (await limitNFT)(() => this.getCachedNFTInfo(network, nft));
+          return (await limitNFT)(() => this.utilsService.getCachedNFTContractInfo(network, nft));
         }),
       ),
     );
 
-    return nftsOwned
+    return (nftsOwned ?? [])
       .map((nftContract: any[], i: number) => {
-        return nftContract.map((token: any) => {
-          let tokenNftInfo = camelCaseObjectDeep(token.nftInfo);
+        return nftContract.map((token: any): TokenInteracted => {
+          const tokenNftInfo = camelCaseObjectDeep(token.nftInfo);
           return {
             tokenId: token.tokenId,
-            contractAddress: nftsArray[i],
-            collectionName: nftsInfo?.[i]?.name,
-            allNftInfo: tokenNftInfo,
+            collectionAddress: nftsArray[i],
+            collectionName: nftsInfo?.[i]?.collectionName,
+            symbol: nftsInfo?.[i]?.symbol,
+            allNFTInfo: tokenNftInfo,
             imageUrl: fromIPFSImageURLtoImageURL(tokenNftInfo?.extension?.image),
             description: tokenNftInfo?.extension?.description,
             name: tokenNftInfo?.extension?.name,

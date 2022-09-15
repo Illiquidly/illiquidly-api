@@ -10,17 +10,17 @@ async function bootstrap() {
   let httpsOptions: any;
   if (process.env.ENVIRONMENT == "PRODUCTION") {
     httpsOptions = {
-	       cert: fs.readFileSync('/home/illiquidly/identity/fullchain.pem'),
-        key: fs.readFileSync('/home/illiquidly/identity/privkey.pem')
+      cert: fs.readFileSync("/home/illiquidly/identity/fullchain.pem"),
+      key: fs.readFileSync("/home/illiquidly/identity/privkey.pem"),
     };
   }
 
-  console.log()
+  console.log();
 
-  const app = await NestFactory.create(AppModule,{
-    httpsOptions
+  const app = await NestFactory.create(AppModule, {
+    httpsOptions,
   });
-
+  app.enableCors();
   const config = new DocumentBuilder()
     .setTitle("Illiquidlabs API")
     .setDescription("The illiquidlabs API description")

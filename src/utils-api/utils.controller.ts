@@ -9,17 +9,17 @@ import { UtilsService } from "./utils.service";
 export class UtilsController {
   constructor(private readonly utilsService: UtilsService) {}
 
-  @Get("registered_nfts/:network/")
-  async registeredNfts(@Param() params: NetworkParam) {
-    return this.utilsService.registeredNfts(params.network);
+  @Get("registered-nfts/:network/")
+  async registeredNftsEntryPoint(@Param() params: NetworkParam) {
+    return this.utilsService.registeredNFTs(params.network);
   }
 
-  @Get("nft_info/:network/:address/:tokenId")
+  @Get("nft-info/:network/:address/:tokenId")
   async nftInfo(@Param() params: TokenDescription) {
     return this.utilsService.nftInfo(params.network, params.address, params.tokenId);
   }
 
-  @Get("nft_info/:network/:address?")
+  @Get("nft-info/:network/:address?")
   async allNftInfo(@Param() params: NFTDescription) {
     return this.utilsService.allNFTInfo(params.network, params.address);
   }
