@@ -25,6 +25,8 @@ export class TradeInfo {
   acceptedInfo?: any; // TODO correct this type
   assetsWithdrawn: boolean;
   associatedAssets: Asset[];
+  associatedAssetsWithInfo?: any[];
+  associatedCollections?: Partial<Collection>[];
   lastCounterId?: number;
   additionalInfo: {
     ownerComment: {

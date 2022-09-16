@@ -309,6 +309,16 @@ export class TradeDatabaseService {
     }));
   }
 
+  async getCounterTradeNumber(parameters: QueryParameters) {
+    const counterTradeNumberQuery = this.knexDB("counter-trades");
+
+    await this.applyQueryParameters(counterTradeNumberQuery, false, parameters);
+
+    const counterTradeInfo = await counterTradeNumberQuery.count("id as nbCounterTrade");
+
+    return +counterTradeInfo[0].nbCounterTrade;
+  }
+
   async getTrade(network: Network, tradeId: number): Promise<Trade> {
     const tradeInfo = await this.knexDB("trades").select("*").where({
       network,
