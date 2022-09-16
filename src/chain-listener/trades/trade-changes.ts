@@ -272,9 +272,9 @@ if (process.env.FLUSH_DB_ON_STARTUP == "true") {
   resetDB()
     .then(async () => await launchReceiver())
     // Then query the new transcations for the first time
-    .then(async () => await queryNewTransaction(Network.devnet));
+    .then(async () => await queryNewTransaction(Network.testnet));
 } else {
   launchReceiver()
     // Then query the new transcations for the first time
-    .then(async () => await queryNewTransaction(Network.devnet));
+    .then(async () => await queryNewTransaction(Network.testnet));
 }

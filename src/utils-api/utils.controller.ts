@@ -1,5 +1,6 @@
 import { Controller, Get, Param } from "@nestjs/common";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
+import { contracts } from "../utils/blockchain/chains";
 import { NetworkParam } from "../utils/blockchain/dto/network.dto";
 import { NFTDescription, TokenDescription } from "./dto/nft.dto";
 import { UtilsService } from "./utils.service";
@@ -22,5 +23,10 @@ export class UtilsController {
   @Get("nft-info/:network/:address?")
   async allNftInfo(@Param() params: NFTDescription) {
     return await this.utilsService.allNFTInfo(params.network, params.address);
+  }
+
+  @Get("illiquidlabs-contracts")
+  contract() {
+    return contracts
   }
 }
