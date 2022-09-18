@@ -4,6 +4,7 @@ import { UtilsModule } from "./utils-api/utils.module";
 import { TradesModule } from "./trades/trades.module";
 import { KnexModule } from "nestjs-knex";
 import { RedisModule } from "nestjs-redis";
+import { RedisLockModule } from "nestjs-simple-redis-lock";
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { RedisModule } from "nestjs-redis";
       },
     }),
     RedisModule.register({}),
+    RedisLockModule,
   ],
   controllers: [],
   providers: [],

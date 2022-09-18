@@ -40,7 +40,7 @@ export class TradesController {
     return await this.tradesService.getMultipleTrades(params);
   }
 
-  @Get("counter_trades")
+  @Get("counter-trades")
   @ApiResponse({
     status: 200,
     type: () => Trade,
@@ -54,7 +54,7 @@ export class TradesController {
     );
   }
 
-  @Get("counter_trades/all")
+  @Get("counter-trades/all")
   @ApiResponse({
     status: 200,
     type: () => MultipleTradeResponse,

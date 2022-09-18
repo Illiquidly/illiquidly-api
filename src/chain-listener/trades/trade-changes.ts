@@ -4,7 +4,6 @@ import Axios from "axios";
 import { TxLog } from "@terra-money/terra.js";
 
 import { chains, contracts } from "../../utils/blockchain/chains";
-import { getCounterTradeInfo, getTradeInfo } from "../../utils/blockchain/p2pTradeQuery";
 import { createRedisClient } from "../../utils/redis_db_accessor";
 import { asyncAction } from "../../utils/js/asyncAction";
 import { TradeDatabaseService } from "../../database/trades/access";
@@ -15,6 +14,8 @@ import { sleep } from "../../utils/js/sleep";
 import { RedisService } from "nestjs-redis";
 import { Trade } from "../../trades/dto/getTrades.dto";
 import { NFTInfoService } from "../../database/nft_info/access";
+import { QueryLimitService } from "../../utils/queryLimit.service";
+import { BlockchainTradeQuery } from "../../utils/blockchain/p2pTradeQuery";
 const _ = require("lodash");
 const pMap = require("p-map");
 const camelcaseObjectDeep = require("camelcase-object-deep");
@@ -40,11 +41,17 @@ const redisService = new RedisService({
 const nftInfoService = new NFTInfoService(knexDB);
 const databaseTradeService = new TradeDatabaseService(knexDB, redisService, nftInfoService);
 
+const queryLimitService: QueryLimitService = new QueryLimitService();
+const tradeQuery = new BlockchainTradeQuery(
+  queryLimitService.sendIndependentQuery.bind(queryLimitService.sendIndependentQuery),
+);
+
 async function resetDB() {
   await txHashClient.del(redisHashSetName);
   await flushTradeDB(knexDB);
   await createTradeDB(knexDB);
 }
+
 async function queryNewTransaction(network: Network) {
   const lcd = Axios.create(
     chains[network].axiosObject ?? {
@@ -104,7 +111,7 @@ async function queryNewTransaction(network: Network) {
           if (id.length == 1) {
             const [tradeId] = id;
             // We query the trade_info
-            const tradeInfo = await getTradeInfo(network, tradeId);
+            const tradeInfo = await tradeQuery.getTradeInfo(network, tradeId);
 
             // We query all counters associated with this trade in the db and update them here
             const counterIds = (
@@ -116,7 +123,11 @@ async function queryNewTransaction(network: Network) {
             const counterTradeInfos = await pMap(
               counterIds,
               async (counterId: number) => {
-                const counterTradeInfo = await getCounterTradeInfo(network, tradeId, counterId);
+                const counterTradeInfo = await tradeQuery.getCounterTradeInfo(
+                  network,
+                  tradeId,
+                  counterId,
+                );
                 return {
                   network,
                   tradeId,
@@ -140,8 +151,12 @@ async function queryNewTransaction(network: Network) {
           } else {
             const [tradeId, counterId] = id;
             // We query the tradeInfo and counterTradeInfo
-            const tradeInfo: any = await getTradeInfo(network, tradeId);
-            const counterTradeInfo = await getCounterTradeInfo(network, tradeId, counterId);
+            const tradeInfo: any = await tradeQuery.getTradeInfo(network, tradeId);
+            const counterTradeInfo = await tradeQuery.getCounterTradeInfo(
+              network,
+              tradeId,
+              counterId,
+            );
 
             // We query all counters associated with this trade in the db and update them here
             const counterIds = (
@@ -153,7 +168,11 @@ async function queryNewTransaction(network: Network) {
             const allCounterTradeInfos = await pMap(
               counterIds,
               async (counterId: number) => {
-                const counterTradeInfo = await getCounterTradeInfo(network, tradeId, counterId);
+                const counterTradeInfo = await tradeQuery.getCounterTradeInfo(
+                  network,
+                  tradeId,
+                  counterId,
+                );
                 return {
                   network,
                   tradeId,

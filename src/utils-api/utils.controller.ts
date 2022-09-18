@@ -27,6 +27,6 @@ export class UtilsController {
 
   @Get("illiquidlabs-contracts")
   contract() {
-    return contracts
+    return contracts;
   }
 }

@@ -62,7 +62,7 @@ export class TokenInteracted {
   tokenId: string;
   collectionName: string;
   collectionAddress: string;
-  symbol: string;
+  symbol?: string;
   imageUrl?: string[] | string;
   name?: string;
   attributes?: NFTAttribute[];

@@ -1,3 +1,4 @@
+import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
 import { IsInt } from "class-validator";
 import { Network } from "../../utils/blockchain/dto/network.dto";
@@ -82,12 +83,12 @@ export class QueryParameters {
   /* Filters section */
   "filters.network": Network;
   "filters.globalSearch"?: string;
-  "filters.tradeId"?: number[] | number;
-  "filters.state"?: string[] | string;
-  "filters.collections"?: string[] | string;
-  "filters.lookingFor"?: string[] | string;
-  "filters.counteredBy"?: string[] | string;
-  "filters.whitelistedUsers"?: string[] | string;
+  "filters.tradeId"?: number[];
+  "filters.state"?: string[];
+  "filters.collections"?: string[];
+  "filters.lookingFor"?: string[];
+  "filters.counteredBy"?: string[];
+  "filters.whitelistedUsers"?: string[];
 
   /* Pagination section */
   "pagination.offset"?: number;

@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { getCounterTradeInfo, getTradeInfo } from "../utils/blockchain/p2pTradeQuery";
 import { asyncAction } from "../utils/js/asyncAction";
 import {
   Coin,
@@ -12,19 +11,26 @@ import {
 import { TradeDatabaseService } from "../database/trades/access";
 import { Network } from "../utils/blockchain/dto/network.dto";
 import { UtilsService } from "../utils-api/utils.service";
-import { RawTokenInteracted, TokenInteracted } from "../nft-content/dto/get-nft-content.dto";
+import { RawTokenInteracted } from "../nft-content/dto/get-nft-content.dto";
 import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
+import { QueryLimitService } from "../utils/queryLimit.service";
+import { BlockchainTradeQuery } from "../utils/blockchain/p2pTradeQuery";
 const camelCaseObjectDeep = require("camelcase-object-deep");
 const pMap = require("p-map");
 const _ = require("lodash");
 
 @Injectable()
 export class TradesService {
+  tradeQuery: BlockchainTradeQuery;
   constructor(
     private readonly tradeDatabaseService: TradeDatabaseService,
     private readonly utilsService: UtilsService,
-  ) {}
-
+    private readonly queryLimitService: QueryLimitService,
+  ) {
+    this.tradeQuery = new BlockchainTradeQuery(
+      this.queryLimitService.sendIndependentQuery.bind(this.queryLimitService),
+    );
+  }
   async getMultipleTrades(params: QueryParameters): Promise<MultipleTradeResponse> {
     const [err, tradeInfo] = await asyncAction(this.tradeDatabaseService.getTrades(params));
     if (err || !tradeInfo.length) {
@@ -90,7 +96,9 @@ export class TradesService {
     }
 
     // We try to query the trade on_chain directly :
-    const [queryErr, distantTradeInfo] = await asyncAction(getTradeInfo(network, tradeId));
+    const [queryErr, distantTradeInfo] = await asyncAction(
+      this.tradeQuery.getTradeInfo(network, tradeId),
+    );
     if (queryErr) {
       throw new NotFoundException("Trade Not Found");
     }
@@ -121,7 +129,7 @@ export class TradesService {
     }
     // We try to query the counter_trade on_chain directly :
     const [queryErr, distantCounterTradeInfo] = await asyncAction(
-      getCounterTradeInfo(network, tradeId, counterId),
+      this.tradeQuery.getCounterTradeInfo(network, tradeId, counterId),
     );
     if (queryErr) {
       throw new NotFoundException("Counter Trade Not Found");

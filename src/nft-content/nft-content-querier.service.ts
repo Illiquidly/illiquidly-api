@@ -8,7 +8,8 @@ import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
 import { Network } from "../utils/blockchain/dto/network.dto";
 import { Injectable } from "@nestjs/common";
 import { UtilsService } from "../utils-api/utils.service";
-import { getAllNFTInfo } from "../utils/blockchain/nft_query";
+import { BlockchainNFTQuery } from "../utils/blockchain/nft_query";
+import { QueryLimitService } from "../utils/queryLimit.service";
 const pLimit = require("p-limit");
 
 const cloudscraper = require("cloudscraper");
@@ -21,7 +22,15 @@ const AXIOS_TIMEOUT = 10_000;
 
 @Injectable()
 export class NftContentQuerierService {
-  constructor(private readonly utilsService: UtilsService) {}
+  nftQuery: BlockchainNFTQuery;
+  constructor(
+    private readonly utilsService: UtilsService,
+    private readonly queryLimitService: QueryLimitService,
+  ) {
+    this.nftQuery = new BlockchainNFTQuery(
+      this.queryLimitService.sendIndependentQuery.bind(this.queryLimitService),
+    );
+  }
 
   addFromWasmEvents(tx: any, nftsInteracted: any, chainType: string) {
     for (const log of tx?.logs) {
@@ -102,7 +111,6 @@ export class NftContentQuerierService {
           { cancelToken: source.token },
         ),
       );
-
       clearTimeout(axiosTimeout);
       if (error) {
         console.log(error.toJSON());
@@ -160,32 +168,26 @@ export class NftContentQuerierService {
     nft: string,
     startAfter: string | undefined = undefined,
   ) {
-    const lcdClient = new LCDClient(chains[network]);
-
     const [, tokenBatch] = await asyncAction(
-      lcdClient.wasm.contractQuery(nft, {
-        tokens: {
-          owner: address,
-          startAfter,
-          limit: 100,
-        },
-      }),
+      this.nftQuery.getUserTokens(network, nft, address, 100, startAfter),
     );
 
-    if (tokenBatch?.tokens) {
+    if (tokenBatch) {
       const [infoError, tokenInfos] = await asyncAction(
         Promise.all(
-          tokenBatch.tokens.map(async (id: string) => {
-            const tokenInfo = (await limitToken)(async () => await getAllNFTInfo(network, nft, id));
-            return tokenInfo.info;
+          tokenBatch.map(async (id: string) => {
+            const [_, tokenInfo] = await asyncAction(this.utilsService.nftInfo(network, nft, id));
+            return {
+              tokenId: id,
+              nftInfo: tokenInfo ?? null,
+            };
           }),
         ),
       );
       if (infoError) {
-        console.log(infoError);
         return tokenBatch.tokens.map((tokenId: any) => ({
           tokenId: tokenId,
-          nftInfo: {},
+          nftInfo: null,
         }));
       }
       return tokenInfos;
@@ -233,7 +235,6 @@ export class NftContentQuerierService {
         }),
       ),
     );
-
     const [, nftsInfo] = await asyncAction(
       Promise.all(
         nftsArray.map(async nft => {

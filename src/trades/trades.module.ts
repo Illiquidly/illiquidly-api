@@ -6,6 +6,7 @@ import { UtilsService } from "../utils-api/utils.service";
 import { UtilsModule } from "../utils-api/utils.module";
 import { TradeDatabaseService } from "../database/trades/access";
 import { NFTInfoService } from "../database/nft_info/access";
+import { QueryLimitService } from "../utils/queryLimit.service";
 
 @Module({
   imports: [UtilsModule],
@@ -16,6 +17,7 @@ import { NFTInfoService } from "../database/nft_info/access";
     UtilsService,
     TradeDatabaseService,
     NFTInfoService,
+    QueryLimitService,
   ],
 })
 export class TradesModule {}

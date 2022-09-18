@@ -13,6 +13,11 @@ import { Network } from "../../utils/blockchain/dto/network.dto";
 import { NFTInfoService } from "../nft_info/access";
 const pMap = require("p-map");
 
+export class TradeAsset {
+  denom: string;
+  assetType: string;
+}
+
 @Injectable()
 export class TradeDatabaseService {
   redisDB: Redis;
@@ -74,6 +79,20 @@ export class TradeDatabaseService {
       )
       .onConflict()
       .merge(); // We erase if the data is already present
+    return insertToken;
+  }
+
+  async addToCollectionDB(network: Network, assets: TradeAsset[]) {
+    const insertToken = await this.knexDB("counter-trades")
+      .insert(
+        assets.map(asset => ({
+          network,
+          denom: asset.denom,
+          asset_type: asset.assetType,
+        })),
+      )
+      .onConflict()
+      .ignore(); // We ignore if the data is already present
     return insertToken;
   }
 
@@ -140,6 +159,13 @@ export class TradeDatabaseService {
       owner: dbResult.owner,
       state: dbResult.state,
       whitelistedUsers: JSON.parse(dbResult.whitelisted_users),
+    };
+  }
+
+  parseFromCollectionDB(asset: any): TradeAsset {
+    return {
+      denom: asset.denom,
+      assetType: asset.asset_type,
     };
   }
 
@@ -343,6 +369,11 @@ export class TradeDatabaseService {
       counterId: counterTradeInfo[0].counter_id,
       tradeInfo: this.parseFromDB(counterTradeInfo[0]),
     };
+  }
+
+  async getCollections(network: Network) {
+    const collections = await this.knexDB("trade-assets-denom").where("network", network);
+    return collections.map(collection => this.parseFromCollectionDB(collection));
   }
 
   async getNotifications({

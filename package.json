@@ -41,12 +41,15 @@
     "mysql2": "^2.3.3",
     "nestjs-knex": "^2.0.0",
     "nestjs-redis": "git+https://github.com/skunight/nestjs-redis.git",
+    "nestjs-simple-redis-lock": "^0.1.1",
     "p-limit": "^3.1.0",
     "p-map": "^4.0.0",
+    "p-queue": "^6.6.2",
     "redlock": "^5.0.0-beta.2",
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
-    "rxjs": "^7.2.0"
+    "rxjs": "^7.2.0",
+    "wait-for-signals": "^1.2.7"
   },
   "devDependencies": {
     "@nestjs/cli": "^9.0.0",

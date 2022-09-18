@@ -51,7 +51,7 @@ export const contracts: AllContracts = {
   testnet: {
     p2pTrade: "terra1sft6nydyn487w6seslg5vruz95gyeqlwvqeux20rs9l7fk4qq8lq2f94x0",
     fee: "terra1xavp8ha2hj07704wz9c3t5v9cx2d7urmvz3gvrtftyyygdjl4arq3zavuy",
-    fee_distributor: "terra1a7h3c6qr530dhm2zpa4p2j5k9jh22q2s6mfnmn9j75fywsdfxsfs83375m"
+    fee_distributor: "terra1a7h3c6qr530dhm2zpa4p2j5k9jh22q2s6mfnmn9j75fywsdfxsfs83375m",
   },
   classic: {},
   mainnet: {},

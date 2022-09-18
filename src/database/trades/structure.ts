@@ -59,6 +59,16 @@ async function createTradeDB(knexDB: Knex) {
       table.unique(["network", "trade_id", "counter_id"]);
     })
     .catch(() => console.log("Counter Trade table exists already"));
+
+  await knexDB.schema
+    .createTable("trade-assets-denom", (table: any) => {
+      _createTradeInfo(table);
+      table.enu("network", Object.values(Network)).notNullable();
+      table.string("denom").notNullable();
+      table.string("asset_type").notNullable();
+      table.unique(["network", "denom"]);
+    })
+    .catch(() => console.log("Trade Collections table exists already"));
 }
 
 async function createNotificationDB(knexDB: Knex) {

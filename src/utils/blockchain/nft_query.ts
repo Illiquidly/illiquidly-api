@@ -1,81 +1,112 @@
-import { chains } from "./chains.js";
-import { LCDClient } from "@terra-money/terra.js";
+import { registeredNftContracts } from "./chains.js";
 import _ from "lodash";
+import { Network } from "./dto/network.dto.js";
+import { localNftList } from "./nft_list.js";
+import axios from "axios";
+import { sendIndependentQuery } from "./sendIndependentQuery.js";
 
-async function sendIndependentQuery(
-  networkId: string,
-  contractAddress: string,
-  query: object,
-): Promise<any> {
-  const lcdClient = new LCDClient(chains[networkId]);
+export class BlockchainNFTQuery {
+  sendQueryFunction: typeof sendIndependentQuery;
+  constructor(sendQueryFunction: typeof sendIndependentQuery = sendIndependentQuery) {
+    this.sendQueryFunction = sendQueryFunction;
+  }
 
-  return await lcdClient.wasm.contractQuery(contractAddress, query);
-}
+  async getContractInfo(network: string, nftContractAddress: string): Promise<any> {
+    const nftInfo = await sendIndependentQuery(network, nftContractAddress, {
+      contract_info: {},
+    });
 
-async function getContractInfo(network: string, nftContractAddress: string): Promise<any> {
-  const nftInfo = await sendIndependentQuery(network, nftContractAddress, {
-    contract_info: {},
-  });
+    return nftInfo;
+  }
 
-  return nftInfo;
-}
+  async getAllNFTInfo(network: string, nftContractAddress: string, tokenId: string): Promise<any> {
+    const nftInfo = await sendIndependentQuery(network, nftContractAddress, {
+      all_nft_info: {
+        token_id: tokenId,
+      },
+    });
 
-async function getAllNFTInfo(
-  network: string,
-  nftContractAddress: string,
-  tokenId: string,
-): Promise<any> {
-  const nftInfo = await sendIndependentQuery(network, nftContractAddress, {
-    all_nft_info: {
-      token_id: tokenId,
-    },
-  });
+    return nftInfo;
+  }
 
-  return nftInfo;
-}
+  async getNumTokens(network: string, nftContractAddress: string): Promise<any> {
+    const nftInfo = await sendIndependentQuery(network, nftContractAddress, {
+      num_tokens: {},
+    });
 
-async function getNumTokens(network: string, nftContractAddress: string): Promise<any> {
-  const nftInfo = await sendIndependentQuery(network, nftContractAddress, {
-    num_tokens: {},
-  });
+    return nftInfo;
+  }
 
-  return nftInfo;
-}
+  async getUserTokens(
+    network: string,
+    contractAddress: string,
+    userAddress: string,
+    limit = 100,
+    startAfter?: string,
+  ): Promise<string[]> {
+    const { tokens } = await sendIndependentQuery(network, contractAddress, {
+      tokens: {
+        owner: userAddress,
+        ...(limit ? { limit } : {}),
+        ...(startAfter ? { start_after: startAfter } : {}),
+      },
+    });
+    return tokens;
+  }
 
-async function getTokens(
-  network: string,
-  contractAddress: string,
-  limit?: number,
-  startAfter?: string,
-): Promise<string[]> {
-  const { tokens } = await sendIndependentQuery(network, contractAddress, {
-    all_tokens: {
-      ...(limit ? { limit } : {}),
-      ...(startAfter ? { start_after: startAfter } : {}),
-    },
-  });
-  return tokens;
-}
+  async getTokens(
+    network: string,
+    contractAddress: string,
+    limit?: number,
+    startAfter?: string,
+  ): Promise<string[]> {
+    const { tokens } = await sendIndependentQuery(network, contractAddress, {
+      all_tokens: {
+        ...(limit ? { limit } : {}),
+        ...(startAfter ? { start_after: startAfter } : {}),
+      },
+    });
+    return tokens;
+  }
 
-const getAllTokens = async (network: string, address: string, limit = 100) => {
-  let startAfter: string | undefined;
-  const response: string[][] = [];
+  async getAllTokens(network: string, address: string, limit = 100) {
+    let startAfter: string | undefined;
+    const response: string[][] = [];
 
-  const fetchUserTokensPart = async () => {
-    const result: string[] = await getTokens(network, address, limit, startAfter);
+    const fetchUserTokensPart = async () => {
+      const result: string[] = await this.getTokens(network, address, limit, startAfter);
 
-    response.push(result);
+      response.push(result);
 
-    startAfter = _.last(result);
+      startAfter = _.last(result);
 
-    if (startAfter) {
-      await fetchUserTokensPart();
+      if (startAfter) {
+        await fetchUserTokensPart();
+      }
+    };
+
+    await fetchUserTokensPart();
+
+    return response.flat();
+  }
+
+  // This is an offchain query, but let's limit it nonetheless
+  async getRegisteredNFTs(network: Network): Promise<any> {
+    let knownNfts: any = {};
+
+    if (localNftList[network]) {
+      knownNfts = localNftList[network];
     }
-  };
 
-  await fetchUserTokensPart();
+    const remoteNftList = await axios.get(registeredNftContracts);
 
-  return response.flat();
-};
+    if (remoteNftList?.data[network]) {
+      knownNfts = {
+        ...knownNfts,
+        ...remoteNftList?.data[network],
+      };
+    }
 
-export { getAllNFTInfo, getContractInfo, getNumTokens, getAllTokens };
+    return knownNfts;
+  }
+}
