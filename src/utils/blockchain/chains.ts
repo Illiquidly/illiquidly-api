@@ -7,15 +7,16 @@ export const chains: any = {
     chainId: "localterra",
   },
   testnet: {
-    // URL: 'https://pisco-lcd.terra.dev/',
-    URL: `https://lcd.pisco.terra.setten.io/${settenConfig.settenProject}?key=${settenConfig.settenKey}`,
+    URL: 'https://pisco-lcd.terra.dev/',
+   //URL: `https://lcd.pisco.terra.setten.io/${settenConfig.settenProject}?key=${settenConfig.settenKey}`,
     chainID: "pisco-1",
-    axiosObject: {
+    /*axiosObject: {
       baseURL: `https://lcd.pisco.terra.setten.io/${settenConfig.settenProject}`,
       params: {
         key: settenConfig.settenKey,
       },
     },
+   */
   },
   classic: {
     URL: "https://columbus-lcd.terra.dev",

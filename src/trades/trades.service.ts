@@ -149,8 +149,10 @@ export class TradesService {
 
   async addInfoToTradeInfo(tradeInfo: TradeInfo): Promise<TradeInfo> {
     console.log("adding info");
+
+if(tradeInfo.additionalInfo){
     // We modify the tradeInfo lookingFor info. It merges nfts_wanted and tokens_wanted
-    tradeInfo.additionalInfo.lookingFor = (tradeInfo.additionalInfo.tokensWanted ?? [])
+    tradeInfo.additionalInfo.lookingFor = (tradeInfo.additionalInfo?.tokensWanted ?? [])
       .map((token): Coin => {
         if (token.coin) {
           return {
@@ -166,15 +168,15 @@ export class TradesService {
       })
       .concat(
         await pMap(
-          tradeInfo.additionalInfo.nftsWanted ?? [],
+          tradeInfo.additionalInfo?.nftsWanted ?? [],
           async (nft: string): Promise<Collection> =>
             // We get the collection name
             await this.utilsService.getCachedNFTContractInfo(tradeInfo.network, nft),
         ),
       );
-
+}
     // We fetch metadata for the associated assets :
-    tradeInfo.associatedAssetsWithInfo = await pMap(tradeInfo.associatedAssets, async asset => {
+    tradeInfo.associatedAssetsWithInfo = await pMap(tradeInfo.associatedAssets ?? [], async asset => {
       if (asset.cw721Coin) {
         return await this.addCW721Info(tradeInfo, asset);
       } else {
@@ -231,7 +233,7 @@ export class TradesService {
       attributes: tokenInfo?.extension?.attributes,
       description: tokenInfo?.extension?.description,
       traits: (tokenInfo?.extension?.attributes ?? []).map(
-        ({ traitType, value }: { traitType: string; value: string }) => [traitType, value],
+        ({ trait_type, value }: { trait_type: string; value: string }) => [trait_type, value],
       ),
     };
 
