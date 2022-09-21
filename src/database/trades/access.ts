@@ -286,8 +286,6 @@ export class TradeDatabaseService {
       });
     }
 
-    console.log((await currentQuery).length);
-    console.log(parameters["filters.hasLiquidAsset"] == false);
     if (parameters?.["filters.hasLiquidAsset"] != undefined) {
       // We filter on liquid assets
       if (parameters["filters.hasLiquidAsset"]) {
@@ -308,8 +306,6 @@ export class TradeDatabaseService {
       }
     }
 
-    console.log((await currentQuery).length);
-
     // Sort
     currentQuery.orderBy(
       parameters?.["sorters.parameter"] ?? "trade_id",
@@ -319,7 +315,19 @@ export class TradeDatabaseService {
     // Pagination
     if (limitUsed) {
       currentQuery.offset(parameters?.["pagination.offset"] ?? 0);
+      console.log(
+        "limit",
+        parameters["pagination.limit"],
+        process.env.BASE_TRADE_QUERY_LIMIT,
+        process.env.MAX_TRADE_QUERY_LIMIT,
+      );
 
+      console.log(
+        Math.min(
+          parameters?.["pagination.limit"] ?? parseInt(process.env.BASE_TRADE_QUERY_LIMIT),
+          parseInt(process.env.MAX_TRADE_QUERY_LIMIT),
+        ),
+      );
       currentQuery.limit(
         Math.min(
           parameters?.["pagination.limit"] ?? parseInt(process.env.BASE_TRADE_QUERY_LIMIT),

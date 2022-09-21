@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { IsBoolean, IsInt } from "class-validator";
+import { IsBoolean, IsInt, IsOptional } from "class-validator";
 import { Network } from "../../utils/blockchain/dto/network.dto";
 
 export interface Collection {
@@ -91,12 +91,18 @@ export class QueryParameters {
   "filters.counteredBy"?: string[];
   "filters.whitelistedUsers"?: string[];
 
-  @IsBoolean()
   @Transform(({ value }) => value === "true")
   "filters.hasLiquidAsset"?: boolean;
 
   /* Pagination section */
+  @IsOptional()
+  @IsInt()
+  @Transform(({ value }) => parseInt(value))
   "pagination.offset"?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Transform(({ value }) => parseInt(value))
   "pagination.limit"?: number;
 
   /* Sorters section */

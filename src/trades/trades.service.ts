@@ -33,7 +33,7 @@ export class TradesService {
   }
   async getMultipleTrades(params: QueryParameters): Promise<MultipleTradeResponse> {
     const [err, tradeInfo] = await asyncAction(this.tradeDatabaseService.getTrades(params));
-    if (err || !tradeInfo.length) {
+    if (err) {
       console.log(err);
       throw new NotFoundException("Trades Not Found");
     }
@@ -62,7 +62,7 @@ export class TradesService {
     const [err, counterTradeInfo] = await asyncAction(
       this.tradeDatabaseService.getCounterTrades(params),
     );
-    if (err || !counterTradeInfo.length) {
+    if (err) {
       throw new NotFoundException("Counter Trades Not Found");
     }
 
