@@ -68,7 +68,7 @@ async function queryNewTransaction(network: Network) {
       lcd.get("/cosmos/tx/v1beta1/txs", {
         params: {
           events: `wasm._contract_address='${contracts[network].p2pTrade}'`,
-          "pagination.offset": offset,
+          "pagination.offset": 5,
         },
       }),
     );

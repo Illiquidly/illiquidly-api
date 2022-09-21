@@ -150,39 +150,42 @@ export class TradesService {
   async addInfoToTradeInfo(tradeInfo: TradeInfo): Promise<TradeInfo> {
     console.log("adding info");
 
-if(tradeInfo.additionalInfo){
-    // We modify the tradeInfo lookingFor info. It merges nfts_wanted and tokens_wanted
-    tradeInfo.additionalInfo.lookingFor = (tradeInfo.additionalInfo?.tokensWanted ?? [])
-      .map((token): Coin => {
-        if (token.coin) {
-          return {
-            currency: token.coin.denom,
-            amount: token.coin.amount,
-          };
-        } else {
-          return {
-            currency: token.cw20_coin.address,
-            amount: token.cw20_coin.amount,
-          };
-        }
-      })
-      .concat(
-        await pMap(
-          tradeInfo.additionalInfo?.nftsWanted ?? [],
-          async (nft: string): Promise<Collection> =>
-            // We get the collection name
-            await this.utilsService.getCachedNFTContractInfo(tradeInfo.network, nft),
-        ),
-      );
-}
+    if (tradeInfo.additionalInfo) {
+      // We modify the tradeInfo lookingFor info. It merges nfts_wanted and tokens_wanted
+      tradeInfo.additionalInfo.lookingFor = (tradeInfo.additionalInfo?.tokensWanted ?? [])
+        .map((token): Coin => {
+          if (token.coin) {
+            return {
+              currency: token.coin.denom,
+              amount: token.coin.amount,
+            };
+          } else {
+            return {
+              currency: token.cw20_coin.address,
+              amount: token.cw20_coin.amount,
+            };
+          }
+        })
+        .concat(
+          await pMap(
+            tradeInfo.additionalInfo?.nftsWanted ?? [],
+            async (nft: string): Promise<Collection> =>
+              // We get the collection name
+              await this.utilsService.getCachedNFTContractInfo(tradeInfo.network, nft),
+          ),
+        );
+    }
     // We fetch metadata for the associated assets :
-    tradeInfo.associatedAssetsWithInfo = await pMap(tradeInfo.associatedAssets ?? [], async asset => {
-      if (asset.cw721Coin) {
-        return await this.addCW721Info(tradeInfo, asset);
-      } else {
-        return asset;
-      }
-    });
+    tradeInfo.associatedAssetsWithInfo = await pMap(
+      tradeInfo.associatedAssets ?? [],
+      async asset => {
+        if (asset.cw721Coin) {
+          return await this.addCW721Info(tradeInfo, asset);
+        } else {
+          return asset;
+        }
+      },
+    );
 
     // We gather the collections in one place for easy fetching
     tradeInfo.associatedCollections = _.uniqBy(
@@ -225,7 +228,6 @@ if(tradeInfo.additionalInfo){
     );
     const tokenInfo = await this.utilsService.nftInfo(tradeInfo.network, address, tokenId);
 
-    console.log(tokenInfo);
     const returnToken: RawTokenInteracted = {
       tokenId,
       imageUrl: fromIPFSImageURLtoImageURL(tokenInfo?.extension?.image),
@@ -233,7 +235,10 @@ if(tradeInfo.additionalInfo){
       attributes: tokenInfo?.extension?.attributes,
       description: tokenInfo?.extension?.description,
       traits: (tokenInfo?.extension?.attributes ?? []).map(
-        ({ trait_type, value }: { trait_type: string; value: string }) => [trait_type, value],
+        (attribute: { trait_type: string; value: string }) => [
+          attribute.trait_type,
+          attribute.value,
+        ],
       ),
     };
 

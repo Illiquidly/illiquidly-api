@@ -238,12 +238,13 @@ export class NftContentQuerierService {
     const [, nftsInfo] = await asyncAction(
       Promise.all(
         nftsArray.map(async nft => {
-          let [, nft_info] = await asyncAction(this.utilsService.getCachedNFTContractInfo(network, nft));
-		return nft_info ?? {}
+          const [, nftInfo] = await asyncAction(
+            this.utilsService.getCachedNFTContractInfo(network, nft),
+          );
+          return nftInfo ?? {};
         }),
       ),
     );
-
 
     return (nftsOwned ?? [])
       .map((nftContract: any[], i: number) => {

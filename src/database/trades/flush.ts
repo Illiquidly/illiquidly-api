@@ -1,4 +1,10 @@
-import { createNotificationDB, createTradeDB, flushNotificationDB, flushTradeDB, initDB } from "./structure";
+import {
+  createNotificationDB,
+  createTradeDB,
+  flushNotificationDB,
+  flushTradeDB,
+  initDB,
+} from "./structure";
 
 const knexDB = initDB();
 
@@ -10,4 +16,3 @@ flushTradeDB(knexDB)
     console.log(await knexDB("nft_info").columnInfo());
   })
   .then(async () => await knexDB.destroy());
-

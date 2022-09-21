@@ -223,6 +223,13 @@ export class TradeDatabaseService {
       currentQuery.whereIn("trade_id", parameters["filters.tradeId"]);
     }
 
+    if (parameters?.["filters.owners"]) {
+      if (!Array.isArray(parameters["filters.owners"])) {
+        parameters["filters.owners"] = [parameters["filters.owners"]];
+      }
+      currentQuery.whereIn("owner", parameters["filters.owners"]);
+    }
+
     if (parameters?.["filters.state"]) {
       if (!Array.isArray(parameters["filters.state"])) {
         parameters["filters.state"] = [parameters["filters.state"]];
@@ -259,7 +266,6 @@ export class TradeDatabaseService {
 
       const possibleNfts = (
         await pMap(parameters?.["filters.lookingFor"], async (address: string) => {
-          console.log(address);
           return await this.nftInfoService.getNftInfoByPartialName(
             parameters["filters.network"],
             address,
@@ -279,6 +285,30 @@ export class TradeDatabaseService {
         }
       });
     }
+
+    console.log((await currentQuery).length);
+    console.log(parameters["filters.hasLiquidAsset"] == false);
+    if (parameters?.["filters.hasLiquidAsset"] != undefined) {
+      // We filter on liquid assets
+      if (parameters["filters.hasLiquidAsset"]) {
+        currentQuery.where(function () {
+          this.orWhereRaw("associated_assets like ?", `%"coin":%`);
+          this.orWhereRaw("associated_assets like ?", `%"cw20Coin":%`);
+        });
+      } else {
+        // We filter on only illiquid assets
+        console.log("no liquid assets");
+        currentQuery.where(function () {
+          this.orWhereRaw("associated_assets is null");
+          this.orWhere(function () {
+            this.andWhereRaw("associated_assets not like ?", `%"coin":%`);
+            this.andWhereRaw("associated_assets not like ?", `%"cw20Coin":%`);
+          });
+        });
+      }
+    }
+
+    console.log((await currentQuery).length);
 
     // Sort
     currentQuery.orderBy(
