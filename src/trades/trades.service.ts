@@ -169,9 +169,17 @@ export class TradesService {
         .concat(
           await pMap(
             tradeInfo.additionalInfo?.nftsWanted ?? [],
-            async (nft: string): Promise<Collection> =>
+            async (nft: string): Promise<Collection> => {
               // We get the collection name
-              await this.utilsService.getCachedNFTContractInfo(tradeInfo.network, nft),
+              let [err, collectionInfo] = await asyncAction(this.utilsService.getCachedNFTContractInfo(tradeInfo.network, nft));
+              if(err){
+                return {
+                  collectionAddress: nft,
+                  collectionName: ""
+                }
+              }
+              return collectionInfo;
+            }
           ),
         );
     }
