@@ -20,6 +20,7 @@ import { Repository } from "typeorm";
 import { BlockChainTradeInfo } from "../utils/blockchain/dto/trade-info.dto";
 import { CounterTrade, RawAsset, Trade, TradeInfoORM } from "./entities/trade.entity";
 import { CW721Collection, ValuedCoin, ValuedCW20Coin } from "../utils-api/entities/nft-info.entity";
+import { formatNiceLuna } from "../utils/js/parseCoin";
 const pMap = require("p-map");
 const DATE_FORMAT = require("dateformat");
 
@@ -210,7 +211,7 @@ export class TradesService {
         .map((asset: Coin) => {
           const coin = new ValuedCoin();
           coin.id = null;
-          coin.amount = parseInt(asset.coin.amount);
+          coin.amount = asset.coin.amount;
           coin.denom = asset.coin.denom;
           coin.network = network;
           return coin;
@@ -220,7 +221,7 @@ export class TradesService {
         async (asset: CW20Coin) => {
           const coin = new ValuedCW20Coin();
           coin.id = null;
-          coin.amount = parseInt(asset.cw20Coin.amount);
+          coin.amount = asset.cw20Coin.amount;
           coin.cw20Coin = await this.utilsService.CW20CoinInfo(network, asset.cw20Coin.address);
           return coin;
         },
@@ -256,6 +257,9 @@ export class TradesService {
     tradeInfo.additionalInfo.lookingFor = (tradeInfo.additionalInfo.tokensWanted ?? []).map(
       (token): RawCoin => {
         if (token.coin) {
+          if(token.coin.denom == "uluna"){
+            return formatNiceLuna(token.coin.amount)
+          }
           return {
             currency: token.coin.denom,
             amount: token.coin.amount,
@@ -304,7 +308,13 @@ export class TradesService {
     tradeInfo: TradeInfoORM,
   ): Promise<TradeInfo> {
     // We fetch metadata for the associated assets :
-    let associatedAssets: RawAsset[] = tradeInfo.coinAssets ?? [];
+    let associatedAssets: RawAsset[] = (tradeInfo.coinAssets ?? []).map((coin: ValuedCoin)=>{
+      if(coin.denom != "uluna"){
+        return coin
+      }
+      let asset = formatNiceLuna(coin.amount);
+      coin.amount = asset.amount;
+    });
     associatedAssets = associatedAssets.concat(tradeInfo.cw20Assets ?? []);
     associatedAssets = associatedAssets.concat(tradeInfo.cw721Assets ?? []);
     associatedAssets = associatedAssets.concat(JSON.parse(tradeInfo.cw1155Assets) ?? []);

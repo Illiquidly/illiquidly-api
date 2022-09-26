@@ -26,8 +26,11 @@ export class ValuedCoin {
   @Column()
   denom: string;
 
+  @Column({default: "LUNA"})
+  currency: string;
+
   @Column()
-  amount: number;
+  amount: string;
 }
 
 @Entity()
@@ -64,7 +67,7 @@ export class ValuedCW20Coin {
   cw20Coin: CW20Coin;
 
   @Column()
-  amount: number;
+  amount: string;
 }
 
 @Entity()
