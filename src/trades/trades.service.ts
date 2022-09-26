@@ -257,8 +257,8 @@ export class TradesService {
     tradeInfo.additionalInfo.lookingFor = (tradeInfo.additionalInfo.tokensWanted ?? []).map(
       (token): RawCoin => {
         if (token.coin) {
-          if(token.coin.denom == "uluna"){
-            return formatNiceLuna(token.coin.amount)
+          if (token.coin.denom == "uluna") {
+            return formatNiceLuna(token.coin.amount);
           }
           return {
             currency: token.coin.denom,
@@ -308,34 +308,35 @@ export class TradesService {
     tradeInfo: TradeInfoORM,
   ): Promise<TradeInfo> {
     // We fetch metadata for the associated assets :
-    let associatedAssets: RawAsset[] = (tradeInfo.coinAssets ?? []).map((coin: ValuedCoin)=>{
-      if(coin.denom != "uluna"){
+    let associatedAssets: RawAsset[] = (tradeInfo.coinAssets ?? []).map((coin: ValuedCoin) => {
+      if (coin.denom != "uluna") {
         return {
-          coin
-        }
+          coin,
+        };
       }
-      let asset = formatNiceLuna(coin.amount);
+      const asset = formatNiceLuna(coin.amount);
       coin.amount = asset.amount;
       return {
-        coin
-      }
+        coin,
+      };
     });
-    associatedAssets = associatedAssets.concat(tradeInfo.cw20Assets ?? [].map((cw20Coin) => {
-      return {
-        cw20Coin
-      }
-    }));
     associatedAssets = associatedAssets.concat(
-      (tradeInfo.cw721Assets ?? []).map(
-        (asset) => {
+      tradeInfo.cw20Assets ??
+        [].map(cw20Coin => {
           return {
-            cw721Coin: this.utilsService.parseTokenDBToResponse(asset)
-          }
-        }
-      )
+            cw20Coin,
+          };
+        }),
+    );
+    associatedAssets = associatedAssets.concat(
+      (tradeInfo.cw721Assets ?? []).map(asset => {
+        return {
+          cw721Coin: this.utilsService.parseTokenDBToResponse(asset),
+        };
+      }),
     );
     associatedAssets = associatedAssets.concat(JSON.parse(tradeInfo.cw1155Assets) ?? []);
-    console.log("new associated")
+    console.log("new associated");
     // We don't want all the collections NFTs here, that's a bit heavy
     const tokensWanted = JSON.parse(tradeInfo.tokensWanted);
     let tradePreview = JSON.parse(tradeInfo.tradePreview);

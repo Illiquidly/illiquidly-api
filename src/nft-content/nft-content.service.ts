@@ -54,7 +54,7 @@ export class NftContentService {
 
   async findNfts(network: Network, address: string): Promise<NFTContentResponse> {
     const currentData: StoreContractsInteracted = await this._internalGetNfts(network, address);
-    console.log(currentData)
+    console.log("current", currentData);
     return this.nftContentQuerierService.mapForResponse(network, currentData);
   }
 
@@ -103,7 +103,6 @@ export class NftContentService {
     }, QUERY_TIMEOUT);
 
     // We launch the actual update code
-
     // Force update restarts everything from scratch
 
     if (mode == UpdateMode.FORCE_UPDATE) {
@@ -226,6 +225,7 @@ export class NftContentService {
         newContracts,
         address,
       );
+      console.log("owned Tokens", ownedTokens);
 
       // We update the owned tokens
       ownedTokens.forEach((token: StoredTokenInteracted) => {

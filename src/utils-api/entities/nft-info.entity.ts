@@ -26,7 +26,7 @@ export class ValuedCoin {
   @Column()
   denom: string;
 
-  @Column({default: "LUNA"})
+  @Column({ default: "LUNA" })
   currency: string;
 
   @Column()

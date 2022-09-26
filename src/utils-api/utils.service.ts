@@ -52,7 +52,9 @@ export class UtilsService {
       Object.entries(knownNfts).forEach(async ([key]: [string, any]) => {
         const [, newCollection] = await asyncAction(this.nftQuery.newCW721Contract(network, key));
         if (newCollection) {
-          await this.collectionRepository.save([newCollection]).catch(()=>{console.log("we don't care if this doesn't work")});
+          await this.collectionRepository.save([newCollection]).catch(() => {
+            console.log("we don't care if this doesn't work");
+          });
         }
       });
     }
@@ -167,19 +169,19 @@ export class UtilsService {
 
   parseTokenDBToResponse(tokenInfo: CW721Token): TokenInteracted {
     return {
-          tokenId: tokenInfo?.tokenId,
-          collectionName: tokenInfo?.collection?.collectionName,
-          collectionAddress: tokenInfo?.collection?.collectionAddress,
-          symbol: tokenInfo?.collection?.symbol,
-          imageUrl: fromIPFSImageURLtoImageURL(tokenInfo?.metadata?.image),
-          name: tokenInfo?.metadata?.name,
-          attributes: tokenInfo?.metadata?.attributes,
-          description: tokenInfo?.metadata?.description,
-          traits: (tokenInfo?.metadata?.attributes ?? []).map(
-            ({ traitType, value }: { traitType: string; value: string }) => [traitType, value],
-          ),
-          allNFTInfo: tokenInfo?.metadata,
-        }
+      tokenId: tokenInfo?.tokenId,
+      collectionName: tokenInfo?.collection?.collectionName,
+      collectionAddress: tokenInfo?.collection?.collectionAddress,
+      symbol: tokenInfo?.collection?.symbol,
+      imageUrl: fromIPFSImageURLtoImageURL(tokenInfo?.metadata?.image),
+      name: tokenInfo?.metadata?.name,
+      attributes: tokenInfo?.metadata?.attributes,
+      description: tokenInfo?.metadata?.description,
+      traits: (tokenInfo?.metadata?.attributes ?? []).map(
+        ({ traitType, value }: { traitType: string; value: string }) => [traitType, value],
+      ),
+      allNFTInfo: tokenInfo?.metadata,
+    };
   }
 
   async parseDistantTokenToDB(tokenId: string, tokenInfo: BlockchainCW721Token) {

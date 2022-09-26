@@ -180,7 +180,7 @@ export class NftContentQuerierService {
         Promise.all(
           tokenBatch.map(async (id: string) => {
             const [, tokenInfo] = await asyncAction(
-              this.utilsService.nftTokenInfo(network, nft, id),
+              this.utilsService.nftTokenInfoFromDB(network, nft, id),
             );
             return {
               tokenId: id,
@@ -250,31 +250,36 @@ export class NftContentQuerierService {
         return nftContract.map((token: any): StoredTokenInteracted => {
           const tokenNftInfo = camelCaseObjectDeep(token.nftInfo);
           return {
+            ...tokenNftInfo,
             tokenId: token.tokenId,
             collectionAddress: nftsArray[i],
-            allNFTInfo: tokenNftInfo,
           };
         });
       })
       .flat();
   }
 
-  async mapForResponse(network: Network, nftContracts: StoreContractsInteracted): Promise<NFTContentResponse> {
+  async mapForResponse(
+    network: Network,
+    nftContracts: StoreContractsInteracted,
+  ): Promise<NFTContentResponse> {
     const ownedTokens: TokenInteracted[] = await pMap(nftContracts.ownedTokens, async token => {
-      const tokenNftInfo = camelCaseObjectDeep(token.allNFTInfo);
-      let collectionInfo = await this.utilsService.collectionInfo(network, token.collectionAddress);
-      console.log(collectionInfo)
+      const tokenNftInfo = camelCaseObjectDeep(token.metadata);
+      const collectionInfo = await this.utilsService.collectionInfo(
+        network,
+        token.collectionAddress,
+      );
       return {
         tokenId: token.tokenId,
         collectionAddress: token.collectionAddress,
         collectionName: collectionInfo?.collectionName,
         symbol: collectionInfo?.symbol,
-        allNFTInfo: tokenNftInfo,
-        imageUrl: fromIPFSImageURLtoImageURL(tokenNftInfo?.extension?.image),
-        description: tokenNftInfo?.extension?.description,
-        name: tokenNftInfo?.extension?.name,
-        attributes: tokenNftInfo?.extension?.attributes,
-        traits: (tokenNftInfo?.extension?.attributes ?? []).map(
+        allNFTInfo: token?.allNFTInfo,
+        imageUrl: fromIPFSImageURLtoImageURL(tokenNftInfo?.image),
+        description: tokenNftInfo?.description,
+        name: tokenNftInfo?.name,
+        attributes: tokenNftInfo?.attributes,
+        traits: (tokenNftInfo?.attributes ?? []).map(
           ({ traitType, value }: { traitType: string; value: string }) => [traitType, value],
         ),
       };
@@ -295,32 +300,4 @@ export class NftContentQuerierService {
       txs: nftContracts.txs,
     };
   }
-
-  /*
-
-
-
-    return 
-      .map((nftContract: any[], i: number) => {
-        return nftContract.map((token: any): TokenInteracted => {
-          const tokenNftInfo = camelCaseObjectDeep(token.nftInfo);
-          return {
-            tokenId: token.tokenId,
-            collectionAddress: nftsArray[i],
-            collectionName: nftsInfo?.[i]?.collectionName,
-            symbol: nftsInfo?.[i]?.symbol,
-            allNFTInfo: tokenNftInfo,
-            imageUrl: fromIPFSImageURLtoImageURL(tokenNftInfo?.extension?.image),
-            description: tokenNftInfo?.extension?.description,
-            name: tokenNftInfo?.extension?.name,
-            attributes: tokenNftInfo?.extension?.attributes,
-            traits: (tokenNftInfo?.extension?.attributes ?? []).map(
-              ({ traitType, value }: { traitType: string; value: string }) => [traitType, value],
-            ),
-          };
-        });
-      })
-      .flat();
-
-      */
 }
