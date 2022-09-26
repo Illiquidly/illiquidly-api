@@ -19,6 +19,7 @@ import { QueryLimitService } from "../utils/queryLimit.service";
 const cloudscraper = require("cloudscraper");
 const camelCaseObjectDeep = require("camelcase-object-deep");
 const _ = require("lodash");
+const pMap = require("p-map");
 
 const AXIOS_TIMEOUT = 10_000;
 
@@ -258,19 +259,16 @@ export class NftContentQuerierService {
       .flat();
   }
 
-  async mapForResponse(nftContracts: StoreContractsInteracted): Promise<NFTContentResponse> {
-    const ownedTokens: TokenInteracted[] = nftContracts.ownedTokens.map(token => {
+  async mapForResponse(network: Network, nftContracts: StoreContractsInteracted): Promise<NFTContentResponse> {
+    const ownedTokens: TokenInteracted[] = await pMap(nftContracts.ownedTokens, async token => {
       const tokenNftInfo = camelCaseObjectDeep(token.allNFTInfo);
+      let collectionInfo = await this.utilsService.collectionInfo(network, token.collectionAddress);
+      console.log(collectionInfo)
       return {
         tokenId: token.tokenId,
-        /*
-            collectionAddress: nftsArray[i],
-            collectionName: nftsInfo?.[i]?.collectionName,
-            symbol: nftsInfo?.[i]?.symbol,
-            */
-        collectionAddress: "",
-        collectionName: "",
-        symbol: "",
+        collectionAddress: token.collectionAddress,
+        collectionName: collectionInfo?.collectionName,
+        symbol: collectionInfo?.symbol,
         allNFTInfo: tokenNftInfo,
         imageUrl: fromIPFSImageURLtoImageURL(tokenNftInfo?.extension?.image),
         description: tokenNftInfo?.extension?.description,

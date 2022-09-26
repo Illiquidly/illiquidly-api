@@ -54,7 +54,8 @@ export class NftContentService {
 
   async findNfts(network: Network, address: string): Promise<NFTContentResponse> {
     const currentData: StoreContractsInteracted = await this._internalGetNfts(network, address);
-    return this.nftContentQuerierService.mapForResponse(currentData);
+    console.log(currentData)
+    return this.nftContentQuerierService.mapForResponse(network, currentData);
   }
 
   async update(network: Network, address: string, mode: UpdateMode): Promise<NFTContentResponse> {
@@ -72,7 +73,7 @@ export class NftContentService {
     this._internalUpdate(network, address, mode, currentData);
 
     // And without waiting for the end of execution, we return the data
-    return this.nftContentQuerierService.mapForResponse(returnData);
+    return this.nftContentQuerierService.mapForResponse(network, returnData);
   }
 
   @RedisLock(
