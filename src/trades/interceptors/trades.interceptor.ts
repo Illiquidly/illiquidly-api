@@ -19,7 +19,7 @@ export class TradeResultInterceptor implements NestInterceptor {
           );
           return {
             data: parsedTrades,
-            restOfResponse,
+            ...restOfResponse,
           };
         } else if (Array.isArray(res)) {
           return await pMap(res, async trade =>
@@ -47,7 +47,7 @@ export class CounterTradeResultInterceptor implements NestInterceptor {
           );
           return {
             data: parsedCounterTrades,
-            restOfResponse,
+            ...restOfResponse,
           };
         } else if (Array.isArray(res)) {
           return await pMap(res, async trade =>
