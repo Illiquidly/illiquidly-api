@@ -310,15 +310,32 @@ export class TradesService {
     // We fetch metadata for the associated assets :
     let associatedAssets: RawAsset[] = (tradeInfo.coinAssets ?? []).map((coin: ValuedCoin)=>{
       if(coin.denom != "uluna"){
-        return coin
+        return {
+          coin
+        }
       }
       let asset = formatNiceLuna(coin.amount);
       coin.amount = asset.amount;
+      return {
+        coin
+      }
     });
-    associatedAssets = associatedAssets.concat(tradeInfo.cw20Assets ?? []);
-    associatedAssets = associatedAssets.concat(tradeInfo.cw721Assets ?? []);
+    associatedAssets = associatedAssets.concat(tradeInfo.cw20Assets ?? [].map((cw20Coin) => {
+      return {
+        cw20Coin
+      }
+    }));
+    associatedAssets = associatedAssets.concat(
+      (tradeInfo.cw721Assets ?? []).map(
+        (asset) => {
+          return {
+            cw721Coin: this.utilsService.parseTokenDBToResponse(asset)
+          }
+        }
+      )
+    );
     associatedAssets = associatedAssets.concat(JSON.parse(tradeInfo.cw1155Assets) ?? []);
-
+    console.log("new associated")
     // We don't want all the collections NFTs here, that's a bit heavy
     const tokensWanted = JSON.parse(tradeInfo.tokensWanted);
     let tradePreview = JSON.parse(tradeInfo.tradePreview);

@@ -17,6 +17,7 @@ import {
   Unique,
 } from "typeorm";
 import { Network } from "../../utils/blockchain/dto/network.dto";
+import { TokenInteracted } from "src/nft-content/dto/get-nft-content.dto";
 
 // TODO table.text("whole_data");
 @Entity()
@@ -93,7 +94,11 @@ export class TradeInfoORM {
   tradePreview: string;
 }
 
-export type RawAsset = ValuedCoin | ValuedCW20Coin | CW721Token;
+export class RawAsset {
+  cw721Coin?: TokenInteracted;
+  cw20Coin?: ValuedCW20Coin;
+  coin?: ValuedCoin;
+}
 
 @Entity()
 @Unique("UQ_TRADES", ["network", "tradeId"])

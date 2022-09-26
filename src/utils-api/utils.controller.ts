@@ -39,7 +39,7 @@ export class UtilsController {
   },
 })
 @Controller("collections")
-export class TradesController {
+export class CollectionsController {
   constructor(
     private readonly utilsService: UtilsService,
     public service: CW721CollectionCrudService,
