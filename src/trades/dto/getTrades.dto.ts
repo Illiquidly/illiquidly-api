@@ -74,7 +74,7 @@ export class TradeInfo {
 export class CounterTradeInfoResponse {
   network: Network;
   counterId: number;
-  primary_id: number;
+  id: number;
   trade: Trade;
   tradeInfo: TradeInfo;
 }
@@ -82,7 +82,7 @@ export class CounterTradeInfoResponse {
 export class TradeInfoResponse {
   network: Network;
   tradeId: number;
-  primary_id: number;
+  id: number;
   counterTrades: CounterTrade[];
   tradeInfo: TradeInfo;
 }

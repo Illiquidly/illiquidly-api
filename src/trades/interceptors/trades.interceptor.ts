@@ -12,14 +12,14 @@ export class TradeResultInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
       map(async res => {
-        const { data, ...restOfResponse } = res;
+        const { data, ...meta } = res;
         if (res?.data) {
           const parsedTrades = await pMap(data, async trade =>
             this.tradesService.parseTradeDBToResponse(Network.testnet, trade),
           );
           return {
             data: parsedTrades,
-            ...restOfResponse,
+            ...meta,
           };
         } else if (Array.isArray(res)) {
           return await pMap(res, async trade =>
@@ -40,14 +40,14 @@ export class CounterTradeResultInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
       map(async res => {
-        const { data, ...restOfResponse } = res;
+        const { data, ...meta } = res;
         if (res?.data) {
           const parsedCounterTrades = await pMap(data, async trade =>
             this.tradesService.parseCounterTradeDBToResponse(Network.testnet, trade),
           );
           return {
             data: parsedCounterTrades,
-            ...restOfResponse,
+            ...meta,
           };
         } else if (Array.isArray(res)) {
           return await pMap(res, async trade =>

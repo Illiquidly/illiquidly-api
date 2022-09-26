@@ -278,7 +278,7 @@ export class TradesService {
     return {
       network,
       tradeId: trade.tradeId,
-      primary_id: trade.id,
+      id: trade.id,
       counterTrades: trade.counterTrades,
       tradeInfo: tradeInfo,
     };
@@ -296,7 +296,7 @@ export class TradesService {
     return {
       network,
       counterId: counterTrade.counterTradeId,
-      primary_id: counterTrade.id,
+      id: counterTrade.id,
       trade: counterTrade.trade,
       tradeInfo: tradeInfo,
     };
