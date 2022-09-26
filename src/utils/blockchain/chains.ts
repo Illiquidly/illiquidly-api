@@ -16,7 +16,7 @@ export const chains: any = {
         key: settenConfig.settenKey,
       },
     },
-   */
+    */
   },
   classic: {
     URL: "https://columbus-lcd.terra.dev",

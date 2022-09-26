@@ -1,14 +1,18 @@
 import { Injectable } from "@nestjs/common";
 import "dotenv/config";
-import { TokenInteracted, TxInterval, UpdateMode, UpdateState } from "./dto/get-nft-content.dto";
+import {
+  NFTContentResponse,
+  StoreContractsInteracted,
+  StoredTokenInteracted,
+  TokenInteracted,
+  TxInterval,
+  UpdateMode,
+  UpdateState,
+} from "./dto/get-nft-content.dto";
 import {
   canUpdate,
-  ContractsInteracted,
   defaultContractsApiStructure,
   getNFTContentFromDb,
-  serialise,
-  deserialise,
-  SerializableContractsInteracted,
   saveNFTContentToDb,
 } from "../utils/redis_db_accessor";
 import { Network } from "../utils/blockchain/dto/network.dto";
@@ -16,8 +20,6 @@ import { NftContentQuerierService } from "./nft-content-querier.service";
 import { RedisService } from "nestjs-redis";
 import Redis from "ioredis";
 import { RedisLock, RedisLockService } from "nestjs-simple-redis-lock";
-
-const _ = require("lodash");
 
 function toNFTKey(network: string, address: string) {
   return `nft:${address}@${network}_${process.env.DB_VERSION}`;
@@ -44,34 +46,37 @@ export class NftContentService {
     this.redisDB = redisService.getClient();
   }
 
-  async findNfts(network: Network, address: string): Promise<SerializableContractsInteracted> {
+  async _internalGetNfts(network: Network, address: string): Promise<StoreContractsInteracted> {
     // We get the db data
     const dbKey = toNFTKey(network, address);
-    const currentData: ContractsInteracted = await getNFTContentFromDb(this.redisDB, dbKey);
-
-    return serialise(currentData);
+    return await getNFTContentFromDb(this.redisDB, dbKey);
   }
 
-  async update(network: Network, address: string, mode: UpdateMode) {
+  async findNfts(network: Network, address: string): Promise<NFTContentResponse> {
+    const currentData: StoreContractsInteracted = await this._internalGetNfts(network, address);
+    return this.nftContentQuerierService.mapForResponse(currentData);
+  }
+
+  async update(network: Network, address: string, mode: UpdateMode): Promise<NFTContentResponse> {
     // First we get the current data
-    const currentData = await this.findNfts(network, address);
+    const currentData = await this._internalGetNfts(network, address);
 
     let returnData = { ...currentData };
     if (mode == UpdateMode.UPDATE) {
       returnData.state = UpdateState.isUpdating;
     } else if (mode == UpdateMode.FORCE_UPDATE) {
-      returnData = serialise(defaultContractsApiStructure());
+      returnData = defaultContractsApiStructure();
       returnData.state = UpdateState.isUpdating;
     }
     // Then we process the updateFunction
-    this._internalUpdate(network, address, mode, deserialise(currentData));
+    this._internalUpdate(network, address, mode, currentData);
 
     // And without waiting for the end of execution, we return the data
-    return returnData;
+    return this.nftContentQuerierService.mapForResponse(returnData);
   }
 
   @RedisLock(
-    (target, network, address) =>
+    (_target, network, address) =>
       `${toNFTKey(network, address)}_updateLock_${process.env.DB_VERSION}`,
     UPDATE_DESPITE_LOCK_TIME,
     0,
@@ -81,7 +86,7 @@ export class NftContentService {
     network: Network,
     address: string,
     mode: UpdateMode,
-    data: ContractsInteracted,
+    data: StoreContractsInteracted,
   ) {
     // Here we want to update the database
 
@@ -123,7 +128,7 @@ export class NftContentService {
     dbKey: string,
     network: string,
     address: string,
-    currentData: ContractsInteracted,
+    currentData: StoreContractsInteracted,
     hasTimedOut: any,
     queryNewInteractedContracts: any,
     parseTokenSet: typeof this.nftContentQuerierService.parseNFTSet,
@@ -201,7 +206,7 @@ export class NftContentService {
     network: string,
     address: string,
     newContracts: Set<string>,
-    currentData: ContractsInteracted,
+    currentData: StoreContractsInteracted,
     newTxs: TxInterval,
     parseTokenSet: (n: string, c: Set<string>, a: string) => Promise<TokenInteracted[]>,
   ) {
@@ -215,10 +220,14 @@ export class NftContentService {
       currentData.interactedContracts = contracts;
       // We query what tokens are actually owned by the address
 
-      const ownedTokens: TokenInteracted[] = await parseTokenSet(network, newContracts, address);
+      const ownedTokens: StoredTokenInteracted[] = await parseTokenSet(
+        network,
+        newContracts,
+        address,
+      );
 
       // We update the owned tokens
-      ownedTokens.forEach((token: TokenInteracted) => {
+      ownedTokens.forEach((token: StoredTokenInteracted) => {
         // First we find if the token data already exists in the array
         const existingIndex = currentData.ownedTokens.findIndex(
           element =>
@@ -231,17 +240,6 @@ export class NftContentService {
           currentData.ownedTokens[existingIndex] = token;
         }
       });
-
-      // We correct the old data (TODO this is only a temporary fix)
-
-      // We update the owned Contracts
-      currentData.ownedCollections = _.uniqBy(
-        currentData.ownedTokens.map(token => ({
-          collectionName: token.collectionName,
-          collectionAddress: token.collectionAddress,
-        })),
-        "collectionAddress",
-      );
     }
 
     // Then we update the transactions we've already seen
@@ -249,7 +247,7 @@ export class NftContentService {
 
     return currentData;
   }
-  updateSeenTransaction(currentData: ContractsInteracted, newTxs: TxInterval) {
+  updateSeenTransaction(currentData: StoreContractsInteracted, newTxs: TxInterval) {
     // If there is an interval, we init the interval data
     if (
       newTxs.oldest &&

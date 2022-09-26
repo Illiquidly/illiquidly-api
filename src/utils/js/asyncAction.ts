@@ -1,5 +1,5 @@
-export async function asyncAction(promise: Promise<unknown>) {
+export async function asyncAction(promise: Promise<unknown>): Promise<[any, any]> {
   return await Promise.resolve(promise)
-    .then(data => [null, data])
-    .catch(error => [error]);
+    .then((data): [null, any] => [null, data])
+    .catch(error => [error, null]);
 }

@@ -5,6 +5,8 @@ import { TradesModule } from "./trades/trades.module";
 import { KnexModule } from "nestjs-knex";
 import { RedisModule } from "nestjs-redis";
 import { RedisLockModule } from "nestjs-simple-redis-lock";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { typeOrmOptions } from "./utils/typeormOptions";
 
 @Module({
   imports: [
@@ -25,6 +27,10 @@ import { RedisLockModule } from "nestjs-simple-redis-lock";
     }),
     RedisModule.register({}),
     RedisLockModule,
+    TypeOrmModule.forRoot({
+      ...typeOrmOptions,
+      type: "mysql",
+    }),
   ],
   controllers: [],
   providers: [],

@@ -1,8 +1,13 @@
-import { LCDClient, TxLog } from "@terra-money/terra.js";
+import { TxLog } from "@terra-money/terra.js";
 import axios from "axios";
-import { TokenInteracted } from "./dto/get-nft-content.dto";
+import {
+  NFTContentResponse,
+  StoreContractsInteracted,
+  StoredTokenInteracted,
+  TokenInteracted,
+} from "./dto/get-nft-content.dto";
 
-import { chains, fcds } from "../utils/blockchain/chains";
+import { fcds } from "../utils/blockchain/chains";
 import { asyncAction } from "../utils/js/asyncAction.js";
 import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
 import { Network } from "../utils/blockchain/dto/network.dto";
@@ -10,14 +15,11 @@ import { Injectable } from "@nestjs/common";
 import { UtilsService } from "../utils-api/utils.service";
 import { BlockchainNFTQuery } from "../utils/blockchain/nft_query";
 import { QueryLimitService } from "../utils/queryLimit.service";
-const pLimit = require("p-limit");
 
 const cloudscraper = require("cloudscraper");
 const camelCaseObjectDeep = require("camelcase-object-deep");
 const _ = require("lodash");
 
-const limitNFT = pLimit(10);
-const limitToken = pLimit(50);
 const AXIOS_TIMEOUT = 10_000;
 
 @Injectable()
@@ -176,7 +178,9 @@ export class NftContentQuerierService {
       const [infoError, tokenInfos] = await asyncAction(
         Promise.all(
           tokenBatch.map(async (id: string) => {
-            const [_, tokenInfo] = await asyncAction(this.utilsService.nftInfo(network, nft, id));
+            const [, tokenInfo] = await asyncAction(
+              this.utilsService.nftTokenInfo(network, nft, id),
+            );
             return {
               tokenId: id,
               nftInfo: tokenInfo ?? null,
@@ -229,24 +233,76 @@ export class NftContentQuerierService {
     const [, nftsOwned] = await asyncAction(
       Promise.all(
         nftsArray.map(async nft => {
-          return (await limitNFT)(
-            async () => await this.parseTokensFromOneNft(network, address, nft),
-          );
-        }),
-      ),
-    );
-    const [, nftsInfo] = await asyncAction(
-      Promise.all(
-        nftsArray.map(async nft => {
-          const [, nftInfo] = await asyncAction(
-            this.utilsService.getCachedNFTContractInfo(network, nft),
-          );
-          return nftInfo ?? {};
+          return await this.parseTokensFromOneNft(network, address, nft);
         }),
       ),
     );
 
+    // We update the contractInfo of the collections that exist (we let that run in the background, no worries)
+    nftsArray.map(async nft => {
+      await asyncAction(this.utilsService.collectionInfo(network, nft));
+    });
+
+    // We return the raw information
     return (nftsOwned ?? [])
+      .map((nftContract: any[], i: number) => {
+        return nftContract.map((token: any): StoredTokenInteracted => {
+          const tokenNftInfo = camelCaseObjectDeep(token.nftInfo);
+          return {
+            tokenId: token.tokenId,
+            collectionAddress: nftsArray[i],
+            allNFTInfo: tokenNftInfo,
+          };
+        });
+      })
+      .flat();
+  }
+
+  async mapForResponse(nftContracts: StoreContractsInteracted): Promise<NFTContentResponse> {
+    const ownedTokens: TokenInteracted[] = nftContracts.ownedTokens.map(token => {
+      const tokenNftInfo = camelCaseObjectDeep(token.allNFTInfo);
+      return {
+        tokenId: token.tokenId,
+        /*
+            collectionAddress: nftsArray[i],
+            collectionName: nftsInfo?.[i]?.collectionName,
+            symbol: nftsInfo?.[i]?.symbol,
+            */
+        collectionAddress: "",
+        collectionName: "",
+        symbol: "",
+        allNFTInfo: tokenNftInfo,
+        imageUrl: fromIPFSImageURLtoImageURL(tokenNftInfo?.extension?.image),
+        description: tokenNftInfo?.extension?.description,
+        name: tokenNftInfo?.extension?.name,
+        attributes: tokenNftInfo?.extension?.attributes,
+        traits: (tokenNftInfo?.extension?.attributes ?? []).map(
+          ({ traitType, value }: { traitType: string; value: string }) => [traitType, value],
+        ),
+      };
+    });
+    const ownedCollections = _.uniqBy(
+      ownedTokens.map(token => ({
+        collectionName: token.collectionName,
+        collectionAddress: token.collectionAddress,
+      })),
+      "collectionAddress",
+    );
+
+    return {
+      interactedContracts: Array.from(nftContracts.interactedContracts),
+      ownedCollections,
+      ownedTokens,
+      state: nftContracts.state,
+      txs: nftContracts.txs,
+    };
+  }
+
+  /*
+
+
+
+    return 
       .map((nftContract: any[], i: number) => {
         return nftContract.map((token: any): TokenInteracted => {
           const tokenNftInfo = camelCaseObjectDeep(token.nftInfo);
@@ -267,5 +323,6 @@ export class NftContentQuerierService {
         });
       })
       .flat();
-  }
+
+      */
 }

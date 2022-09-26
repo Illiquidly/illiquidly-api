@@ -4,6 +4,7 @@ import { UpdateMode } from "../../nft-content/dto/get-nft-content.dto";
 import { Network } from "../blockchain/dto/network.dto";
 
 export function validateRequest(network: Network, mode?: UpdateMode) {
+  console.log(network);
   if (chains[network] == undefined) {
     throw new NetworkError();
   }

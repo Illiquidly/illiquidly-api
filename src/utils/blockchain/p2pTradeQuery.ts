@@ -3,6 +3,8 @@ import { LCDClient } from "@terra-money/terra.js";
 import { chains, contracts } from "./chains";
 import { Network } from "./dto/network.dto";
 import { sendIndependentQuery } from "./sendIndependentQuery";
+import { BlockChainTradeInfo } from "./dto/trade-info.dto";
+const camelCaseObjectDeep = require("camelcase-object-deep");
 
 export class BlockchainTradeQuery {
   sendQueryFunction: typeof sendIndependentQuery;
@@ -10,22 +12,26 @@ export class BlockchainTradeQuery {
     this.sendQueryFunction = sendQueryFunction;
   }
 
-  async getTradeInfo(network: Network, tradeId: number): Promise<any> {
+  async getTradeInfo(network: Network, tradeId: number): Promise<BlockChainTradeInfo> {
     const terra = new LCDClient(chains[network]);
-    return await terra.wasm.contractQuery(contracts[network].p2pTrade, {
-      trade_info: {
-        trade_id: tradeId,
-      },
-    });
+    return camelCaseObjectDeep(
+      await terra.wasm.contractQuery(contracts[network].p2pTrade, {
+        trade_info: {
+          trade_id: tradeId,
+        },
+      }),
+    );
   }
 
   async getCounterTradeInfo(network: Network, tradeId: number, counterId: number): Promise<any> {
     const terra = new LCDClient(chains[network]);
-    return await terra.wasm.contractQuery(contracts[network].p2pTrade, {
-      counter_trade_info: {
-        trade_id: tradeId,
-        counter_id: counterId,
-      },
-    });
+    return camelCaseObjectDeep(
+      await terra.wasm.contractQuery(contracts[network].p2pTrade, {
+        counter_trade_info: {
+          trade_id: tradeId,
+          counter_id: counterId,
+        },
+      }),
+    );
   }
 }

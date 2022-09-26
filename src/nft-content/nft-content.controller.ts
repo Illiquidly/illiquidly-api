@@ -3,7 +3,7 @@ import { NftContentService } from "./nft-content.service";
 import {
   GetNFTWalletContent,
   UpdateNFTWalletContent,
-  SerializableContractsInteracted,
+  NFTContentResponse,
 } from "./dto/get-nft-content.dto";
 import { IsEnum } from "class-validator";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
@@ -18,10 +18,10 @@ export class NftContentController {
   @IsEnum(Network)
   @ApiResponse({
     status: 200,
-    type: () => SerializableContractsInteracted,
+    type: () => NFTContentResponse,
     description: "Returns the content of a wallet",
   })
-  async findNfts(@Param() params: GetNFTWalletContent): Promise<SerializableContractsInteracted> {
+  async findNfts(@Param() params: GetNFTWalletContent): Promise<NFTContentResponse> {
     // Need to validate that network enum
     return await this.nftContentService.findNfts(params.network, params.address);
   }
@@ -29,7 +29,7 @@ export class NftContentController {
   @Patch(":network/:address/:mode")
   @ApiResponse({
     status: 200,
-    type: () => SerializableContractsInteracted,
+    type: () => NFTContentResponse,
     description: "Updates and Returns the content of a wallet",
   })
   async update(@Param() params: UpdateNFTWalletContent) {

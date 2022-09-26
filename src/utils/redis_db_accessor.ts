@@ -1,8 +1,7 @@
 import Redis from "ioredis";
-import Redlock, { Lock } from "redlock";
 import {
-  ContractsInteracted,
   SerializableContractsInteracted,
+  StoreContractsInteracted,
   UpdateState,
 } from "../nft-content/dto/get-nft-content.dto";
 
@@ -13,15 +12,14 @@ function createRedisClient() {
 
 async function quitDB(db: Redis) {
   // We stop the db
-  db.end();
+  await db.quit();
 }
 
 export { createRedisClient };
 
-export function defaultContractsApiStructure(): ContractsInteracted {
+export function defaultContractsApiStructure(): StoreContractsInteracted {
   return {
     interactedContracts: new Set(),
-    ownedCollections: [],
     ownedTokens: [],
     state: UpdateState.Full,
     txs: {
@@ -39,7 +37,7 @@ export function defaultContractsApiStructure(): ContractsInteracted {
 
 type Nullable<T> = T | null;
 
-function fillEmpty(currentData: Nullable<ContractsInteracted>): ContractsInteracted {
+function fillEmpty(currentData: Nullable<StoreContractsInteracted>): StoreContractsInteracted {
   if (!currentData || Object.keys(currentData).length === 0) {
     return defaultContractsApiStructure();
   } else {
@@ -47,17 +45,17 @@ function fillEmpty(currentData: Nullable<ContractsInteracted>): ContractsInterac
   }
 }
 
-async function saveNFTContentToDb(db: Redis, key: string, currentData: ContractsInteracted) {
+async function saveNFTContentToDb(db: Redis, key: string, currentData: StoreContractsInteracted) {
   const serialisedData = serialise(currentData);
   return await db.set(key, JSON.stringify(serialisedData));
 }
 
-async function getNFTContentFromDb(db: Redis, key: string): Promise<ContractsInteracted> {
+async function getNFTContentFromDb(db: Redis, key: string): Promise<StoreContractsInteracted> {
   const serialisedData = await db.get(key);
   const currentData = deserialise(JSON.parse(serialisedData));
   return fillEmpty(currentData);
 }
-function serialise(currentData: ContractsInteracted): SerializableContractsInteracted {
+function serialise(currentData: StoreContractsInteracted): SerializableContractsInteracted {
   const serialised: any = { ...currentData };
   if (serialised.interactedContracts) {
     serialised.interactedContracts = Array.from(serialised.interactedContracts);
@@ -65,7 +63,9 @@ function serialise(currentData: ContractsInteracted): SerializableContractsInter
   return serialised;
 }
 
-function deserialise(serialisedData: SerializableContractsInteracted): ContractsInteracted | null {
+function deserialise(
+  serialisedData: SerializableContractsInteracted,
+): StoreContractsInteracted | null {
   if (serialisedData) {
     const currentData: any = { ...serialisedData };
     if (currentData.interactedContracts) {
@@ -123,7 +123,6 @@ export {
   saveJSONToDb,
   getJSONFromDb,
   SerializableContractsInteracted,
-  ContractsInteracted,
   serialise,
   deserialise,
   quitDB,

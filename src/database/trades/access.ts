@@ -1,23 +1,4 @@
-import { Injectable } from "@nestjs/common";
-import Redis from "ioredis";
-import { Knex } from "knex";
-import { InjectKnex } from "nestjs-knex";
-import { RedisService } from "nestjs-redis";
-import {
-  QueryParameters,
-  Trade,
-  TradeInfo,
-  TradeNotification,
-} from "../../trades/dto/getTrades.dto";
-import { Network } from "../../utils/blockchain/dto/network.dto";
-import { NFTInfoService } from "../nft_info/access";
-const pMap = require("p-map");
-
-export class TradeAsset {
-  denom: string;
-  assetType: string;
-}
-
+/*
 @Injectable()
 export class TradeDatabaseService {
   redisDB: Redis;
@@ -53,7 +34,7 @@ export class TradeDatabaseService {
     };
   }
 
-  async addToTradeDB(trades: Trade[]) {
+  async addToTradeDB(trades: TradeInfoResponse[]) {
     const insertToken = await this.knexDB("trades")
       .insert(
         trades.map(trade => ({
@@ -67,7 +48,7 @@ export class TradeDatabaseService {
     return insertToken;
   }
 
-  async addToCounterTradeDB(counterTrades: Trade[]) {
+  async addToCounterTradeDB(counterTrades: TradeInfoResponse[]) {
     const insertToken = await this.knexDB("counter-trades")
       .insert(
         counterTrades.map(counterTrade => ({
@@ -135,7 +116,6 @@ export class TradeDatabaseService {
 
   parseFromDB(dbResult: any): TradeInfo {
     return {
-      network: dbResult.network,
       acceptedInfo: {
         counterId: dbResult.accepted_counter_trade_id,
       },
@@ -383,7 +363,7 @@ export class TradeDatabaseService {
     return +counterTradeInfo[0].nbCounterTrade;
   }
 
-  async getTrade(network: Network, tradeId: number): Promise<Trade> {
+  async getTrade(network: Network, tradeId: number): Promise<TradeInfoResponse> {
     const tradeInfo = await this.knexDB("trades").select("*").where({
       network,
       trade_id: tradeId,
@@ -395,7 +375,11 @@ export class TradeDatabaseService {
     };
   }
 
-  async getCounterTrade(network: Network, tradeId: number, counterId: number): Promise<Trade> {
+  async getCounterTrade(
+    network: Network,
+    tradeId: number,
+    counterId: number,
+  ): Promise<TradeInfoResponse> {
     const counterTradeInfo = await this.knexDB("counter-trades").select("*").where({
       network,
       trade_id: tradeId,
@@ -469,3 +453,4 @@ export class TradeDatabaseService {
     return +notificationNumber[0].nbNotif;
   }
 }
+*/

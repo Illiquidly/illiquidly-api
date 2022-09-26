@@ -1,94 +1,185 @@
-import { Controller, Get, Post, Query } from "@nestjs/common";
+import { Controller, Patch, Query } from "@nestjs/common";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
+import { Crud } from "@rewiko/crud";
 import {
-  MultipleNotificationsResponse,
-  MultipleTradeResponse,
-  QueryParameters,
   SingleCounterTradeParameters,
   SingleTradeParameters,
-  Trade,
+  TradeInfoResponse,
 } from "./dto/getTrades.dto";
-import { NotificationsQuery, NotificationsRead } from "./dto/notifications.dto";
-import { NotificationsService } from "./notifications/notifications.service";
+import { CounterTrade, Trade, TradeNotification } from "./entities/trade.entity";
+import {
+  CounterTradeResultInterceptor,
+  TradeResultInterceptor,
+} from "./interceptors/trades.interceptor";
+import {
+  CounterTradeCrudService,
+  TradeCrudService,
+  TradeNotificationCrudService,
+} from "./tradeCrud.service";
 import { TradesService } from "./trades.service";
 
 @ApiTags("Trades")
+@Crud({
+  model: {
+    type: Trade,
+  },
+  query: {
+    limit: 10,
+    sort: [],
+    join: {
+      nftsWanted: {
+        eager: true,
+      },
+      tradeInfo: {
+        eager: true,
+      },
+      "tradeInfo.cw721Assets": {
+        eager: true,
+        alias: "tradeInfo_cw721Assets_join",
+      },
+      "tradeInfo.cw721Assets.collection": {
+        eager: true,
+        alias: "tradeInfo_cw721Assets_collection_join",
+      },
+      "tradeInfo.cw721Assets.metadata": {
+        eager: true,
+        alias: "tradeInfo_cw721Assets_metadata_join",
+      },
+      "tradeInfo.cw721Assets.metadata.attributes": {
+        eager: true,
+        alias: "tradeInfo_cw721Assets_metadata_attributes_join",
+      },
+      "tradeInfo.cw20Assets": {
+        eager: true,
+      },
+      "tradeInfo.coinAssets": {
+        eager: true,
+      },
+      counterTrades: {
+        eager: true,
+      },
+    },
+  },
+  routes: {
+    getOneBase: {
+      decorators: [],
+      interceptors: [TradeResultInterceptor],
+    },
+    getManyBase: {
+      decorators: [],
+      interceptors: [TradeResultInterceptor],
+    },
+    only: ["getOneBase", "getManyBase"],
+  },
+})
 @Controller("trades")
 export class TradesController {
-  constructor(
-    private readonly tradesService: TradesService,
-    private readonly notificationService: NotificationsService,
-  ) {}
+  constructor(private readonly tradesService: TradesService, public service: TradeCrudService) {}
 
-  @Get("")
+  @Patch("")
   @ApiResponse({
     status: 200,
-    type: () => Trade,
+    type: () => TradeInfoResponse,
     description: "Queries the information about a posted trade",
   })
   async getSingleTrade(@Query() params: SingleTradeParameters) {
-    return await this.tradesService.getSingleTrade(params.network, params.tradeId);
+    return await this.tradesService.getTradeById(params.network, params.tradeId);
   }
+}
 
-  @Get("all")
+@ApiTags("Trades")
+@Crud({
+  model: {
+    type: CounterTrade,
+  },
+  query: {
+    limit: 10,
+    sort: [],
+    join: {
+      tradeInfo: {
+        eager: true,
+      },
+      "tradeInfo.cw721Assets": {
+        eager: true,
+        alias: "tradeInfo_cw721Assets_join",
+      },
+      "tradeInfo.cw721Assets.collection": {
+        eager: true,
+        alias: "tradeInfo_cw721Assets_collection_join",
+      },
+      "tradeInfo.cw721Assets.metadata": {
+        eager: true,
+        alias: "tradeInfo_cw721Assets_metadata_join",
+      },
+      "tradeInfo.cw721Assets.metadata.attributes": {
+        eager: true,
+        alias: "tradeInfo_cw721Assets_metadata_attributes_join",
+      },
+      "tradeInfo.cw20Assets": {
+        eager: true,
+      },
+      "tradeInfo.coinAssets": {
+        eager: true,
+      },
+      trade: {
+        eager: true,
+      },
+    },
+  },
+  routes: {
+    getOneBase: {
+      decorators: [],
+      interceptors: [CounterTradeResultInterceptor],
+    },
+    getManyBase: {
+      decorators: [],
+      interceptors: [CounterTradeResultInterceptor],
+    },
+    only: ["getOneBase", "getManyBase"],
+  },
+})
+@Controller("counter-trades")
+export class CounterTradesController {
+  constructor(
+    private readonly tradesService: TradesService,
+    public service: CounterTradeCrudService,
+  ) {}
+
+  @Patch("")
   @ApiResponse({
     status: 200,
-    type: () => MultipleTradeResponse,
-    description: "Queries multiple trade information at once",
-  })
-  async getTrades(@Query() params: QueryParameters) {
-    return await this.tradesService.getMultipleTrades(params);
-  }
-
-  @Get("counter-trades")
-  @ApiResponse({
-    status: 200,
-    type: () => Trade,
+    type: () => TradeInfoResponse,
     description: "Queries the information about a posted counter trade",
   })
   async getSingleCounterTrade(@Query() params: SingleCounterTradeParameters) {
-    return await this.tradesService.getSingleCounterTrade(
+    return await this.tradesService.getCounterTradeById(
       params.network,
       params.tradeId,
       params.counterId,
     );
   }
+}
 
-  @Get("counter-trades/all")
-  @ApiResponse({
-    status: 200,
-    type: () => MultipleTradeResponse,
-    description: "Queries multiple counter trade information at once",
-  })
-  async getCounterTrades(@Query() params: QueryParameters) {
-    return await this.tradesService.getMultipleCounterTrades(params);
-  }
-
-  @ApiResponse({
-    status: 200,
-    type: () => MultipleNotificationsResponse,
-    description: "Queries user's notifications",
-  })
-  @Get("notifications")
-  async queryNotifications(@Query() params: NotificationsQuery) {
-    return await this.notificationService.queryNotifications(
-      params.network,
-      params.user,
-      params.limit,
-      params.offset,
-    );
-  }
-
-  @ApiResponse({
-    status: 200,
-    description: "Marks the user's notifications as read",
-  })
-  @Post("notifications/read")
-  async readNotifications(@Query() params: NotificationsRead) {
-    return await this.notificationService.readNotifications(
-      params.network,
-      params.user,
-      params.notificationId,
-    );
-  }
+@ApiTags("Trades")
+@Crud({
+  model: {
+    type: TradeNotification,
+  },
+  query: {
+    limit: 10,
+    sort: [],
+  },
+  routes: {
+    getOneBase: {
+      decorators: [],
+    },
+    getManyBase: {
+      decorators: [],
+    },
+    only: ["getOneBase", "getManyBase"],
+  },
+})
+@Controller("trade-notifications")
+export class TradeNotificationController {
+  constructor(public service: TradeNotificationCrudService) {}
 }

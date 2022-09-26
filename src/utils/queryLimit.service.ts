@@ -1,15 +1,14 @@
 import { Injectable } from "@nestjs/common";
-const { default: PQueue } = require("p-queue");
 import { waitForSignals } from "wait-for-signals";
-import { asyncAction } from "./js/asyncAction";
 import { chains } from "./blockchain/chains.js";
 import { LCDClient } from "@terra-money/terra.js";
+import PQueue from "p-queue";
 
 @Injectable()
 export class QueryLimitService {
-  queue;
+  queue: PQueue;
   constructor() {
-    this.queue = new PQueue({ concurrency: 10, interval: 10000000, intervalCap: 100 }); //100req/10s
+    this.queue = new PQueue({ concurrency: 10, interval: 10000000, intervalCap: 90 }); //100req/10s
   }
 
   private async internalAddToQueue(func: () => Promise<any>): Promise<[any, void]> {

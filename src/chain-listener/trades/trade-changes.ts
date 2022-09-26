@@ -6,19 +6,23 @@ import { TxLog } from "@terra-money/terra.js";
 import { chains, contracts } from "../../utils/blockchain/chains";
 import { createRedisClient } from "../../utils/redis_db_accessor";
 import { asyncAction } from "../../utils/js/asyncAction";
-import { TradeDatabaseService } from "../../database/trades/access";
-import { createTradeDB, flushTradeDB, initDB } from "../../database/trades/structure";
 import { Network } from "../../utils/blockchain/dto/network.dto";
 import { QueueMessage } from "./websocket-server";
 import { sleep } from "../../utils/js/sleep";
-import { RedisService } from "nestjs-redis";
-import { Trade } from "../../trades/dto/getTrades.dto";
-import { NFTInfoService } from "../../database/nft_info/access";
 import { QueryLimitService } from "../../utils/queryLimit.service";
-import { BlockchainTradeQuery } from "../../utils/blockchain/p2pTradeQuery";
+import { TradesService } from "../../trades/trades.service";
+import { UtilsService } from "../../utils-api/utils.service";
+import { CounterTrade, Trade } from "../../trades/entities/trade.entity";
+import { DataSource, Repository } from "typeorm";
+import {
+  CW20Coin,
+  CW721Collection,
+  CW721Token,
+  CW721TokenMetadata,
+} from "../../utils-api/entities/nft-info.entity";
+import { typeOrmOptions } from "../../utils/typeormOptions";
 const _ = require("lodash");
 const pMap = require("p-map");
-const camelcaseObjectDeep = require("camelcase-object-deep");
 
 const redisHashSetName: string = process.env.REDIS_TXHASH_SET;
 
@@ -31,25 +35,46 @@ async function hasTx(db: Redis, txHash: string): Promise<boolean> {
 }
 
 const txHashClient = createRedisClient();
-const knexDB = initDB();
-
-const redisService = new RedisService({
-  defaultKey: "client",
-  clients: new Map().set("client", txHashClient),
-  size: 1,
-});
-const nftInfoService = new NFTInfoService(knexDB);
-const databaseTradeService = new TradeDatabaseService(knexDB, redisService, nftInfoService);
 
 const queryLimitService: QueryLimitService = new QueryLimitService();
-const tradeQuery = new BlockchainTradeQuery(
-  queryLimitService.sendIndependentQuery.bind(queryLimitService.sendIndependentQuery),
-);
 
-async function resetDB() {
-  await txHashClient.del(redisHashSetName);
-  await flushTradeDB(knexDB);
-  await createTradeDB(knexDB);
+const manager = new DataSource({
+  type: "mysql",
+  ...typeOrmOptions,
+});
+
+let tradesRepository: Repository<Trade>;
+let counterTradesRepository: Repository<CounterTrade>;
+let collectionRepository: Repository<CW721Collection>;
+let tokenRepository: Repository<CW20Coin>;
+let nftTokenRepository: Repository<CW721Token>;
+let nftTokenMetadataRepository: Repository<CW721TokenMetadata>;
+
+let tradesService: TradesService;
+
+async function initElements() {
+  await manager.initialize();
+  tradesRepository = manager.getRepository(Trade);
+  counterTradesRepository = manager.getRepository(CounterTrade);
+  collectionRepository = manager.getRepository(CW721Collection);
+  tokenRepository = manager.getRepository(CW20Coin);
+  nftTokenRepository = manager.getRepository(CW721Token);
+  nftTokenMetadataRepository = manager.getRepository(CW721TokenMetadata);
+
+  const utilsService = new UtilsService(
+    collectionRepository,
+    tokenRepository,
+    nftTokenRepository,
+    nftTokenMetadataRepository,
+    queryLimitService,
+  );
+  tradesService = new TradesService(
+    tradesRepository,
+    counterTradesRepository,
+    collectionRepository,
+    utilsService,
+    queryLimitService,
+  );
 }
 
 async function queryNewTransaction(network: Network) {
@@ -68,11 +93,10 @@ async function queryNewTransaction(network: Network) {
       lcd.get("/cosmos/tx/v1beta1/txs", {
         params: {
           events: `wasm._contract_address='${contracts[network].p2pTrade}'`,
-          "pagination.offset": 5,
+          "pagination.offset": offset,
         },
       }),
     );
-    console.log(offset, response.data);
     // If we get no lcd tx result
     if (err) {
       console.log(err);
@@ -101,122 +125,22 @@ async function queryNewTransaction(network: Network) {
       })
       .flat();
 
-    console.log(idsToQuery);
+    console.log(_.uniqWith(_.compact(idsToQuery), _.isEqual));
 
     // The we query the blockchain for trade info and put it into the database
-    const toAdd: Trade[] = (
-      await pMap(
-        _.compact(idsToQuery),
-        async (id: number[]) => {
-          if (id.length == 1) {
-            const [tradeId] = id;
-            // We query the trade_info
-            const tradeInfo = await tradeQuery.getTradeInfo(network, tradeId);
-
-            // We query all counters associated with this trade in the db and update them here
-            const counterIds = (
-              await databaseTradeService.getCounterTrades({
-                "filters.network": network,
-                "filters.tradeId": [tradeId],
-              })
-            ).map(counterInfo => counterInfo.counterId);
-            const counterTradeInfos = await pMap(
-              counterIds,
-              async (counterId: number) => {
-                const counterTradeInfo = await tradeQuery.getCounterTradeInfo(
-                  network,
-                  tradeId,
-                  counterId,
-                );
-                return {
-                  network,
-                  tradeId,
-                  counterId,
-                  tradeInfo: camelcaseObjectDeep(counterTradeInfo),
-                };
-              },
-              { concurrency: 2 },
-            );
-
-            // We return it to add to the db
-            return [
-              {
-                network,
-                tradeId,
-                counterId: undefined,
-                tradeInfo: camelcaseObjectDeep(tradeInfo),
-              },
-              ...counterTradeInfos,
-            ];
-          } else {
-            const [tradeId, counterId] = id;
-            // We query the tradeInfo and counterTradeInfo
-            const tradeInfo: any = await tradeQuery.getTradeInfo(network, tradeId);
-            const counterTradeInfo = await tradeQuery.getCounterTradeInfo(
-              network,
-              tradeId,
-              counterId,
-            );
-
-            // We query all counters associated with this trade in the db and update them here
-            const counterIds = (
-              await databaseTradeService.getCounterTrades({
-                "filters.network": network,
-                "filters.tradeId": [tradeId],
-              })
-            ).map(counterInfo => counterInfo.counterId);
-            const allCounterTradeInfos = await pMap(
-              counterIds,
-              async (counterId: number) => {
-                const counterTradeInfo = await tradeQuery.getCounterTradeInfo(
-                  network,
-                  tradeId,
-                  counterId,
-                );
-                return {
-                  network,
-                  tradeId,
-                  counterId,
-                  tradeInfo: camelcaseObjectDeep(counterTradeInfo),
-                };
-              },
-              { concurrency: 2 },
-            );
-
-            // We return them to add to the db
-            return [
-              {
-                network,
-                tradeId,
-                counterId: undefined,
-                tradeInfo: camelcaseObjectDeep(tradeInfo),
-              },
-              {
-                network,
-                tradeId,
-                counterId,
-                tradeInfo: camelcaseObjectDeep(counterTradeInfo),
-              },
-              ...allCounterTradeInfos,
-            ];
-          }
-        },
-        { concurrency: 2 },
-      )
-    ).flat();
-
-    // And we add them in a bunch to the database
-    // First the trades
-    const tradesToAdd = toAdd.filter((trade: Trade) => trade.counterId === undefined);
-    if (tradesToAdd.length > 0) {
-      await databaseTradeService.addToTradeDB(tradesToAdd);
-    }
-
-    // Then the counter trades
-    const counterTradesToAdd = toAdd.filter((trade: Trade) => trade.counterId !== undefined);
-    if (counterTradesToAdd.length > 0) {
-      await databaseTradeService.addToCounterTradeDB(counterTradesToAdd);
-    }
+    await pMap(
+      _.uniqWith(_.compact(idsToQuery), _.isEqual),
+      async (id: number[]) => {
+        const [tradeId, counterId] = id;
+        // We update the tradeInfo and all its associated counter_trades in the database
+        await tradesService.updateTradeAndCounterTrades(network, tradeId);
+        if (counterId != undefined) {
+          // If a counterId is defined, we also update that specific counterId
+          await tradesService.getCounterTradeById(network, tradeId, counterId);
+        }
+      },
+      { concurrency: 1 },
+    );
 
     // We add the transaction hashes to the redis set :
     await txHashClient.sadd(
@@ -229,10 +153,13 @@ async function queryNewTransaction(network: Network) {
       continueQuerying = false;
     }
   } while (continueQuerying);
+  console.log("Update finished");
 }
 
 async function launchReceiver() {
   const db = createRedisClient();
+
+  await initElements();
 
   db.subscribe(process.env.P2P_QUEUE_NAME, (err: any) => {
     if (err) {
@@ -287,13 +214,8 @@ async function testQuery() {
 // testQuery()
 
 /* Actual event loop */
-if (process.env.FLUSH_DB_ON_STARTUP == "true") {
-  resetDB()
-    .then(async () => await launchReceiver())
-    // Then query the new transcations for the first time
-    .then(async () => await queryNewTransaction(Network.testnet));
-} else {
-  launchReceiver()
-    // Then query the new transcations for the first time
-    .then(async () => await queryNewTransaction(Network.testnet));
-}
+
+launchReceiver()
+  // Then query the new transcations for the first time
+  .then(async () => await txHashClient.del(redisHashSetName))
+  .then(async () => await queryNewTransaction(Network.testnet));

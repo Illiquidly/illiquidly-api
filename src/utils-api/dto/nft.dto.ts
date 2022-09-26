@@ -1,23 +1,33 @@
-import { IsEnum, IsOptional, IsString } from "class-validator";
 import { Network } from "../../utils/blockchain/dto/network.dto";
-import { IsAddress } from "../../utils/nest/addressValidator";
 
 export class TokenDescription {
-  @IsEnum(Network)
   network: Network;
-
-  @IsAddress()
   address: string;
-
-  @IsString()
   tokenId: string;
 }
 
-export class NFTDescription {
-  @IsEnum(Network)
+export class CW721CollectionDescription {
   network: Network;
+  address: string;
+}
 
-  @IsOptional()
-  @IsAddress()
-  address?: string;
+export class Attribute {
+  displayType?: string;
+  traitType: string;
+  value: string;
+}
+
+export class BlockchainCW721Token {
+  tokenUri?: string;
+  extension: {
+    image?: string;
+    imageData?: string;
+    externalUrl?: string;
+    description?: string;
+    name?: string;
+    attributes: Attribute[];
+    backgroundColor?: string;
+    animationUrl?: string;
+    youtubeUrl?: string;
+  };
 }

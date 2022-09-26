@@ -1,259 +1,360 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { asyncAction } from "../utils/js/asyncAction";
 import {
+  Asset,
   Coin,
-  Collection,
-  MultipleTradeResponse,
-  QueryParameters,
-  Trade,
+  CounterTradeInfoResponse,
+  CW20Coin,
+  CW721Coin,
+  RawCoin,
   TradeInfo,
+  TradeInfoResponse,
 } from "./dto/getTrades.dto";
-import { TradeDatabaseService } from "../database/trades/access";
 import { Network } from "../utils/blockchain/dto/network.dto";
 import { UtilsService } from "../utils-api/utils.service";
-import { RawTokenInteracted } from "../nft-content/dto/get-nft-content.dto";
-import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
 import { QueryLimitService } from "../utils/queryLimit.service";
 import { BlockchainTradeQuery } from "../utils/blockchain/p2pTradeQuery";
-const camelCaseObjectDeep = require("camelcase-object-deep");
+import { BlockchainNFTQuery } from "../utils/blockchain/nft_query";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { BlockChainTradeInfo } from "../utils/blockchain/dto/trade-info.dto";
+import { CounterTrade, RawAsset, Trade, TradeInfoORM } from "./entities/trade.entity";
+import { CW721Collection, ValuedCoin, ValuedCW20Coin } from "../utils-api/entities/nft-info.entity";
 const pMap = require("p-map");
-const _ = require("lodash");
+const DATE_FORMAT = require("dateformat");
 
 @Injectable()
 export class TradesService {
   tradeQuery: BlockchainTradeQuery;
+  nftQuery: BlockchainNFTQuery;
   constructor(
-    private readonly tradeDatabaseService: TradeDatabaseService,
+    @InjectRepository(Trade) private tradesRepository: Repository<Trade>,
+    @InjectRepository(CounterTrade) private counterTradesRepository: Repository<CounterTrade>,
+    @InjectRepository(CW721Collection) private collectionRepository: Repository<CW721Collection>,
     private readonly utilsService: UtilsService,
     private readonly queryLimitService: QueryLimitService,
   ) {
     this.tradeQuery = new BlockchainTradeQuery(
       this.queryLimitService.sendIndependentQuery.bind(this.queryLimitService),
     );
-  }
-  async getMultipleTrades(params: QueryParameters): Promise<MultipleTradeResponse> {
-    const [err, tradeInfo] = await asyncAction(this.tradeDatabaseService.getTrades(params));
-    if (err) {
-      console.log(err);
-      throw new NotFoundException("Trades Not Found");
-    }
-    const offset = params?.["pagination.offset"];
 
-    const [nbErr, tradeNumber] = await asyncAction(
-      this.tradeDatabaseService.getTradeNumber(params),
+    this.nftQuery = new BlockchainNFTQuery(
+      this.queryLimitService.sendIndependentQuery.bind(this.queryLimitService),
     );
-
-    if (nbErr) {
-      console.log(nbErr);
-      throw new NotFoundException("Error getting total number of Trades");
-    }
-
-    return {
-      data: await pMap(tradeInfo, async tradeInfo => {
-        tradeInfo.tradeInfo = await this.addInfoToTradeInfo(tradeInfo.tradeInfo);
-        return tradeInfo;
-      }),
-      nextOffset: offset ?? 0 + tradeInfo.length,
-      totalNumber: tradeNumber,
-    };
   }
 
-  async getMultipleCounterTrades(params: QueryParameters): Promise<MultipleTradeResponse> {
-    const [err, counterTradeInfo] = await asyncAction(
-      this.tradeDatabaseService.getCounterTrades(params),
-    );
-    if (err) {
-      throw new NotFoundException("Counter Trades Not Found");
-    }
-
-    const offset = params?.["pagination.offset"];
-
-    const [nbErr, tradeNumber] = await asyncAction(
-      this.tradeDatabaseService.getCounterTradeNumber(params),
-    );
-
-    if (nbErr) {
-      console.log(nbErr);
-      throw new NotFoundException("Error getting total number of Trades");
-    }
-
-    return {
-      data: await pMap(counterTradeInfo, async counterTradeInfo => {
-        counterTradeInfo.tradeInfo = await this.addInfoToTradeInfo(counterTradeInfo.tradeInfo);
-        return counterTradeInfo;
-      }),
-      nextOffset: offset ?? 0 + counterTradeInfo.length,
-      totalNumber: tradeNumber,
-    };
-  }
-
-  async getSingleTrade(network: Network, tradeId: number): Promise<Trade> {
-    const [, tradeInfo] = await asyncAction(this.tradeDatabaseService.getTrade(network, tradeId));
-
-    if (tradeInfo) {
-      tradeInfo.tradeInfo = await this.addInfoToTradeInfo(tradeInfo.tradeInfo);
-      return tradeInfo;
-    }
-
+  private async queryDistantTradeAndParseForDB(network: Network, tradeId: number): Promise<Trade> {
     // We try to query the trade on_chain directly :
-    const [queryErr, distantTradeInfo] = await asyncAction(
+    const [queryErr, distantTradeInfo]: [any, BlockChainTradeInfo] = await asyncAction(
       this.tradeQuery.getTradeInfo(network, tradeId),
     );
     if (queryErr) {
       throw new NotFoundException("Trade Not Found");
     }
 
-    const newTradeInfo = {
+    // We parse the new queried object for the database
+
+    return {
+      id: null,
       network,
       tradeId,
-      counterId: undefined,
-      tradeInfo: camelCaseObjectDeep(await this.addInfoToTradeInfo(distantTradeInfo)),
+      tradeInfo: await this.mapDistantTradeToDB(network, distantTradeInfo),
+      nftsWanted: await Promise.all(
+        distantTradeInfo.additionalInfo.nftsWanted.map(
+          async (collectionAddress): Promise<CW721Collection> => {
+            // First we see if the collection exists in the contract
+            const [err, collection] = await asyncAction(
+              this.collectionRepository.findOneBy({ collectionAddress, network }),
+            );
+            if (!err && collection) {
+              return collection;
+            }
+            const newCollection = await this.nftQuery.newCW721Contract(network, collectionAddress);
+            await this.collectionRepository.save([newCollection]);
+            return newCollection;
+          },
+        ),
+      ),
+      counterTrades: [],
     };
-    // We add it to the database
-    await this.tradeDatabaseService.addToTradeDB([newTradeInfo]);
-    return newTradeInfo;
   }
 
-  async getSingleCounterTrade(
-    network: Network,
-    tradeId: number,
-    counterId: number,
-  ): Promise<Trade> {
-    const [, counterTradeInfo] = await asyncAction(
-      this.tradeDatabaseService.getCounterTrade(network, tradeId, counterId),
+  async updateTradeAndCounterTrades(network: Network, tradeId: number) {
+    const [, tradeInfo]: [any, Trade] = await asyncAction(
+      this.tradesRepository.findOneBy({ tradeId, network }),
     );
 
-    if (counterTradeInfo) {
-      counterTradeInfo.tradeInfo = await this.addInfoToTradeInfo(counterTradeInfo);
-      return counterTradeInfo;
+    const tradeDBObject = await this.queryDistantTradeAndParseForDB(network, tradeId);
+
+    // We save asyncronously to the database
+    if (tradeInfo) {
+      tradeDBObject.id = tradeInfo.id;
+      tradeDBObject.counterTrades = tradeInfo.counterTrades;
     }
+    await this.tradesRepository.save([tradeDBObject]);
+
+    // Then we update every counterTrade associated with the trade in the database
+    await pMap(tradeDBObject.counterTrades ?? [], async (counterTrade: CounterTrade) => {
+      // We try to query the counter_trade on_chain directly :
+      const [queryErr, distantCounterTradeInfo] = await asyncAction(
+        this.tradeQuery.getCounterTradeInfo(network, tradeId, counterTrade.counterTradeId),
+      );
+      if (queryErr) {
+        return;
+      }
+
+      // We save the new queried trade Info To the database
+      counterTrade.tradeInfo = await this.mapDistantTradeToDB(network, distantCounterTradeInfo);
+
+      // We save asyncronously to the database
+      await this.counterTradesRepository.save([counterTrade]);
+    });
+  }
+
+  async getTradeById(network: Network, tradeId: number): Promise<TradeInfoResponse> {
+    const [, tradeInfo]: [any, Trade] = await asyncAction(
+      this.tradesRepository.findOneBy({ tradeId, network }),
+    );
+
+    const tradeDBObject = await this.queryDistantTradeAndParseForDB(network, tradeId);
+
+    // We save asyncronously to the database
+    if (tradeInfo) {
+      tradeDBObject.id = tradeInfo.id;
+      tradeDBObject.counterTrades = tradeInfo.counterTrades;
+    }
+
+    await this.tradesRepository.save([tradeDBObject]);
+    // Now we return the database response
+    return await this.parseTradeDBToResponse(network, tradeDBObject);
+  }
+
+  async getCounterTradeById(
+    network: Network,
+    tradeId: number,
+    counterTradeId: number,
+  ): Promise<CounterTradeInfoResponse> {
+    const [, counterTradeInfo] = await asyncAction(
+      this.counterTradesRepository.findOneBy({ network, trade: { tradeId }, counterTradeId }),
+    );
+
     // We try to query the counter_trade on_chain directly :
     const [queryErr, distantCounterTradeInfo] = await asyncAction(
-      this.tradeQuery.getCounterTradeInfo(network, tradeId, counterId),
+      this.tradeQuery.getCounterTradeInfo(network, tradeId, counterTradeId),
     );
     if (queryErr) {
       throw new NotFoundException("Counter Trade Not Found");
     }
 
-    const newCounterTradeInfo = {
+    // We save the new queried trade Info To the database
+    const counterTradeDBObject: CounterTrade = {
+      id: counterTradeInfo?.id,
       network,
-      tradeId,
-      counterId,
-      tradeInfo: camelCaseObjectDeep(await this.addInfoToTradeInfo(distantCounterTradeInfo)),
+      counterTradeId,
+      tradeInfo: await this.mapDistantTradeToDB(network, distantCounterTradeInfo),
+      trade: counterTradeInfo?.trade,
     };
-    // We add it to the database
-    await this.tradeDatabaseService.addToCounterTradeDB([newCounterTradeInfo]);
+    // If it's the first time we save this counter Trade, we need to link it to its Trade
+    if (!counterTradeInfo?.trade) {
+      // We query the database to look for the corresponding trade
+      const [, tradeInfo] = await asyncAction(
+        this.tradesRepository.findOneBy({ network, tradeId }),
+      );
+      if (tradeInfo) {
+        // If it was already registered, we can simply save it
+        counterTradeDBObject.trade = tradeInfo;
+      } else {
+        // If it was not in the database, we have to look else-where
+        const tradeInfo = await this.queryDistantTradeAndParseForDB(network, tradeId);
+        await this.tradesRepository.save([tradeInfo]);
+        counterTradeDBObject.trade = tradeInfo;
+      }
+    }
 
-    return newCounterTradeInfo;
+    // We save asyncronously to the database
+    await this.counterTradesRepository.save([counterTradeDBObject]);
+
+    // Now we return the database response
+    return await this.parseCounterTradeDBToResponse(network, counterTradeDBObject);
   }
 
-  async addInfoToTradeInfo(tradeInfo: TradeInfo): Promise<TradeInfo> {
-    console.log("adding info");
+  async mapDistantTradeToDB(
+    network: Network,
+    tradeInfo: BlockChainTradeInfo,
+  ): Promise<TradeInfoORM> {
+    // First we get the objects corresponding to the NFTs Wanted :
 
-    if (tradeInfo.additionalInfo) {
-      // We modify the tradeInfo lookingFor info. It merges nfts_wanted and tokens_wanted
-      tradeInfo.additionalInfo.lookingFor = (tradeInfo.additionalInfo?.tokensWanted ?? [])
-        .map((token): Coin => {
-          if (token.coin) {
-            return {
-              currency: token.coin.denom,
-              amount: token.coin.amount,
-            };
-          } else {
-            return {
-              currency: token.cw20_coin.address,
-              amount: token.cw20_coin.amount,
-            };
-          }
-        })
-        .concat(
-          await pMap(
-            tradeInfo.additionalInfo?.nftsWanted ?? [],
-            async (nft: string): Promise<Collection> => {
-              // We get the collection name
-              let [err, collectionInfo] = await asyncAction(this.utilsService.getCachedNFTContractInfo(tradeInfo.network, nft));
-              if(err){
-                return {
-                  collectionAddress: nft,
-                  collectionName: ""
-                }
-              }
-              return collectionInfo;
-            }
-          ),
-        );
-    }
-    // We fetch metadata for the associated assets :
-    tradeInfo.associatedAssetsWithInfo = await pMap(
-      tradeInfo.associatedAssets ?? [],
-      async asset => {
-        if (asset.cw721Coin) {
-          return await this.addCW721Info(tradeInfo, asset);
+    return {
+      id: null,
+      owner: tradeInfo.owner,
+      time: DATE_FORMAT(
+        new Date(parseInt(tradeInfo.additionalInfo.time) / 1000000),
+        "yyyy-mm-dd HH:MM:ss",
+      ),
+      lastCounterId: tradeInfo.lastCounterId,
+      ownerComment: tradeInfo.additionalInfo.ownerComment?.comment,
+      ownerCommentTime: tradeInfo.additionalInfo.ownerComment?.time
+        ? DATE_FORMAT(
+            new Date(parseInt(tradeInfo.additionalInfo.ownerComment?.time) / 1000000),
+            "yyyy-mm-dd HH:MM:ss",
+          )
+        : null,
+      traderComment: tradeInfo.additionalInfo.traderComment?.comment,
+      traderCommentTime: tradeInfo.additionalInfo.traderComment?.time,
+      state: tradeInfo.state,
+      acceptedCounterTradeId: tradeInfo.acceptedInfo?.counterId,
+      assetsWithdrawn: tradeInfo.assetsWithdrawn,
+      // Difficult fields
+      coinAssets: tradeInfo.associatedAssets
+        .filter((asset: Asset) => !!asset.coin)
+        .map((asset: Coin) => {
+          const coin = new ValuedCoin();
+          coin.id = null;
+          coin.amount = parseInt(asset.coin.amount);
+          coin.denom = asset.coin.denom;
+          coin.network = network;
+          return coin;
+        }),
+      cw20Assets: await pMap(
+        tradeInfo.associatedAssets.filter((asset: Asset) => !!asset.cw20Coin),
+        async (asset: CW20Coin) => {
+          const coin = new ValuedCW20Coin();
+          coin.id = null;
+          coin.amount = parseInt(asset.cw20Coin.amount);
+          coin.cw20Coin = await this.utilsService.CW20CoinInfo(network, asset.cw20Coin.address);
+          return coin;
+        },
+      ),
+      cw721Assets: await pMap(
+        tradeInfo.associatedAssets.filter((asset: Asset) => !!asset.cw721Coin),
+        async (asset: CW721Coin) => {
+          const token = await this.utilsService.nftTokenInfoFromDB(
+            network,
+            asset.cw721Coin.address,
+            asset.cw721Coin.tokenId,
+          );
+          return token;
+        },
+      ),
+      cw1155Assets: JSON.stringify(
+        tradeInfo.associatedAssets.filter((asset: Asset) => asset.cw1155Coin),
+      ),
+
+      whitelistedUsers: JSON.stringify(tradeInfo.whitelistedUsers),
+      tokensWanted: JSON.stringify(tradeInfo.additionalInfo.tokensWanted),
+      tradePreview: JSON.stringify(tradeInfo.additionalInfo.tradePreview),
+    };
+  }
+
+  async parseTradeDBToResponse(network: Network, trade: Trade): Promise<TradeInfoResponse> {
+    const tradeInfo: TradeInfo = await this.parseTradeDBToResponseInfo(network, trade.tradeInfo);
+    const nftsWanted = trade?.nftsWanted?.map(nft => {
+      nft.tokens = undefined;
+      return nft;
+    });
+    tradeInfo.additionalInfo.nftsWanted = nftsWanted;
+    tradeInfo.additionalInfo.lookingFor = (tradeInfo.additionalInfo.tokensWanted ?? []).map(
+      (token): RawCoin => {
+        if (token.coin) {
+          return {
+            currency: token.coin.denom,
+            amount: token.coin.amount,
+          };
         } else {
-          return asset;
+          return {
+            currency: token.cw20Coin.address,
+            amount: token.cw20Coin.amount,
+          };
         }
       },
     );
+    tradeInfo.additionalInfo.lookingFor = tradeInfo.additionalInfo.lookingFor.concat(nftsWanted);
 
-    // We gather the collections in one place for easy fetching
-    tradeInfo.associatedCollections = _.uniqBy(
-      tradeInfo.associatedAssetsWithInfo.map(asset => {
-        if (asset.cw721Coin) {
-          return {
-            collectionAddress: asset.cw721Coin.collectionAddress,
-            collectionName: asset.cw721Coin.collectionName,
-            symbol: asset.cw721Coin.symbol,
-          };
-        } else if (asset.cw1155Coin) {
-          return {
-            collectionAddress: asset.cw721Coin.address,
-          };
-        } else {
-          return {};
-        }
-      }),
-      nft => nft.collectionAddress,
-    );
-
-    // We now do the same for the preview NFT
-    if (tradeInfo?.additionalInfo?.tradePreview?.cw721Coin) {
-      tradeInfo.additionalInfo.tradePreview = await this.addCW721Info(
-        tradeInfo,
-        tradeInfo.additionalInfo.tradePreview,
-      );
-    }
-
-    return tradeInfo;
+    // We parse the tradeInfo :
+    return {
+      network,
+      tradeId: trade.tradeId,
+      primary_id: trade.id,
+      counterTrades: trade.counterTrades,
+      tradeInfo: tradeInfo,
+    };
   }
 
-  async addCW721Info(tradeInfo: TradeInfo, asset) {
+  async parseCounterTradeDBToResponse(
+    network: Network,
+    counterTrade: CounterTrade,
+  ): Promise<CounterTradeInfoResponse> {
+    const tradeInfo: TradeInfo = await this.parseTradeDBToResponseInfo(
+      network,
+      counterTrade.tradeInfo,
+    );
+
+    return {
+      network,
+      counterId: counterTrade.counterTradeId,
+      primary_id: counterTrade.id,
+      trade: counterTrade.trade,
+      tradeInfo: tradeInfo,
+    };
+  }
+
+  private async parseTradeDBToResponseInfo(
+    // T should extend TradeInfoORM and contain an nftsWanted field
+    network: Network,
+    tradeInfo: TradeInfoORM,
+  ): Promise<TradeInfo> {
+    // We fetch metadata for the associated assets :
+    let associatedAssets: RawAsset[] = tradeInfo.coinAssets ?? [];
+    associatedAssets = associatedAssets.concat(tradeInfo.cw20Assets ?? []);
+    associatedAssets = associatedAssets.concat(tradeInfo.cw721Assets ?? []);
+    associatedAssets = associatedAssets.concat(JSON.parse(tradeInfo.cw1155Assets) ?? []);
+
+    // We don't want all the collections NFTs here, that's a bit heavy
+    const tokensWanted = JSON.parse(tradeInfo.tokensWanted);
+    let tradePreview = JSON.parse(tradeInfo.tradePreview);
+
+    // And now we add the metadata do the same for the preview NFT
+    if (tradePreview?.cw721Coin) {
+      tradePreview = await this.addCW721Info(network, tradePreview);
+    }
+
+    return {
+      acceptedInfo: {
+        counterId: tradeInfo.acceptedCounterTradeId,
+      },
+      assetsWithdrawn: tradeInfo.assetsWithdrawn,
+      lastCounterId: tradeInfo.lastCounterId,
+      associatedAssets,
+      additionalInfo: {
+        ownerComment: {
+          comment: tradeInfo.ownerComment,
+          time: tradeInfo.ownerCommentTime,
+        },
+        time: tradeInfo.time,
+        tokensWanted,
+        tradePreview,
+        traderComment: {
+          comment: tradeInfo.traderComment,
+          time: tradeInfo.traderCommentTime,
+        },
+      },
+      owner: tradeInfo.owner,
+      state: tradeInfo.state,
+      whitelistedUsers: JSON.parse(tradeInfo.whitelistedUsers),
+    };
+  }
+
+  // We get the collection name
+
+  async addCW721Info(network: Network, asset) {
     const address = asset.cw721Coin.address;
     const tokenId = asset.cw721Coin.tokenId;
 
-    const collectionInfo = await this.utilsService.getCachedNFTContractInfo(
-      tradeInfo.network,
-      address,
-    );
-    const tokenInfo = await this.utilsService.nftInfo(tradeInfo.network, address, tokenId);
-
-    const returnToken: RawTokenInteracted = {
-      tokenId,
-      imageUrl: fromIPFSImageURLtoImageURL(tokenInfo?.extension?.image),
-      name: tokenInfo?.extension?.name,
-      attributes: tokenInfo?.extension?.attributes,
-      description: tokenInfo?.extension?.description,
-      traits: (tokenInfo?.extension?.attributes ?? []).map(
-        (attribute: { trait_type: string; value: string }) => [
-          attribute.trait_type,
-          attribute.value,
-        ],
-      ),
-    };
+    const tokenInfo = await this.utilsService.nftTokenInfo(network, address, tokenId);
 
     return {
       cw721Coin: {
-        ...collectionInfo,
-        ...returnToken,
+        ...tokenInfo,
       },
     };
   }

@@ -21,8 +21,16 @@ export class NFTInteracted {
   collectionName: string;
   collectionAddress: string;
 }
-export class ContractsInteracted {
+
+export class StoreContractsInteracted {
   interactedContracts: Set<string>;
+  ownedTokens: StoredTokenInteracted[];
+  state: UpdateState;
+  txs: TxQueried;
+}
+
+export class NFTContentResponse {
+  interactedContracts: string[];
   ownedCollections?: NFTInteracted[];
   ownedTokens: TokenInteracted[];
   state: UpdateState;
@@ -56,6 +64,12 @@ export class RawTokenInteracted {
   })
   traits?: Traits[];
   otherNFTInfo?: any;
+}
+
+export class StoredTokenInteracted {
+  tokenId: string;
+  collectionAddress: string;
+  allNFTInfo?: any;
 }
 
 export class TokenInteracted {

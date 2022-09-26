@@ -2,9 +2,8 @@ import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
-import { RedisLockModule } from "nestjs-simple-redis-lock";
-import "dotenv/config";
 const fs = require("fs");
+import "dotenv/config";
 
 async function bootstrap() {
   console.log(process.env.ENVIRONMENT);
@@ -15,8 +14,6 @@ async function bootstrap() {
       key: fs.readFileSync("/home/illiquidly/identity/privkey.pem"),
     };
   }
-
-  console.log();
 
   const app = await NestFactory.create(AppModule, {
     httpsOptions,
@@ -33,6 +30,6 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
-  await app.listen(3333);
+  await app.listen(3000);
 }
 bootstrap();

@@ -4,11 +4,37 @@ import { Network } from "./dto/network.dto.js";
 import { localNftList } from "./nft_list.js";
 import axios from "axios";
 import { sendIndependentQuery } from "./sendIndependentQuery.js";
+import { CW20Coin, CW721Collection } from "../../utils-api/entities/nft-info.entity.js";
+const camelCaseObjectDeep = require("camelcase-object-deep");
 
 export class BlockchainNFTQuery {
   sendQueryFunction: typeof sendIndependentQuery;
   constructor(sendQueryFunction: typeof sendIndependentQuery = sendIndependentQuery) {
     this.sendQueryFunction = sendQueryFunction;
+  }
+
+  async newCW721Contract(network: Network, nftContractAddress: string): Promise<CW721Collection> {
+    const collection = new CW721Collection();
+    collection.collectionAddress = nftContractAddress;
+    collection.network = network;
+    console.log(network);
+    const contractInfo = await this.getContractInfo(network, nftContractAddress).catch(() => ({}));
+    collection.collectionName = contractInfo?.name;
+    collection.symbol = contractInfo?.symbol;
+    collection.tokens = [];
+
+    return collection;
+  }
+
+  async newCW20Contract(network: Network, coinAddress: string): Promise<CW20Coin> {
+    const collection = new CW20Coin();
+    collection.coinAddress = coinAddress;
+    collection.network = network;
+    const contractInfo = await this.getContractInfo(network, coinAddress).catch(() => ({}));
+    collection.coinName = contractInfo?.name;
+    collection.symbol = contractInfo?.symbol;
+
+    return collection;
   }
 
   async getContractInfo(network: string, nftContractAddress: string): Promise<any> {
@@ -26,7 +52,7 @@ export class BlockchainNFTQuery {
       },
     });
 
-    return nftInfo;
+    return camelCaseObjectDeep(nftInfo);
   }
 
   async getNumTokens(network: string, nftContractAddress: string): Promise<any> {
