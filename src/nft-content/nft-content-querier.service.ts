@@ -114,9 +114,9 @@ export class NftContentQuerierService {
       const tokenNftInfo = camelCaseObjectDeep(token.metadata);
       return {
         tokenId: token.tokenId,
-        collectionAddress: token.collection.collectionAddress,
-        collectionName: token.collection.collectionName,
-        symbol:  token.collection.symbol,
+        collectionAddress: token.collection?.collectionAddress,
+        collectionName: token.collection?.collectionName,
+        symbol:  token.collection?.symbol,
         allNFTInfo: token?.allNFTInfo,
         imageUrl: fromIPFSImageURLtoImageURL(tokenNftInfo?.image),
         description: tokenNftInfo?.description,

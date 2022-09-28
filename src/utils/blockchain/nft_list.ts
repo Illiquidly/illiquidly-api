@@ -17,10 +17,10 @@ export const localNftList = {
     },
   },
   testnet: {
-    terra19hasymrgld7794e3xg4uddp9lnmvlldhyj09es: {
-      contract: "terra19hasymrgld7794e3xg4uddp9lnmvlldhyj09es",
-      name: "Levana Dragons",
-      symbol: "LEV",
+    terra10633023lhzc3d4gm8uhc3txzlkg53kf3ymact57lgadhhtl7pzfsc8gg3x: {
+      contract: "terra10633023lhzc3d4gm8uhc3txzlkg53kf3ymact57lgadhhtl7pzfsc8gg3x",
+      name: "Astro Hero",
+      symbol: "Astro",
       icon: "https://factions.levana.finance/favicon.ico",
       homepage: "https://factions.levana.finance/",
     },
