@@ -15,19 +15,13 @@ const tradeIds = [2, 1, 0];
 const names = ["Galactic Punks"];
 const addresses = counterers;
 
-qb.setFilter({ field: "network", operator: "$eq", value: networkType })
-  .setFilter({ field: "tradeInfo.state", operator: "$in", value: states })
-  .setFilter({ field: "tradeId", operator: "$in", value: tradeIds })
-  .setFilter({ field: "tradeInfo.owner", operator: "$in", value: counterers })
-  .setFilter({ field: "tradeInfo.whitelistedUsers", operator: "$in", value: counterers })
-  .setFilter({ field: "counterTrades.tradeInfo.owner", operator: "$in", value: counterers })
-  .setJoin({ field: "cw721Assets.collection" })
-  .setFilter({ field: "cw721Assets.collection.collectionName", operator: "$in", value: names })
-  .setFilter({
-    field: "cw721Assets.collection.collectionAddress",
-    operator: "$in",
-    value: addresses,
-  });
+
+//qb.setFilter({ field: "tradeInfo_cw721Assets_join.allNftInfo", operator: "$cont", value: "token_id" })
+//qb.setFilter({ field: "tradeInfo_cw721Assets_collection_join.collectionName", operator: "$cont", value: "Punks"})
+//qb.setFilter({ field: "tradeInfo_cw721Assets_join.allNftInfo", operator: "$cont", value: "sun-face"})
+qb.setFilter({ field: "tradeInfo.tokensWanted", operator: "$cont", value: "coin"})
+qb.setOr({ field: "tradeInfo.tokensWanted", operator: "$cont", value: "cw20Coin"})
+console.log("with coin")
 
 const test = qb.query();
 

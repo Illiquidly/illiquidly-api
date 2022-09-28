@@ -18,14 +18,8 @@ import { Repository } from "typeorm";
 import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
 import { TokenInteracted } from "../nft-content/dto/get-nft-content.dto";
 import { Attribute, BlockchainCW721Token } from "./dto/nft.dto";
+const _ = require("lodash");
 
-export function toAllNFTInfoKey(network: string) {
-  return `all_nft_info:${network}`;
-}
-
-export function toExistingTokenKey(network: string) {
-  return `existing_tokens:${network}`;
-}
 
 @Injectable()
 export class UtilsService {
@@ -92,6 +86,16 @@ export class UtilsService {
     const tokenDBObject: CW721Token = await this.parseDistantTokenToDB(tokenId, distantNFTInfo);
     // Save it in the database with its collection ?
     tokenDBObject.collection = await this.collectionInfo(network, address);
+
+    // We want to keep allNftInfo for general filtering
+    const allNftInfo = _.cloneDeep(tokenDBObject);
+    allNftInfo.metadata.attributes = allNftInfo.metadata.attributes.map((attribute: CW721TokenAttribute) => {
+      attribute.metadata = null;
+      return attribute
+    })
+
+    tokenDBObject.allNftInfo = JSON.stringify(allNftInfo);
+
     await this.NFTTokenRepository.save([tokenDBObject]);
     return distantNFTInfo;
   }
@@ -180,7 +184,7 @@ export class UtilsService {
       traits: (tokenInfo?.metadata?.attributes ?? []).map(
         ({ traitType, value }: { traitType: string; value: string }) => [traitType, value],
       ),
-      allNFTInfo: tokenInfo?.metadata,
+      allNFTInfo: tokenInfo?.allNftInfo
     };
   }
 
@@ -189,7 +193,6 @@ export class UtilsService {
     const dbTokenInfoMetadata = new CW721TokenMetadata();
     dbTokenInfo.tokenId = tokenId;
     dbTokenInfo.metadata = dbTokenInfoMetadata;
-    dbTokenInfo.allNftInfo = JSON.stringify(tokenInfo);
 
     dbTokenInfoMetadata.tokenUri = tokenInfo.tokenUri;
     dbTokenInfoMetadata.image = tokenInfo.extension?.image;
