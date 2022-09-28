@@ -81,7 +81,6 @@ export class TradesService {
     );
 
     const tradeDBObject = await this.queryDistantTradeAndParseForDB(network, tradeId);
-    console.log(tradeDBObject.tradeInfo.cw721Assets)
     // We save asyncronously to the database
     if (tradeInfo) {
       tradeDBObject.id = tradeInfo.id;

@@ -64,16 +64,22 @@ export class UtilsService {
     address: string,
     tokenId: string,
   ): Promise<CW721Token> {
-    const [err, storedNFTInfo] = await asyncAction(
-      this.NFTTokenRepository.createQueryBuilder("token")
-        .leftJoinAndSelect("token.collection", "collection")
-        .leftJoinAndSelect("token.metadata", "metadata")
-        .leftJoinAndSelect("metadata.attributes", "attributes")
-        .where("collection.collectionAddress = :address", { address })
-        .where("token.tokenId = :tokenId", { tokenId })
-        .getOne(),
-    );
 
+    // test with find
+    const [err, storedNFTInfo] =  await asyncAction( this.NFTTokenRepository.findOne({
+      relations: {
+        collection: true,
+        metadata:{
+          attributes: true
+        }
+      },
+      where:{
+        tokenId,
+        collection:{
+          collectionAddress:address
+        }
+      },
+    }))
     if (!err && storedNFTInfo) {
       return storedNFTInfo;
     }
@@ -106,7 +112,7 @@ export class UtilsService {
   /// This function is used to load and cache Token info variables
   async nftTokenInfo(network: Network, address: string, tokenId: string) {
     const nftInfo = await this.nftTokenInfoFromDB(network, address, tokenId);
-    return await this.parseTokenDBToResponse(nftInfo);
+    return this.parseTokenDBToResponse(nftInfo);
   }
 
   /// This function is used to load and cache NFT contract_info variables

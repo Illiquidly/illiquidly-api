@@ -39,7 +39,7 @@ export class NftContentQuerierService {
     startAfter: string | undefined = undefined,
   ) {
     // We get the token batch
-    const [, tokenBatch] = await asyncAction(
+    const [errDistantTokens, tokenBatch] = await asyncAction(
       this.nftQuery.getUserTokens(network, nft, address, 100, startAfter),
     );
 
@@ -55,6 +55,9 @@ export class NftContentQuerierService {
         const [inner_err, tokenInfo] = await asyncAction(
           this.utilsService.nftTokenInfoFromDB(network, nft, id),
         );
+        if(inner_err){
+          console.log("Error Fetching NFT Info From DB", inner_err)
+        }
         return tokenInfo;
       }),
     );
@@ -69,11 +72,9 @@ export class NftContentQuerierService {
     do {
       lastTokens = tokens;
       tokens = await this.getOneTokenBatchFromNFT(network, address, nft, startAfter);
-      console.log("tokens queried 1", tokens)
 
       tokens = _.compact(tokens);
       // If some tokens have been queried, we prepare the next token iteration
-      console.log("tokens queried", tokens)
       if (tokens && tokens.length > 0) {
         startAfter = tokens[tokens.length - 1].tokenId;
         allTokens = allTokens.concat(tokens);
@@ -94,11 +95,13 @@ export class NftContentQuerierService {
         token => {
           return token.collection.collectionAddress != collectionAddress
         },
-      ) ?? [];
+      ) ?? [];      
+
 
       // We then add all the tokens associated from the address
       let newNfts = await this.parseTokensFromOneNft(network, address, collectionAddress);
       data.ownedTokens = data.ownedTokens.concat(_.compact(newNfts))
+      data.ownedTokens = _.uniqBy(data.ownedTokens, (token)=> `${token.id}-${token.collectionId}`)
     });
   }
 

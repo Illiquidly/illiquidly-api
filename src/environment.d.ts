@@ -5,7 +5,6 @@ declare global {
       UPDATE_DESPITE_LOCK_TIME: number;
       IDLE_UPDATE_INTERVAL: number;
       QUERY_TIMEOUT: number;
-      ENVIRONMENT: "staging" | "PRODUCTION";
 
       // Database options
       DB_VERSION: string;

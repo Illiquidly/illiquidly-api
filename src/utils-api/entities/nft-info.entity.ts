@@ -121,7 +121,7 @@ export class CW1155Collection {
 }
 
 @Entity()
-@Unique(["collectionId", "tokenId"])
+@Unique("UNIQUE_TOKEN_ID", ["collectionId", "tokenId"])
 export class CW721Token {
   @PrimaryGeneratedColumn()
   id: number;

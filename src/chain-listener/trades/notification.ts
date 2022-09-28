@@ -86,9 +86,7 @@ async function queryNewTransaction(network: Network) {
           const txLog = new TxLog(log.msg_index, log.log, log.events);
           const contractEvents = txLog.eventsByType.wasm;
           // New counter_trade published
-          console.log(offset, contractEvents?.action, tx.txhash);
           if (contractEvents?.action?.[0] == "confirm_counter_trade") {
-            console.log("confirmed");
             // If there is a new counter_trade, we notify the owner of the trade
             const notification: TradeNotification = new TradeNotification();
             notification.network = network;
@@ -202,7 +200,6 @@ async function queryNewTransaction(network: Network) {
         // No concurrency because we are querying the local db
       );
     });
-    console.log(notifications);
 
     tradeNotificationRepository.save(notifications);
 

@@ -71,14 +71,16 @@ export class NftContentService {
       currentData.network = network;
       currentData.user = address;
     }
+    if (currentData?.lastUpdateStartTime && Date.now() < +currentData?.lastUpdateStartTime + IDLE_UPDATE_INTERVAL) {
+      throw new ForbiddenException("Too much requests my girl");
+    }
 
-    // Then we prepare the data for update
     if (mode == UpdateMode.FORCE_UPDATE) {
       currentData.reset();
     }
 
     // We update the saved data
-    this._internalUpdate(network, address, currentData);
+    this._internalUpdate(network, address, currentData).catch((error)=> console.log("Error during update", error));
   }
 
   @RedisLock(
@@ -89,11 +91,7 @@ export class NftContentService {
     1,
   )
   async _internalUpdate(network: Network, address: string, data: WalletContent) {
-    // We first make sure we can update the walletContent
-    if (data?.lastUpdateStartTime && Date.now() < +data?.lastUpdateStartTime + IDLE_UPDATE_INTERVAL) {
-      throw new ForbiddenException("Too much requests my girl");
-    }
-
+    
     // And we now start the actual update
     await this.updateAddress(
       network,
@@ -104,6 +102,15 @@ export class NftContentService {
     // We save the updated object to database for the last time
     await this.walletContentRepository.save([data]);
   }
+
+
+
+  async sleep(ms: number){
+    let promise = new Promise((resolve)=>{
+      setTimeout(resolve,ms)
+    })
+    return promise
+  };
 
   async updateAddress(
     network: Network, 
@@ -120,17 +127,16 @@ export class NftContentService {
     // We awnt ot prevent multiple updates, so we update the internals
     data.lastUpdateStartTime = Date.now();
     data.state = UpdateState.isUpdating;
-    console.log("before saving", data)
     await this.walletContentRepository.save([data]);
-    console.log("after saving")
+
+    console.log("Update Triggered");
+
 
     const queryCallback = async (newContracts: string[], txSeen: WalletContentTransactions) => {
       if (!network || !address || !data) {
         return;
       }
-      console.log("before updating owned")
       await this.updateOwnedTokens(network, address, newContracts, data, txSeen);
-      console.log("after updating owned")
       data.state = UpdateState.isUpdating;
       await this.walletContentRepository.save([data]);
     };

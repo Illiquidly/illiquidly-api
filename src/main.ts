@@ -5,19 +5,9 @@ import { AppModule } from "./app.module";
 const fs = require("fs");
 import "dotenv/config";
 
-async function bootstrap() {
-  console.log(process.env.ENVIRONMENT);
-  let httpsOptions: any;
-  if (process.env.ENVIRONMENT == "PRODUCTION") {
-    httpsOptions = {
-      cert: fs.readFileSync("/home/illiquidly/identity/fullchain.pem"),
-      key: fs.readFileSync("/home/illiquidly/identity/privkey.pem"),
-    };
-  }
+async function bootstrap() { 
 
-  const app = await NestFactory.create(AppModule, {
-    httpsOptions,
-  });
+  const app = await NestFactory.create(AppModule);
   app.enableCors();
   const config = new DocumentBuilder()
     .setTitle("Illiquidlabs API")

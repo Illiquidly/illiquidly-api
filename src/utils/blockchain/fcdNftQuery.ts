@@ -87,7 +87,7 @@ export async function updateInteractedNfts(
     );
     clearTimeout(axiosTimeout);
     if (error) {
-      console.log(error.toJSON());
+      console.log(error);
     }
     if (txData == null) {
       break;
