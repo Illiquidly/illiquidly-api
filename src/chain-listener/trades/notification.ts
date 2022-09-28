@@ -5,7 +5,6 @@ import { TxLog } from "@terra-money/terra.js";
 
 import { asyncAction } from "../../utils/js/asyncAction";
 import { chains, contracts } from "../../utils/blockchain/chains";
-import { createRedisClient } from "../../utils/redis_db_accessor";
 import { QueueMessage } from "./websocket-server";
 import { Network } from "../../utils/blockchain/dto/network.dto";
 import { sleep } from "../../utils/js/sleep";
@@ -21,7 +20,7 @@ const pMap = require("p-map");
 const DATE_FORMAT = require("dateformat");
 
 const redisHashSetName: string = process.env.REDIS_NOTIFICATION_TXHASH_SET;
-const redisDB = createRedisClient();
+const redisDB = new Redis();
 
 const manager = new DataSource({
   type: "mysql",
@@ -223,7 +222,7 @@ async function queryNewTransaction(network: Network) {
 }
 
 async function launchReceiver() {
-  const db = createRedisClient();
+  const db = new Redis();
   await initElements();
   db.subscribe(process.env.P2P_QUEUE_NAME, (err: any) => {
     if (err) {

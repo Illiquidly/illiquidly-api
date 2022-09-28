@@ -1,4 +1,33 @@
-import { Asset, Coin, Collection } from "../../../trades/dto/getTrades.dto";
+
+
+
+export class Coin {
+  denom: string;
+  amount: string;
+}
+
+export class CW20Coin {
+  address: string;
+  amount: string;
+}
+
+export class CW721Coin {
+  address: string;
+  tokenId: string;
+}
+
+export class CW1155Coin {
+  address: string;
+  tokenId: string;
+  value: string;
+}
+
+export class Asset{
+  coin: Coin;
+  cw20Coin: CW20Coin;
+  cw721Coin: CW721Coin;
+  cw1155Coin: CW1155Coin;
+}
 
 export class BlockChainTradeInfo {
   owner: string;
@@ -14,7 +43,6 @@ export class BlockChainTradeInfo {
     time: string;
     nftsWanted: string[];
     tokensWanted: Asset[];
-    lookingFor?: Array<Partial<Collection> & Coin>;
     tradePreview?: any;
     traderComment?: {
       comment: string;

@@ -7,7 +7,6 @@ import {
 } from "./trades.controller";
 import { UtilsService } from "../utils-api/utils.service";
 import { UtilsModule } from "../utils-api/utils.module";
-import { NFTInfoService } from "../database/nft_info/access";
 import { QueryLimitService } from "../utils/queryLimit.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import Entities from "../utils/entities";
@@ -23,7 +22,6 @@ import {
   providers: [
     TradesService,
     UtilsService,
-    NFTInfoService,
     QueryLimitService,
     TradeCrudService,
     CounterTradeCrudService,

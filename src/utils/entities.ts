@@ -15,6 +15,7 @@ import {
   TradeInfoORM,
   TradeNotification,
 } from "../trades/entities/trade.entity";
+import { WalletContent } from "../nft-content/entities/nft-content.entity";
 
 export default [
   Trade,
@@ -30,4 +31,5 @@ export default [
   CW721TokenAttribute,
   CW1155Collection,
   CW1155Token,
+  WalletContent,
 ];

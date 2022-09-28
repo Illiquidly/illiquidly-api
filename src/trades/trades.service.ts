@@ -1,13 +1,8 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { asyncAction } from "../utils/js/asyncAction";
 import {
-  Asset,
-  Coin,
-  CounterTradeInfoResponse,
-  CW20Coin,
-  CW721Coin,
-  RawCoin,
-  TradeInfo,
+  CounterTradeResponse,
+  TradeResponse,
   TradeInfoResponse,
 } from "./dto/getTrades.dto";
 import { Network } from "../utils/blockchain/dto/network.dto";
@@ -21,6 +16,7 @@ import { BlockChainTradeInfo } from "../utils/blockchain/dto/trade-info.dto";
 import { CounterTrade, RawAsset, Trade, TradeInfoORM } from "./entities/trade.entity";
 import { CW721Collection, ValuedCoin, ValuedCW20Coin } from "../utils-api/entities/nft-info.entity";
 import { formatNiceLuna } from "../utils/js/parseCoin";
+import { Asset, AssetResponse, Coin, CW20Coin, CW721Coin, RawCoin } from "../utils-api/dto/nft.dto";
 const pMap = require("p-map");
 const DATE_FORMAT = require("dateformat");
 
@@ -52,7 +48,6 @@ export class TradesService {
     if (queryErr) {
       throw new NotFoundException("Trade Not Found");
     }
-
     // We parse the new queried object for the database
 
     return {
@@ -86,7 +81,7 @@ export class TradesService {
     );
 
     const tradeDBObject = await this.queryDistantTradeAndParseForDB(network, tradeId);
-
+    console.log(tradeDBObject.tradeInfo.cw721Assets)
     // We save asyncronously to the database
     if (tradeInfo) {
       tradeDBObject.id = tradeInfo.id;
@@ -112,7 +107,7 @@ export class TradesService {
     });
   }
 
-  async getTradeById(network: Network, tradeId: number): Promise<TradeInfoResponse> {
+  async getTradeById(network: Network, tradeId: number): Promise<TradeResponse> {
     const [, tradeInfo]: [any, Trade] = await asyncAction(
       this.tradesRepository.findOneBy({ tradeId, network }),
     );
@@ -134,7 +129,7 @@ export class TradesService {
     network: Network,
     tradeId: number,
     counterTradeId: number,
-  ): Promise<CounterTradeInfoResponse> {
+  ): Promise<CounterTradeResponse> {
     const [, counterTradeInfo] = await asyncAction(
       this.counterTradesRepository.findOneBy({ network, trade: { tradeId }, counterTradeId }),
     );
@@ -247,8 +242,11 @@ export class TradesService {
     };
   }
 
-  async parseTradeDBToResponse(network: Network, trade: Trade): Promise<TradeInfoResponse> {
-    const tradeInfo: TradeInfo = await this.parseTradeDBToResponseInfo(network, trade.tradeInfo);
+  async parseTradeDBToResponse(network: Network, trade: Trade): Promise<TradeResponse> {
+    const tradeInfo: TradeInfoResponse = await this.parseTradeDBToResponseInfo(
+      network,
+      trade.tradeInfo,
+    );
     const nftsWanted = trade?.nftsWanted?.map(nft => {
       nft.tokens = undefined;
       return nft;
@@ -287,8 +285,8 @@ export class TradesService {
   async parseCounterTradeDBToResponse(
     network: Network,
     counterTrade: CounterTrade,
-  ): Promise<CounterTradeInfoResponse> {
-    const tradeInfo: TradeInfo = await this.parseTradeDBToResponseInfo(
+  ): Promise<CounterTradeResponse> {
+    const tradeInfo: TradeInfoResponse = await this.parseTradeDBToResponseInfo(
       network,
       counterTrade.tradeInfo,
     );
@@ -298,7 +296,7 @@ export class TradesService {
       counterId: counterTrade.counterTradeId,
       id: counterTrade.id,
       trade: counterTrade.trade,
-      tradeInfo: tradeInfo,
+      tradeInfo,
     };
   }
 
@@ -306,9 +304,9 @@ export class TradesService {
     // T should extend TradeInfoORM and contain an nftsWanted field
     network: Network,
     tradeInfo: TradeInfoORM,
-  ): Promise<TradeInfo> {
+  ): Promise<TradeInfoResponse> {
     // We fetch metadata for the associated assets :
-    let associatedAssets: RawAsset[] = (tradeInfo.coinAssets ?? []).map((coin: ValuedCoin) => {
+    let associatedAssets: AssetResponse[] = (tradeInfo.coinAssets ?? []).map((coin: ValuedCoin) => {
       if (coin.denom != "uluna") {
         return {
           coin,
@@ -336,7 +334,6 @@ export class TradesService {
       }),
     );
     associatedAssets = associatedAssets.concat(JSON.parse(tradeInfo.cw1155Assets) ?? []);
-    console.log("new associated");
     // We don't want all the collections NFTs here, that's a bit heavy
     const tokensWanted = JSON.parse(tradeInfo.tokensWanted);
     let tradePreview = JSON.parse(tradeInfo.tradePreview);

@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common";
 import { QueryLimitService } from "../utils/queryLimit.service";
-import { NFTInfoService } from "../database/nft_info/access";
 import { CollectionsController, UtilsController } from "./utils.controller";
 import { UtilsService } from "./utils.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
@@ -12,7 +11,6 @@ import { CW721CollectionCrudService, CW721TokenCrudService } from "./cw721CrudSe
   controllers: [UtilsController, CollectionsController],
   providers: [
     UtilsService,
-    NFTInfoService,
     QueryLimitService,
     CW721CollectionCrudService,
     CW721TokenCrudService,

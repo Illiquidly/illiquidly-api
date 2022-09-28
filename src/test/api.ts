@@ -16,20 +16,25 @@ const names = ["Galactic Punks"];
 const addresses = counterers;
 
 
-//qb.setFilter({ field: "tradeInfo_cw721Assets_join.allNftInfo", operator: "$cont", value: "token_id" })
-//qb.setFilter({ field: "tradeInfo_cw721Assets_collection_join.collectionName", operator: "$cont", value: "Punks"})
-//qb.setFilter({ field: "tradeInfo_cw721Assets_join.allNftInfo", operator: "$cont", value: "sun-face"})
-qb.setFilter({ field: "tradeInfo.tokensWanted", operator: "$cont", value: "coin"})
-qb.setOr({ field: "tradeInfo.tokensWanted", operator: "$cont", value: "cw20Coin"})
-console.log("with coin")
+/*
+qb.setFilter({ field: "network", operator: "$eq", value: networkType })
+  .setFilter({ field: "tradeInfo.state", operator: "$in", value: states })
+  .setFilter({ field: "tradeId", operator: "$in", value: tradeIds })
+  .setFilter({ field: "tradeInfo.owner", operator: "$in", value: counterers })
+  .setFilter({ field: "tradeInfo.whitelistedUsers", operator: "$in", value: counterers })
+  .setFilter({ field: "counterTrades.tradeInfo.owner", operator: "$in", value: counterers })
+  .setJoin({ field: "cw721Assets.collection" })
+  .setFilter({ field: "cw721Assets.collection.collectionName.allNftInfo", operator: "$in", value: names })
+*/
+
+qb.setFilter({ field: "tradeInfo_cw721Assets_join.allNftInfo", operator: "$cont", value: "AH"})
+  
 
 const test = qb.query();
 
-console.log(test);
-
 const api = axios
   .get(`${url}/?${test}`)
-  .then(r => console.log(r, r.data))
+  .then(r => console.log(r, r.data, r.data[0].tradeInfo.associatedAssets, r.data[1].tradeInfo.associatedAssets))
   .catch(e => console.log(e));
 
 export class QueryParameters {

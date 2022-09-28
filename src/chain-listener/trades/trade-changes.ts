@@ -4,7 +4,6 @@ import Axios from "axios";
 import { TxLog } from "@terra-money/terra.js";
 
 import { chains, contracts } from "../../utils/blockchain/chains";
-import { createRedisClient } from "../../utils/redis_db_accessor";
 import { asyncAction } from "../../utils/js/asyncAction";
 import { Network } from "../../utils/blockchain/dto/network.dto";
 import { QueueMessage } from "./websocket-server";
@@ -34,7 +33,7 @@ async function hasTx(db: Redis, txHash: string): Promise<boolean> {
   return (await db.sismember(redisHashSetName, txHash)) == 1;
 }
 
-const txHashClient = createRedisClient();
+const txHashClient = new Redis();
 
 const queryLimitService: QueryLimitService = new QueryLimitService();
 
@@ -157,7 +156,7 @@ async function queryNewTransaction(network: Network) {
 }
 
 async function launchReceiver() {
-  const db = createRedisClient();
+  const db = new Redis();
 
   await initElements();
 

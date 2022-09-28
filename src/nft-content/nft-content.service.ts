@@ -1,25 +1,20 @@
-import { Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable } from "@nestjs/common";
 import "dotenv/config";
-import {
-  NFTContentResponse,
-  StoreContractsInteracted,
-  StoredTokenInteracted,
-  TokenInteracted,
-  TxInterval,
-  UpdateMode,
-  UpdateState,
-} from "./dto/get-nft-content.dto";
-import {
-  canUpdate,
-  defaultContractsApiStructure,
-  getNFTContentFromDb,
-  saveNFTContentToDb,
-} from "../utils/redis_db_accessor";
+import { NFTContentResponse, UpdateMode } from "./dto/get-nft-content.dto";
 import { Network } from "../utils/blockchain/dto/network.dto";
 import { NftContentQuerierService } from "./nft-content-querier.service";
-import { RedisService } from "nestjs-redis";
 import Redis from "ioredis";
 import { RedisLock, RedisLockService } from "nestjs-simple-redis-lock";
+import {
+  UpdateState,
+  WalletContent,
+  WalletContentTransactions,
+} from "./entities/nft-content.entity";
+import { Repository } from "typeorm";
+import { InjectRepository } from "@nestjs/typeorm";
+import { updateInteractedNfts } from "../utils/blockchain/fcdNftQuery";
+import { Wallet } from "@terra-money/terra.js";
+const _ = require("lodash");
 
 function toNFTKey(network: string, address: string) {
   return `nft:${address}@${network}_${process.env.DB_VERSION}`;
@@ -33,6 +28,10 @@ if (process.env.UPDATE_DESPITE_LOCK_TIME == undefined) {
   process.env.UPDATE_DESPITE_LOCK_TIME = "120000";
 }
 const UPDATE_DESPITE_LOCK_TIME = parseInt(process.env.UPDATE_DESPITE_LOCK_TIME);
+if (process.env.IDLE_UPDATE_INTERVAL == undefined) {
+  process.env.IDLE_UPDATE_INTERVAL = "20000";
+}
+const IDLE_UPDATE_INTERVAL = parseInt(process.env.IDLE_UPDATE_INTERVAL);
 
 @Injectable()
 export class NftContentService {
@@ -40,40 +39,46 @@ export class NftContentService {
 
   constructor(
     private readonly nftContentQuerierService: NftContentQuerierService,
-    private readonly redisService: RedisService,
     protected readonly lockService: RedisLockService,
-  ) {
-    this.redisDB = redisService.getClient();
-  }
-
-  async _internalGetNfts(network: Network, address: string): Promise<StoreContractsInteracted> {
-    // We get the db data
-    const dbKey = toNFTKey(network, address);
-    return await getNFTContentFromDb(this.redisDB, dbKey);
-  }
+    @InjectRepository(WalletContent) private walletContentRepository: Repository<WalletContent>,
+  ) {}
 
   async findNfts(network: Network, address: string): Promise<NFTContentResponse> {
-    const currentData: StoreContractsInteracted = await this._internalGetNfts(network, address);
-    console.log("current", currentData);
-    return this.nftContentQuerierService.mapForResponse(network, currentData);
+    const currentData: WalletContent = await this.walletContentRepository.findOne({
+      relations: {
+         ownedTokens: {
+          metadata:{
+            attributes: true
+          }
+         }
+      },
+      where:{
+        network,
+        user: address,
+      },
+    });
+    return this.nftContentQuerierService.mapWalletContentDBForResponse(network, currentData);
   }
 
-  async update(network: Network, address: string, mode: UpdateMode): Promise<NFTContentResponse> {
+  async update(network: Network, address: string, mode: UpdateMode) {
     // First we get the current data
-    const currentData = await this._internalGetNfts(network, address);
-
-    let returnData = { ...currentData };
-    if (mode == UpdateMode.UPDATE) {
-      returnData.state = UpdateState.isUpdating;
-    } else if (mode == UpdateMode.FORCE_UPDATE) {
-      returnData = defaultContractsApiStructure();
-      returnData.state = UpdateState.isUpdating;
+    let currentData: WalletContent = await this.walletContentRepository.findOneBy({
+      network,
+      user: address,
+    });
+    if(!currentData){
+      currentData = new WalletContent();
+      currentData.network = network;
+      currentData.user = address;
     }
-    // Then we process the updateFunction
-    this._internalUpdate(network, address, mode, currentData);
 
-    // And without waiting for the end of execution, we return the data
-    return this.nftContentQuerierService.mapForResponse(network, returnData);
+    // Then we prepare the data for update
+    if (mode == UpdateMode.FORCE_UPDATE) {
+      currentData.reset();
+    }
+
+    // We update the saved data
+    this._internalUpdate(network, address, currentData);
   }
 
   @RedisLock(
@@ -83,205 +88,167 @@ export class NftContentService {
     0,
     1,
   )
-  async _internalUpdate(
-    network: Network,
-    address: string,
-    mode: UpdateMode,
-    data: StoreContractsInteracted,
-  ) {
-    // Here we want to update the database
-
-    const dbKey = toNFTKey(network, address);
-    // We make sure we can update
-    await canUpdate(this.redisDB, dbKey);
-
-    // We deal with timeouts and shit
-    const hasTimedOut = { timeout: false };
-    const timeout = setTimeout(async () => {
-      hasTimedOut.timeout = true;
-      console.log("has timed-out");
-    }, QUERY_TIMEOUT);
-
-    // We launch the actual update code
-    // Force update restarts everything from scratch
-
-    if (mode == UpdateMode.FORCE_UPDATE) {
-      data = defaultContractsApiStructure();
+  async _internalUpdate(network: Network, address: string, data: WalletContent) {
+    // We first make sure we can update the walletContent
+    if (data?.lastUpdateStartTime && Date.now() < +data?.lastUpdateStartTime + IDLE_UPDATE_INTERVAL) {
+      throw new ForbiddenException("Too much requests my girl");
     }
-    console.log("start update");
-    data = await this.updateAddress(
-      dbKey,
+
+    // And we now start the actual update
+    await this.updateAddress(
       network,
       address,
-      { ...data },
-      hasTimedOut,
-      this.nftContentQuerierService.updateInteractedNfts.bind(this.nftContentQuerierService),
-      this.nftContentQuerierService.parseNFTSet.bind(this.nftContentQuerierService),
+      data,
     );
-    clearTimeout(timeout);
 
-    // We save the updated object to db and release the Lock on the database
-    await saveNFTContentToDb(this.redisDB, dbKey, data);
+    // We save the updated object to database for the last time
+    await this.walletContentRepository.save([data]);
   }
 
   async updateAddress(
-    dbKey: string,
-    network: string,
+    network: Network, 
     address: string,
-    currentData: StoreContractsInteracted,
-    hasTimedOut: any,
-    queryNewInteractedContracts: any,
-    parseTokenSet: typeof this.nftContentQuerierService.parseNFTSet,
+    data: WalletContent,
   ) {
-    const willQueryBefore = currentData.state != UpdateState.Full;
-    // We update currentData to prevent multiple updates
-    currentData.state = UpdateState.isUpdating;
-    await saveNFTContentToDb(this.redisDB, dbKey, currentData);
+    // We setup a timeout for the query
+    const hasTimedOut = { timeout: false };
+    const timeout = setTimeout(async () => {
+      hasTimedOut.timeout = true;
+    }, QUERY_TIMEOUT);
 
-    const queryCallback = async (newContracts: Set<string>, txSeen: TxInterval) => {
-      if (!network || !address || !currentData) {
+    const willQueryBefore = data.state != UpdateState.Full;
+    // We awnt ot prevent multiple updates, so we update the internals
+    data.lastUpdateStartTime = Date.now();
+    data.state = UpdateState.isUpdating;
+    console.log("before saving", data)
+    await this.walletContentRepository.save([data]);
+    console.log("after saving")
+
+    const queryCallback = async (newContracts: string[], txSeen: WalletContentTransactions) => {
+      if (!network || !address || !data) {
         return;
       }
-      currentData = await this.updateOwnedTokensAndSave(
-        network,
-        address,
-        newContracts,
-        { ...currentData },
-        txSeen,
-        parseTokenSet,
-      );
-      currentData.state = UpdateState.isUpdating;
-      await saveNFTContentToDb(this.redisDB, dbKey, currentData);
+      console.log("before updating owned")
+      await this.updateOwnedTokens(network, address, newContracts, data, txSeen);
+      console.log("after updating owned")
+      data.state = UpdateState.isUpdating;
+      await this.walletContentRepository.save([data]);
     };
 
-    // We start by querying data in the possible interval (between the latests transactions queried and the oldest ones)
+    // The Terra fcd returns transactions oldest first
+    // In order to query all transactions with this way of querying the chain, we use a three step query.
+    // 1. We start by querying data in the possible interval that was left by older update tries
+    // This means we want to query between the latests transactions queried and the oldest ones
+    // || : means transactions that were already queried
+    // -- : means transactions that were not queried already
+    // <<--- newest transactions ********** oldest transactions ---->>
+    // -------- |||||||| -------- ||||||||||||||----------
+    // ******************* ^^^^ here ***********
     if (
-      currentData.txs.internal.newest != null &&
-      currentData.txs.internal.oldest != null &&
-      currentData.txs.internal.oldest < currentData.txs.internal.newest
+      data.internalNewestTx != null &&
+      data.internalOldestTx != null &&
+      data.internalOldestTx < data.internalNewestTx
     ) {
       // Here we can query interval transactions
-      await queryNewInteractedContracts(
+      await updateInteractedNfts(
         network,
         address,
-        currentData.txs.internal.newest,
-        currentData.txs.internal.oldest,
+        data.internalNewestTx,
+        data.internalOldestTx,
         queryCallback,
         hasTimedOut,
       );
     }
 
+    // 2. Then we query new transactions
+    // This means we want to query between the latests transactions queried and the oldest ones
+    // -------- |||||||| ---------
+    // * ^^^^ here ***************
     // Then we query new transactions
-    await queryNewInteractedContracts(
+    await updateInteractedNfts(
       network,
       address,
       null,
-      currentData.txs.external.newest,
+      data.externalNewestTx,
       queryCallback,
       hasTimedOut,
     );
 
+    // 3. Finally, we want to query very olds transactions that were not queried before
+    // We know there are some transactions left when the UpdateState has never reached the full state.
+    // |||||||||||||||||| ----------------
+    // ******************* ^^^^ here ***
+    // Then we query new transactions
     // We then query old data if not finalized
     if (willQueryBefore) {
-      await queryNewInteractedContracts(
+      await updateInteractedNfts(
         network,
         address,
-        currentData.txs.external.oldest,
+        data.externalOldestTx,
         null,
         queryCallback,
         hasTimedOut,
       );
     }
 
+    // Finally after querying a lot, we need to specify how the update has ended.
+    // If any query has timed out, the query is not final, we still have potential data to query
+    // If not, the query is final, we have queried all data so far so that's just perfect
     if (hasTimedOut.timeout) {
-      currentData.state = UpdateState.Partial;
+      data.state = UpdateState.Partial;
     } else {
-      currentData.state = UpdateState.Full;
+      data.state = UpdateState.Full;
     }
-
-    return currentData;
+    clearTimeout(timeout);
   }
 
-  async updateOwnedTokensAndSave(
-    network: string,
+  async updateOwnedTokens(
+    network: Network, 
     address: string,
-    newContracts: Set<string>,
-    currentData: StoreContractsInteracted,
-    newTxs: TxInterval,
-    parseTokenSet: (n: string, c: Set<string>, a: string) => Promise<TokenInteracted[]>,
-  ) {
-    // We start by updating the NFT object
-    if (newContracts.size) {
-      const contracts: Set<string> = new Set(currentData.interactedContracts);
-      // For new nft interactions, we update the owned nfts
-      console.log("Querying NFT data from LCD");
-
-      newContracts.forEach(token => contracts.add(token));
-      currentData.interactedContracts = contracts;
-      // We query what tokens are actually owned by the address
-
-      const ownedTokens: StoredTokenInteracted[] = await parseTokenSet(
-        network,
-        newContracts,
-        address,
-      );
-      console.log("owned Tokens", ownedTokens);
-
-      // We update the owned tokens
-      ownedTokens.forEach((token: StoredTokenInteracted) => {
-        // First we find if the token data already exists in the array
-        const existingIndex = currentData.ownedTokens.findIndex(
-          element =>
-            element.tokenId == token.tokenId &&
-            element.collectionAddress == token.collectionAddress,
-        );
-        if (existingIndex == -1) {
-          currentData.ownedTokens.push(token);
-        } else {
-          currentData.ownedTokens[existingIndex] = token;
-        }
-      });
-    }
+    newContracts: string[],
+    data: WalletContent,
+    newTxs: WalletContentTransactions,
+  ): Promise<void> {
+    // First we update the tokens in the contract we have already seen
+    await this.nftContentQuerierService.parseNFTSet(data, network, newContracts, address);
 
     // Then we update the transactions we've already seen
-    this.updateSeenTransaction(currentData, newTxs);
-
-    return currentData;
+    this.updateSeenTransaction(data, newTxs);
   }
-  updateSeenTransaction(currentData: StoreContractsInteracted, newTxs: TxInterval) {
+  updateSeenTransaction(currentData: WalletContent, newTxs: WalletContentTransactions): void {
     // If there is an interval, we init the interval data
     if (
-      newTxs.oldest &&
-      currentData.txs.external.newest &&
-      newTxs.oldest > currentData.txs.external.newest
+      newTxs.oldestTx &&
+      currentData.externalNewestTx &&
+      newTxs.oldestTx > currentData.externalNewestTx
     ) {
-      currentData.txs.internal.newest = newTxs.oldest;
-      currentData.txs.internal.oldest = currentData.txs.external.newest;
+      currentData.internalNewestTx = newTxs.oldestTx;
+      currentData.internalOldestTx = currentData.externalNewestTx;
     }
 
     // We fill the internal hole first
     if (
-      currentData.txs.internal.newest &&
-      currentData.txs.internal.oldest &&
-      newTxs.newest &&
-      newTxs.oldest &&
-      currentData.txs.internal.newest > newTxs.oldest &&
-      newTxs.newest >= currentData.txs.internal.oldest
+      currentData.internalNewestTx &&
+      currentData.internalOldestTx &&
+      newTxs.newestTx &&
+      newTxs.oldestTx &&
+      currentData.internalNewestTx > newTxs.oldestTx &&
+      newTxs.newestTx >= currentData.internalOldestTx
     ) {
-      currentData.txs.internal.newest = newTxs.oldest;
+      currentData.internalNewestTx = newTxs.oldestTx;
     }
 
     if (
-      currentData.txs.external.newest == null ||
-      (newTxs.newest && newTxs.newest > currentData.txs.external.newest)
+      currentData.externalNewestTx == null ||
+      (newTxs.newestTx && newTxs.newestTx > currentData.externalNewestTx)
     ) {
-      currentData.txs.external.newest = newTxs.newest;
+      currentData.externalNewestTx = newTxs.newestTx;
     }
     if (
-      currentData.txs.external.oldest == null ||
-      (newTxs.oldest && newTxs.oldest < currentData.txs.external.oldest)
+      currentData.externalOldestTx == null ||
+      (newTxs.oldestTx && newTxs.oldestTx < currentData.externalOldestTx)
     ) {
-      currentData.txs.external.oldest = newTxs.oldest;
+      currentData.externalOldestTx = newTxs.oldestTx;
     }
   }
 }

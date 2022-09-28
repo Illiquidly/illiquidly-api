@@ -1,6 +1,6 @@
-import { createRedisClient } from "../../utils/redis_db_accessor";
+import Redis from "ioredis";
 
-const redisDB = createRedisClient();
+const redisDB = new Redis();
 
 async function test() {
   await redisDB.keys("*").then(keys => console.log(keys));

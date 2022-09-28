@@ -17,7 +17,6 @@ export class BlockchainNFTQuery {
     const collection = new CW721Collection();
     collection.collectionAddress = nftContractAddress;
     collection.network = network;
-    console.log(network);
     const contractInfo = await this.getContractInfo(network, nftContractAddress).catch(() => ({}));
     collection.collectionName = contractInfo?.name;
     collection.symbol = contractInfo?.symbol;
@@ -115,24 +114,23 @@ export class BlockchainNFTQuery {
 
     return response.flat();
   }
+}
+  // This is an offchain query, we don't limit it
+export async function getRegisteredNFTs(network: Network): Promise<any> {
+  let knownNfts: any = {};
 
-  // This is an offchain query, but let's limit it nonetheless
-  async getRegisteredNFTs(network: Network): Promise<any> {
-    let knownNfts: any = {};
-
-    if (localNftList[network]) {
-      knownNfts = localNftList[network];
-    }
-
-    const remoteNftList = await axios.get(registeredNftContracts);
-
-    if (remoteNftList?.data[network]) {
-      knownNfts = {
-        ...knownNfts,
-        ...remoteNftList?.data[network],
-      };
-    }
-
-    return knownNfts;
+  if (localNftList[network]) {
+    knownNfts = localNftList[network];
   }
+
+  const remoteNftList = await axios.get(registeredNftContracts);
+
+  if (remoteNftList?.data[network]) {
+    knownNfts = {
+      ...knownNfts,
+      ...remoteNftList?.data[network],
+    };
+  }
+
+  return knownNfts;
 }

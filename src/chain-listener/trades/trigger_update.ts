@@ -1,9 +1,9 @@
 "use strict";
 
 import "dotenv/config";
+import Redis from "ioredis";
 import { Network } from "../../utils/blockchain/dto/network.dto";
 
-import { createRedisClient } from "../../utils/redis_db_accessor";
 import { QueueMessage } from "./websocket-server";
 
 let network: Network;
@@ -15,7 +15,7 @@ if (process.argv[2]) {
 
 async function main() {
   // We send a message to the worker
-  const db = createRedisClient();
+  const db = new Redis();
   const message: QueueMessage = {
     message: process.env.TRIGGER_P2P_TRADE_QUERY_MSG,
     network,

@@ -3,9 +3,9 @@
 import "dotenv/config";
 
 import { WebSocketClient } from "@terra-money/terra.js";
-import { createRedisClient } from "../../utils/redis_db_accessor";
 import { ws, contracts } from "../../utils/blockchain/chains";
 import { Network } from "../../utils/blockchain/dto/network.dto";
+import Redis from "ioredis";
 
 export interface QueueMessage {
   message: string;
@@ -13,7 +13,7 @@ export interface QueueMessage {
 }
 
 async function main() {
-  const db = await createRedisClient();
+  const db = new Redis();
 
   // P2P Transaction tracker
   // We subscribe to each network

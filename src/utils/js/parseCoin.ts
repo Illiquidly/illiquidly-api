@@ -11,7 +11,6 @@ export const toDecimal = (num: BigSource, decimalPoints = 6): string => {
 export const formatDecimal = (num: BigSource) => {
   const decimalNum = toDecimal(num);
   const [integer, decimal] = decimalNum.split(".");
-  // eslint-disable-next-line sonarjs/no-nested-template-literals
   return `${numeral(integer).format("0,0")}${decimal ? `.${decimal}` : ""}`;
 };
 export const formatLUNADecimal = (num: BigSource) => `${formatDecimal(num)} LUNA`;

@@ -27,11 +27,6 @@ export class NftContentController {
   }
 
   @Patch(":network/:address/:mode")
-  @ApiResponse({
-    status: 200,
-    type: () => NFTContentResponse,
-    description: "Updates and Returns the content of a wallet",
-  })
   async update(@Param() params: UpdateNFTWalletContent) {
     return await this.nftContentService.update(params.network, params.address, params.mode);
   }

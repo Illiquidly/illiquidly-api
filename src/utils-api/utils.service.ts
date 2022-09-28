@@ -3,7 +3,7 @@ import { Network } from "../utils/blockchain/dto/network.dto";
 
 import { asyncAction } from "../utils/js/asyncAction";
 
-import { BlockchainNFTQuery } from "../utils/blockchain/nft_query.js";
+import { BlockchainNFTQuery, getRegisteredNFTs } from "../utils/blockchain/nft_query.js";
 
 import { QueryLimitService } from "../utils/queryLimit.service";
 import {
@@ -16,10 +16,9 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
-import { TokenInteracted } from "../nft-content/dto/get-nft-content.dto";
-import { Attribute, BlockchainCW721Token } from "./dto/nft.dto";
-const _ = require("lodash");
 
+import { BlockchainCW721Token, NFTAttribute, TokenResponse } from "./dto/nft.dto";
+const _ = require("lodash");
 
 @Injectable()
 export class UtilsService {
@@ -39,7 +38,7 @@ export class UtilsService {
   }
 
   async registeredNFTs(network: Network) {
-    const [err, knownNfts] = await asyncAction(this.nftQuery.getRegisteredNFTs(network));
+    const [err, knownNfts] = await asyncAction(getRegisteredNFTs(network));
 
     if (!err) {
       // We save those nft information to the NFT db if there was no error
@@ -60,7 +59,11 @@ export class UtilsService {
     return Object.keys(await this.registeredNFTs(network));
   }
 
-  async nftTokenInfoFromDB(network: Network, address: string, tokenId: string) {
+  async nftTokenInfoFromDB(
+    network: Network,
+    address: string,
+    tokenId: string,
+  ): Promise<CW721Token> {
     const [err, storedNFTInfo] = await asyncAction(
       this.NFTTokenRepository.createQueryBuilder("token")
         .leftJoinAndSelect("token.collection", "collection")
@@ -97,7 +100,7 @@ export class UtilsService {
     tokenDBObject.allNftInfo = JSON.stringify(allNftInfo);
 
     await this.NFTTokenRepository.save([tokenDBObject]);
-    return distantNFTInfo;
+    return tokenDBObject;
   }
 
   /// This function is used to load and cache Token info variables
@@ -171,7 +174,7 @@ export class UtilsService {
     };
   }
 
-  parseTokenDBToResponse(tokenInfo: CW721Token): TokenInteracted {
+  parseTokenDBToResponse(tokenInfo: CW721Token): TokenResponse {
     return {
       tokenId: tokenInfo?.tokenId,
       collectionName: tokenInfo?.collection?.collectionName,
@@ -203,7 +206,7 @@ export class UtilsService {
     dbTokenInfoMetadata.animationUrl = tokenInfo.extension?.animationUrl;
     dbTokenInfoMetadata.youtubeUrl = tokenInfo.extension?.youtubeUrl;
     dbTokenInfoMetadata.attributes = (tokenInfo.extension?.attributes ?? []).map(
-      (attribute: Attribute) => {
+      (attribute: NFTAttribute) => {
         const dbAttribute = new CW721TokenAttribute();
         dbAttribute.displayType = attribute?.displayType;
         dbAttribute.traitType = attribute?.traitType;

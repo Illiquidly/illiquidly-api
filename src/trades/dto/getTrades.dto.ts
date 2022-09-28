@@ -1,56 +1,19 @@
+import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
 
 import { IsInt } from "class-validator";
-import { CW721Collection } from "src/utils-api/entities/nft-info.entity";
+import { AssetResponse } from "src/utils-api/dto/nft.dto";
+import { CW721Collection } from "../../utils-api/entities/nft-info.entity";
 import { Network } from "../../utils/blockchain/dto/network.dto";
-import { CounterTrade, RawAsset, Trade } from "../entities/trade.entity";
+import { CounterTrade, Trade } from "../entities/trade.entity";
 
-export interface Collection {
-  collectionAddress: string;
-  collectionName: string;
-}
-
-export interface RawCoin {
-  currency?: string;
-  amount?: string;
-}
-
-export type Asset = Coin & CW20Coin & CW721Coin & CW1155Coin;
-
-export class Coin {
-  coin: {
-    denom: string;
-    amount: string;
+export interface TradeInfoResponse {
+  acceptedInfo: {
+    counterId?: number;
   };
-}
-
-export class CW20Coin {
-  cw20Coin: {
-    address: string;
-    amount: string;
-  };
-}
-export class CW721Coin {
-  cw721Coin: {
-    address: string;
-    tokenId: string;
-  };
-}
-export class CW1155Coin {
-  cw1155Coin: {
-    address: string;
-    tokenId: string;
-    value: string;
-  };
-}
-
-export class TradeInfo {
-  acceptedInfo?: any; // TODO correct this type
   assetsWithdrawn: boolean;
-  associatedAssets: RawAsset[];
-  associatedAssetsWithInfo?: any[];
-  associatedCollections?: Partial<Collection>[];
   lastCounterId?: number;
+  associatedAssets: AssetResponse[];
   additionalInfo: {
     ownerComment: {
       comment: string;
@@ -58,33 +21,36 @@ export class TradeInfo {
     };
     time: string;
     nftsWanted?: CW721Collection[];
-    tokensWanted: Asset[];
-    lookingFor?: (Partial<CW721Collection> | RawCoin)[];
-    tradePreview?: any;
-    traderComment?: {
-      comment: string;
-      time: string;
+    tokensWanted: AssetResponse[];
+    tradePreview: AssetResponse[];
+    traderComment: {
+      comment?: string;
+      time?: string;
     };
+    lookingFor?: (Partial<CW721Collection> & {
+      currency?: string;
+      amount?: string;
+    })[];
   };
   owner: string;
   state: string;
   whitelistedUsers: string[];
 }
 
-export class CounterTradeInfoResponse {
+export class CounterTradeResponse {
   network: Network;
   counterId: number;
   id: number;
   trade: Trade;
-  tradeInfo: TradeInfo;
+  tradeInfo: TradeInfoResponse;
 }
 
-export class TradeInfoResponse {
+export class TradeResponse {
   network: Network;
   tradeId: number;
   id: number;
   counterTrades: CounterTrade[];
-  tradeInfo: TradeInfo;
+  tradeInfo: TradeInfoResponse;
 }
 /*
 export class QueryParameters {

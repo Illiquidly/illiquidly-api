@@ -2,9 +2,11 @@ import { Controller, Patch, Query } from "@nestjs/common";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Crud } from "@rewiko/crud";
 import {
+  CounterTradeResponse,
   SingleCounterTradeParameters,
   SingleTradeParameters,
   TradeInfoResponse,
+  TradeResponse,
 } from "./dto/getTrades.dto";
 import { CounterTrade, Trade, TradeNotification } from "./entities/trade.entity";
 import {
@@ -79,7 +81,7 @@ export class TradesController {
   @Patch("")
   @ApiResponse({
     status: 200,
-    type: () => TradeInfoResponse,
+    type: () => TradeResponse,
     description: "Queries the information about a posted trade",
   })
   async getSingleTrade(@Query() params: SingleTradeParameters) {
@@ -148,7 +150,7 @@ export class CounterTradesController {
   @Patch("")
   @ApiResponse({
     status: 200,
-    type: () => TradeInfoResponse,
+    type: () => CounterTradeResponse,
     description: "Queries the information about a posted counter trade",
   })
   async getSingleCounterTrade(@Query() params: SingleCounterTradeParameters) {
