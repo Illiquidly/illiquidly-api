@@ -114,8 +114,8 @@ async function queryNewTransaction(network: Network) {
         return tx.logs
           .map((log: any): number[][] => {
             const txLog = new TxLog(log.msg_index, log.log, log.events);
-            const tradeIds = txLog.eventsByType.wasm.trade_id?.map((id: string) => parseInt(id));
-            const counterIds = txLog.eventsByType.wasm.counter_id?.map((id: string) =>
+            const tradeIds = (txLog.eventsByType.wasm.trade_id ?? txLog.eventsByType.wasm.trade)?.map((id: string) => parseInt(id));
+            const counterIds = (txLog.eventsByType.wasm.counter_id ?? txLog.eventsByType.wasm.counter)?.map((id: string) =>
               parseInt(id),
             );
             return _.unzip([tradeIds, counterIds]);
