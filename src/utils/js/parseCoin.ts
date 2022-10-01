@@ -2,16 +2,22 @@ import * as numeral from "numeral";
 import big, { BigSource } from "big.js";
 export const UST_MAX_DECIMAL_POINTS = 6;
 export const LUNA_MAX_DECIMALS_POINTS = 6;
+
+const PRINT_DECIMAL_POINTS = 3;
+
 export const toDecimal = (num: BigSource, decimalPoints = 6): string => {
-  const decimalNum = big(big(num).toFixed().split(".")[0]).div(10 ** decimalPoints);
+  const decimalNum = big(num).div(10 ** decimalPoints);
+  console.log(decimalNum);
   return (Math.floor(parseFloat(decimalNum.toString()) * 100) / 100)
-    .toFixed(decimalPoints)
+    .toFixed(PRINT_DECIMAL_POINTS)
     .toString();
 };
+
+
 export const formatDecimal = (num: BigSource) => {
   const decimalNum = toDecimal(num);
   const [integer, decimal] = decimalNum.split(".");
-  return `${numeral(integer).format("0,0")}${decimal ? `.${decimal}` : ""}`;
+  return `${numeral(integer).format("0")}${decimal ? `.${decimal}` : ""}`;
 };
 export const formatLUNADecimal = (num: BigSource) => `${formatDecimal(num)} LUNA`;
 

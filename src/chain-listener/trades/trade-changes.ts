@@ -216,5 +216,5 @@ async function testQuery() {
 
 launchReceiver()
   // Then query the new transcations for the first time
-  .then(async () => await txHashClient.del(redisHashSetName))
+  //.then(async () => await txHashClient.del(redisHashSetName))
   .then(async () => await queryNewTransaction(Network.testnet));
