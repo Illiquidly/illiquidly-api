@@ -60,6 +60,10 @@ import { TradesService } from "./trades.service";
       counterTrades: {
         eager: true,
       },
+      "counterTrades.tradeInfo": {
+        eager: true,
+        alias: "counterTrade_tradeInfo_join"
+      },
     },
   },
   routes: {
