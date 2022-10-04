@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Patch } from "@nestjs/common";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiTags } from "@nestjs/swagger";
 import { Crud } from "@rewiko/crud";
 import { contracts } from "../utils/blockchain/chains";
 import { NetworkParam } from "../utils/blockchain/dto/network.dto";

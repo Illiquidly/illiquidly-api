@@ -3,16 +3,18 @@ import { NftContentModule } from "./nft-content/nft-content.module";
 import { UtilsModule } from "./utils-api/utils.module";
 import { TradesModule } from "./trades/trades.module";
 import { KnexModule } from "nestjs-knex";
-import { RedisModule } from "nestjs-redis";
-import { RedisLockModule } from "nestjs-simple-redis-lock";
+import { RedisModule } from "@liaoliaots/nestjs-redis";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { typeOrmOptions } from "./utils/typeormOptions";
+import { ChainListenerModule } from "./chain-listener/chain-listener.module";
+import { RedisLockModule } from "./utils/lock";
 
 @Module({
   imports: [
     NftContentModule,
     UtilsModule,
     TradesModule,
+    ChainListenerModule,
     KnexModule.forRoot({
       config: {
         client: "mysql2",
@@ -25,7 +27,15 @@ import { typeOrmOptions } from "./utils/typeormOptions";
         },
       },
     }),
-    RedisModule.register({}),
+    RedisModule.forRoot({
+      config: [
+        { namespace: "lock" },
+        { namespace: "default-client" },
+        { namespace: "trade-subscriber" },
+        { namespace: "notification-subscriber" },
+        { namespace: "trade-publisher" },
+      ],
+    }),
     RedisLockModule,
     TypeOrmModule.forRoot({
       ...typeOrmOptions,

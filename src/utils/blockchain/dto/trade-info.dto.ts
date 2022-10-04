@@ -1,6 +1,3 @@
-
-
-
 export class Coin {
   denom: string;
   amount: string;
@@ -22,7 +19,7 @@ export class CW1155Coin {
   value: string;
 }
 
-export class Asset{
+export class Asset {
   coin: Coin;
   cw20Coin: CW20Coin;
   cw721Coin: CW721Coin;

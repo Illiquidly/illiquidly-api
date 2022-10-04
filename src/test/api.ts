@@ -2,7 +2,7 @@ import axios from "axios";
 
 const url = "http://localhost:3000/trades";
 
-import { RequestQueryBuilder, CondOperator } from "@rewiko/crud-request";
+import { RequestQueryBuilder } from "@rewiko/crud-request";
 
 const qb = RequestQueryBuilder.create();
 
@@ -15,7 +15,6 @@ const tradeIds = [2, 1, 0];
 const names = ["Galactic Punks"];
 const addresses = counterers;
 
-
 /*
 qb.setFilter({ field: "network", operator: "$eq", value: networkType })
   .setFilter({ field: "tradeInfo.state", operator: "$in", value: states })
@@ -27,14 +26,36 @@ qb.setFilter({ field: "network", operator: "$eq", value: networkType })
   .setFilter({ field: "cw721Assets.collection.collectionName.allNftInfo", operator: "$in", value: names })
 */
 
-qb.setFilter({ field: "tradeInfo_cw721Assets_join.allNftInfo", operator: "$cont", value: "AH"})
-  
+//qb.setJoin({ field: "counterTrades.tradeInfo", select: ["owner"]  });
+qb.setLimit(5);
+//qb.setFilter({ field: "tradeInfo.whitelistedUsers", operator: "$eq" , value: "[]"});
+//qb.setOr({ field: "tradeInfo.whitelistedUsers", operator: "$cont" , value: "terra1hzttzrf2yge4pepnlalvt5zuaphpzk3nnc8x7s"});
+//qb.setOr({ field: "tradeInfo.whitelistedUsers", operator: "$cont" , value: "terra1hzttzrf2yge4pepnlalvt5zuaphpzk3nnc8x7s"});
+
+qb.search({
+  $or: [
+    {
+      "tradeInfo.whitelistedUsers": "[]",
+    },
+    {
+      "tradeInfo.whitelistedUsers": {
+        $cont: "terra1hzttzrf2yge4pepnlalvt5zuaphpzk3nnc8x7s",
+      },
+    },
+    {
+      "tradeInfo.whitelistedUsers": {
+        $ne: "[]",
+      },
+      "tradeInfo.owner": "uy",
+    },
+  ],
+});
 
 const test = qb.query();
 
-const api = axios
+axios
   .get(`${url}/?${test}`)
-  .then(r => console.log(r, r.data, r.data[0].tradeInfo.associatedAssets, r.data[1].tradeInfo.associatedAssets))
+  .then(r => console.log(r.data))
   .catch(e => console.log(e));
 
 export class QueryParameters {

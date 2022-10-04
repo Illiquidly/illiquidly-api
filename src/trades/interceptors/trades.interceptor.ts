@@ -13,6 +13,7 @@ export class TradeResultInterceptor implements NestInterceptor {
     return next.handle().pipe(
       map(async res => {
         const { data, ...meta } = res;
+        console.log(res);
         if (res?.data) {
           const parsedTrades = await pMap(data, async trade =>
             this.tradesService.parseTradeDBToResponse(Network.testnet, trade),

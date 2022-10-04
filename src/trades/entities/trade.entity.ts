@@ -95,7 +95,7 @@ export class TradeInfoORM {
 }
 
 export class RawAsset {
-  cw721Coin?: TokenResponse;  
+  cw721Coin?: TokenResponse;
   cw20Coin?: ValuedCW20Coin;
   coin?: ValuedCoin;
 }

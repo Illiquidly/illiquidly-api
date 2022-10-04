@@ -132,13 +132,13 @@ export class CW721Token {
   @Column({ nullable: true })
   collectionId: number;
 
-  @ManyToOne(() => CW721Collection, nft => nft.tokens, {eager: true})
+  @ManyToOne(() => CW721Collection, nft => nft.tokens, { eager: true })
   @JoinColumn()
   collection: CW721Collection;
 
   @OneToOne(() => CW721TokenMetadata, {
     cascade: true,
-    eager: true
+    eager: true,
   })
   @JoinColumn()
   metadata: Relation<CW721TokenMetadata>;
@@ -181,7 +181,7 @@ export class CW721TokenMetadata {
 
   @OneToMany(() => CW721TokenAttribute, attribute => attribute.metadata, {
     cascade: true,
-    eager: true
+    eager: true,
   })
   @JoinColumn()
   attributes: Relation<CW721TokenAttribute>[];

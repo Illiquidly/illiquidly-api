@@ -1,13 +1,5 @@
 import { CW721Token } from "../../utils-api/entities/nft-info.entity";
-import {
-  Column,
-  Entity,
-  JoinTable,
-  ManyToMany,
-  PrimaryGeneratedColumn,
-  Relation,
-  Unique,
-} from "typeorm";
+import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn, Unique } from "typeorm";
 import { Network } from "../../utils/blockchain/dto/network.dto";
 
 export enum UpdateState {
@@ -42,19 +34,19 @@ export class WalletContent {
   })
   state: UpdateState;
 
-  @Column({ nullable: true, type:"bigint" })
+  @Column({ nullable: true, type: "bigint" })
   externalOldestTx: number;
 
-  @Column({ nullable: true, type:"bigint" })
+  @Column({ nullable: true, type: "bigint" })
   externalNewestTx: number;
 
-  @Column({ nullable: true, type:"bigint" })
+  @Column({ nullable: true, type: "bigint" })
   internalOldestTx: number;
 
-  @Column({ nullable: true, type:"bigint" })
+  @Column({ nullable: true, type: "bigint" })
   internalNewestTx: number;
 
-  @Column({ nullable: true, type:"bigint"})
+  @Column({ nullable: true, type: "bigint" })
   lastUpdateStartTime: number;
 
   reset() {

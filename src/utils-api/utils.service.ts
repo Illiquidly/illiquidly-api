@@ -64,22 +64,23 @@ export class UtilsService {
     address: string,
     tokenId: string,
   ): Promise<CW721Token> {
-
     // test with find
-    const [err, storedNFTInfo] =  await asyncAction( this.NFTTokenRepository.findOne({
-      relations: {
-        collection: true,
-        metadata:{
-          attributes: true
-        }
-      },
-      where:{
-        tokenId,
-        collection:{
-          collectionAddress:address
-        }
-      },
-    }))
+    const [err, storedNFTInfo] = await asyncAction(
+      this.NFTTokenRepository.findOne({
+        relations: {
+          collection: true,
+          metadata: {
+            attributes: true,
+          },
+        },
+        where: {
+          tokenId,
+          collection: {
+            collectionAddress: address,
+          },
+        },
+      }),
+    );
     if (!err && storedNFTInfo) {
       return storedNFTInfo;
     }
@@ -98,10 +99,12 @@ export class UtilsService {
 
     // We want to keep allNftInfo for general filtering
     const allNftInfo = _.cloneDeep(tokenDBObject);
-    allNftInfo.metadata.attributes = allNftInfo.metadata.attributes.map((attribute: CW721TokenAttribute) => {
-      attribute.metadata = null;
-      return attribute
-    })
+    allNftInfo.metadata.attributes = allNftInfo.metadata.attributes.map(
+      (attribute: CW721TokenAttribute) => {
+        attribute.metadata = null;
+        return attribute;
+      },
+    );
 
     tokenDBObject.allNftInfo = JSON.stringify(allNftInfo);
 
@@ -193,7 +196,7 @@ export class UtilsService {
       traits: (tokenInfo?.metadata?.attributes ?? []).map(
         ({ traitType, value }: { traitType: string; value: string }) => [traitType, value],
       ),
-      allNFTInfo: tokenInfo?.allNftInfo
+      allNFTInfo: tokenInfo?.allNftInfo,
     };
   }
 

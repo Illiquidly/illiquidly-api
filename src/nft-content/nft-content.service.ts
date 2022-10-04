@@ -4,7 +4,6 @@ import { NFTContentResponse, UpdateMode } from "./dto/get-nft-content.dto";
 import { Network } from "../utils/blockchain/dto/network.dto";
 import { NftContentQuerierService } from "./nft-content-querier.service";
 import Redis from "ioredis";
-import { RedisLock, RedisLockService } from "nestjs-simple-redis-lock";
 import {
   UpdateState,
   WalletContent,
@@ -13,8 +12,7 @@ import {
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { updateInteractedNfts } from "../utils/blockchain/fcdNftQuery";
-import { Wallet } from "@terra-money/terra.js";
-const _ = require("lodash");
+import { RedisLock, RedisLockService } from "../utils/lock";
 
 function toNFTKey(network: string, address: string) {
   return `nft:${address}@${network}_${process.env.DB_VERSION}`;
@@ -46,13 +44,13 @@ export class NftContentService {
   async findNfts(network: Network, address: string): Promise<NFTContentResponse> {
     const currentData: WalletContent = await this.walletContentRepository.findOne({
       relations: {
-         ownedTokens: {
-          metadata:{
-            attributes: true
-          }
-         }
+        ownedTokens: {
+          metadata: {
+            attributes: true,
+          },
+        },
       },
-      where:{
+      where: {
         network,
         user: address,
       },
@@ -66,12 +64,15 @@ export class NftContentService {
       network,
       user: address,
     });
-    if(!currentData){
+    if (!currentData) {
       currentData = new WalletContent();
       currentData.network = network;
       currentData.user = address;
     }
-    if (currentData?.lastUpdateStartTime && Date.now() < +currentData?.lastUpdateStartTime + IDLE_UPDATE_INTERVAL) {
+    if (
+      currentData?.lastUpdateStartTime &&
+      Date.now() < +currentData?.lastUpdateStartTime + IDLE_UPDATE_INTERVAL
+    ) {
       throw new ForbiddenException("Too much requests my girl");
     }
 
@@ -80,7 +81,9 @@ export class NftContentService {
     }
 
     // We update the saved data
-    this._internalUpdate(network, address, currentData).catch((error)=> console.log("Error during update", error));
+    this._internalUpdate(network, address, currentData).catch(error =>
+      console.log("Error during update", error),
+    );
   }
 
   @RedisLock(
@@ -91,32 +94,21 @@ export class NftContentService {
     1,
   )
   async _internalUpdate(network: Network, address: string, data: WalletContent) {
-    
     // And we now start the actual update
-    await this.updateAddress(
-      network,
-      address,
-      data,
-    );
+    await this.updateAddress(network, address, data);
 
     // We save the updated object to database for the last time
     await this.walletContentRepository.save([data]);
   }
 
+  async sleep(ms: number) {
+    const promise = new Promise(resolve => {
+      setTimeout(resolve, ms);
+    });
+    return promise;
+  }
 
-
-  async sleep(ms: number){
-    let promise = new Promise((resolve)=>{
-      setTimeout(resolve,ms)
-    })
-    return promise
-  };
-
-  async updateAddress(
-    network: Network, 
-    address: string,
-    data: WalletContent,
-  ) {
+  async updateAddress(network: Network, address: string, data: WalletContent) {
     // We setup a timeout for the query
     const hasTimedOut = { timeout: false };
     const timeout = setTimeout(async () => {
@@ -130,7 +122,6 @@ export class NftContentService {
     await this.walletContentRepository.save([data]);
 
     console.log("Update Triggered");
-
 
     const queryCallback = async (newContracts: string[], txSeen: WalletContentTransactions) => {
       if (!network || !address || !data) {
@@ -209,7 +200,7 @@ export class NftContentService {
   }
 
   async updateOwnedTokens(
-    network: Network, 
+    network: Network,
     address: string,
     newContracts: string[],
     data: WalletContent,

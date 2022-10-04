@@ -5,7 +5,6 @@ import {
   CounterTradeResponse,
   SingleCounterTradeParameters,
   SingleTradeParameters,
-  TradeInfoResponse,
   TradeResponse,
 } from "./dto/getTrades.dto";
 import { CounterTrade, Trade, TradeNotification } from "./entities/trade.entity";
@@ -62,7 +61,7 @@ import { TradesService } from "./trades.service";
       },
       "counterTrades.tradeInfo": {
         eager: true,
-        alias: "counterTrade_tradeInfo_join"
+        alias: "counterTrade_tradeInfo_join",
       },
     },
   },

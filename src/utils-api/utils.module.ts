@@ -9,12 +9,7 @@ import { CW721CollectionCrudService, CW721TokenCrudService } from "./cw721CrudSe
 @Module({
   imports: [TypeOrmModule.forFeature(Entities)],
   controllers: [UtilsController, CollectionsController],
-  providers: [
-    UtilsService,
-    QueryLimitService,
-    CW721CollectionCrudService,
-    CW721TokenCrudService,
-  ],
+  providers: [UtilsService, QueryLimitService, CW721CollectionCrudService, CW721TokenCrudService],
   exports: [UtilsService],
 })
 export class UtilsModule {}

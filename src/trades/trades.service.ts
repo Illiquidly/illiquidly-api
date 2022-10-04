@@ -1,10 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { asyncAction } from "../utils/js/asyncAction";
-import {
-  CounterTradeResponse,
-  TradeResponse,
-  TradeInfoResponse,
-} from "./dto/getTrades.dto";
+import { CounterTradeResponse, TradeResponse, TradeInfoResponse } from "./dto/getTrades.dto";
 import { Network } from "../utils/blockchain/dto/network.dto";
 import { UtilsService } from "../utils-api/utils.service";
 import { QueryLimitService } from "../utils/queryLimit.service";
@@ -13,7 +9,7 @@ import { BlockchainNFTQuery } from "../utils/blockchain/nft_query";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { BlockChainTradeInfo } from "../utils/blockchain/dto/trade-info.dto";
-import { CounterTrade, RawAsset, Trade, TradeInfoORM } from "./entities/trade.entity";
+import { CounterTrade, Trade, TradeInfoORM } from "./entities/trade.entity";
 import { CW721Collection, ValuedCoin, ValuedCW20Coin } from "../utils-api/entities/nft-info.entity";
 import { formatNiceLuna } from "../utils/js/parseCoin";
 import { Asset, AssetResponse, Coin, CW20Coin, CW721Coin, RawCoin } from "../utils-api/dto/nft.dto";

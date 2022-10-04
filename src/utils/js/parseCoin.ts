@@ -13,7 +13,6 @@ export const toDecimal = (num: BigSource, decimalPoints = 6): string => {
     .toString();
 };
 
-
 export const formatDecimal = (num: BigSource) => {
   const decimalNum = toDecimal(num);
   const [integer, decimal] = decimalNum.split(".");

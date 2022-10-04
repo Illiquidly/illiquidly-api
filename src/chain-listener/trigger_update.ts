@@ -2,9 +2,9 @@
 
 import "dotenv/config";
 import Redis from "ioredis";
-import { Network } from "../../utils/blockchain/dto/network.dto";
+import { Network } from "../utils/blockchain/dto/network.dto";
 
-import { QueueMessage } from "./websocket-server";
+import { QueueMessage } from "./websocket-listener.service";
 
 let network: Network;
 if (process.argv[2]) {

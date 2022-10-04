@@ -104,7 +104,7 @@ export async function updateInteractedNfts(
     // This step is done because some minted NFTs don't get recognized in mint, the receiver address is not recorded in the events
     if (start == null && stop == null) {
       const registered = await getRegisteredNFTs(network);
-      Object.entries(registered).forEach(([nft,]) => newNfts.add(nft));
+      Object.entries(registered).forEach(([nft]) => newNfts.add(nft));
     }
 
     // We add the new interacted NFTs to the list of contracts interacted with.
@@ -134,6 +134,6 @@ export async function updateInteractedNfts(
     }
   }
 
-  console.log("End updateInteractedNfts")
+  console.log("End updateInteractedNfts");
   return;
 }

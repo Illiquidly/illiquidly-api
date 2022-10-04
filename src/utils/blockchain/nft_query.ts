@@ -115,7 +115,7 @@ export class BlockchainNFTQuery {
     return response.flat();
   }
 }
-  // This is an offchain query, we don't limit it
+// This is an offchain query, we don't limit it
 export async function getRegisteredNFTs(network: Network): Promise<any> {
   let knownNfts: any = {};
 
