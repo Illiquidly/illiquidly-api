@@ -23,10 +23,6 @@ export class NotificationsQuery {
 export class NotificationsRead {
   network: Network;
 
-  @IsOptional()
   @IsAddress()
-  user?: string;
-
-  @IsOptional()
-  notificationId?: string;
+  user: string;
 }

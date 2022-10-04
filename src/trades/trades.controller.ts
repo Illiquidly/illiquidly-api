@@ -7,6 +7,7 @@ import {
   SingleTradeParameters,
   TradeResponse,
 } from "./dto/getTrades.dto";
+import { NotificationsRead } from "./dto/notifications.dto";
 import { CounterTrade, Trade, TradeNotification } from "./entities/trade.entity";
 import {
   CounterTradeResultInterceptor,
@@ -186,5 +187,12 @@ export class CounterTradesController {
 })
 @Controller("trade-notifications")
 export class TradeNotificationController {
-  constructor(public service: TradeNotificationCrudService) {}
+  constructor(
+    private readonly tradesService: TradesService,public service: TradeNotificationCrudService) {}
+
+  @Patch("/read")
+  async getSingleTrade(@Query() params: NotificationsRead) {
+    return await this.tradesService.readNotifications(params.network, params.user);
+  }
+
 }
