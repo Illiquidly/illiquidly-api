@@ -14,6 +14,7 @@ import {
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
+  Relation,
   Unique,
 } from "typeorm";
 import { Network } from "../../utils/blockchain/dto/network.dto";
@@ -92,6 +93,12 @@ export class TradeInfoORM {
 
   @Column({ type: "text" })
   tradePreview: string;
+
+  @OneToOne(() => Trade, trade => trade.tradeInfo)
+  trade?: Relation<Trade>;
+
+  @OneToOne(() => CounterTrade, counter => counter.tradeInfo)
+  counterTrade?: Relation<CounterTrade>;
 }
 
 export class RawAsset {
@@ -119,7 +126,7 @@ export class Trade {
   @ManyToMany(() => CW721Collection)
   nftsWanted: CW721Collection[];
 
-  @OneToOne(() => TradeInfoORM, { cascade: true, onDelete: "CASCADE", onUpdate: "CASCADE" })
+  @OneToOne(() => TradeInfoORM, tradeInfo => tradeInfo.trade, { cascade: true, onDelete: "CASCADE", onUpdate: "CASCADE" })
   @JoinColumn({ name: "UQ_TRADES" })
   tradeInfo: TradeInfoORM;
 
@@ -145,7 +152,7 @@ export class CounterTrade {
   @Column()
   counterTradeId: number;
 
-  @OneToOne(() => TradeInfoORM, { onDelete: "CASCADE", onUpdate: "CASCADE", cascade: true })
+  @OneToOne(() => TradeInfoORM, tradeInfo => tradeInfo.counterTrade,  { onDelete: "CASCADE", onUpdate: "CASCADE", cascade: true })
   @JoinColumn({ name: "UQ_COUNTER_TRADES" })
   tradeInfo: TradeInfoORM;
 }

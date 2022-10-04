@@ -9,7 +9,13 @@ import { BlockchainNFTQuery } from "../utils/blockchain/nft_query";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { BlockChainTradeInfo } from "../utils/blockchain/dto/trade-info.dto";
-import { CounterTrade, Trade, TradeInfoORM, TradeNotification, TradeNotificationStatus } from "./entities/trade.entity";
+import {
+  CounterTrade,
+  Trade,
+  TradeInfoORM,
+  TradeNotification,
+  TradeNotificationStatus,
+} from "./entities/trade.entity";
 import { CW721Collection, ValuedCoin, ValuedCW20Coin } from "../utils-api/entities/nft-info.entity";
 import { formatNiceLuna } from "../utils/js/parseCoin";
 import { Asset, AssetResponse, Coin, CW20Coin, CW721Coin, RawCoin } from "../utils-api/dto/nft.dto";
@@ -24,7 +30,8 @@ export class TradesService {
     @InjectRepository(Trade) private tradesRepository: Repository<Trade>,
     @InjectRepository(CounterTrade) private counterTradesRepository: Repository<CounterTrade>,
     @InjectRepository(CW721Collection) private collectionRepository: Repository<CW721Collection>,
-    @InjectRepository(TradeNotification) private notificationRepository: Repository<TradeNotification>,
+    @InjectRepository(TradeNotification)
+    private notificationRepository: Repository<TradeNotification>,
     private readonly utilsService: UtilsService,
     private readonly queryLimitService: QueryLimitService,
   ) {
@@ -380,14 +387,13 @@ export class TradesService {
     };
   }
 
-  async readNotifications(network: Network, user: String){
+  async readNotifications(network: Network, user: string) {
     await this.notificationRepository
-    .createQueryBuilder()
-    .update(TradeNotification)
-    .set({ status: TradeNotificationStatus.read })
-    .where("network = :network", { network })
-    .andWhere("user = :user", { user })
-    .execute()
+      .createQueryBuilder()
+      .update(TradeNotification)
+      .set({ status: TradeNotificationStatus.read })
+      .where("network = :network", { network })
+      .andWhere("user = :user", { user })
+      .execute();
   }
-
 }

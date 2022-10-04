@@ -64,8 +64,7 @@ export class TradeChangesService {
   }
 
   private async queryNewTransaction(network: Network) {
-
-    await this.redisDB.del(redisHashSetName)
+    await this.redisDB.del(redisHashSetName);
 
     const lcd = Axios.create(
       chains[network].axiosObject ?? {
@@ -87,7 +86,7 @@ export class TradeChangesService {
         }),
       );
 
-      console.log(offset)
+      console.log(offset);
       // If we get no lcd tx result
       if (err) {
         console.log(err);

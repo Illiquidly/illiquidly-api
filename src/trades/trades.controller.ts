@@ -188,11 +188,12 @@ export class CounterTradesController {
 @Controller("trade-notifications")
 export class TradeNotificationController {
   constructor(
-    private readonly tradesService: TradesService,public service: TradeNotificationCrudService) {}
+    private readonly tradesService: TradesService,
+    public service: TradeNotificationCrudService,
+  ) {}
 
   @Patch("/read")
   async getSingleTrade(@Query() params: NotificationsRead) {
     return await this.tradesService.readNotifications(params.network, params.user);
   }
-
 }

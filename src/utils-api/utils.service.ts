@@ -18,6 +18,7 @@ import { Repository } from "typeorm";
 import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
 
 import { BlockchainCW721Token, NFTAttribute, TokenResponse } from "./dto/nft.dto";
+import { TradeInfoORM } from "../trades/entities/trade.entity";
 const _ = require("lodash");
 
 @Injectable()
@@ -226,5 +227,24 @@ export class UtilsService {
     );
     await this.tokenMetadataRepository.save([dbTokenInfoMetadata]);
     return dbTokenInfo;
+  }
+
+  async nftsInTrade(network: Network) {
+    // We want to get all Tokens that appeared in the trade
+    return await this.NFTTokenRepository.createQueryBuilder("token")
+      .innerJoin(
+        "trade_info_orm_cw721_assets_cw721_token",
+        "token_join",
+        "token_join.cw721_token_id = token.id",
+      )
+      .innerJoin("trade_info_orm", "tradeInfo", "tradeInfo.id = token_join.trade_info_orm_id")
+      //and their metadata
+      .leftJoinAndSelect("token.collection", "collection")
+      .leftJoinAndSelect("token.metadata", "metadata")
+      .leftJoinAndSelect("metadata.attributes", "attributes")
+      .where("collection.network = :network", { network })
+      .limit(10)
+      .getMany();
+    //.map(this.parseTokenDBToResponse)
   }
 }

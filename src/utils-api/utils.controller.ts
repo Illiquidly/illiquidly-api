@@ -1,11 +1,11 @@
-import { Controller, Get, Param, Patch } from "@nestjs/common";
+import { Controller, Get, Param, Patch, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { Crud } from "@rewiko/crud";
 import { contracts } from "../utils/blockchain/chains";
-import { NetworkParam } from "../utils/blockchain/dto/network.dto";
-import { CW721CollectionCrudService } from "./cw721CrudService";
+import { Network, NetworkParam } from "../utils/blockchain/dto/network.dto";
+import { CW721CollectionCrudService, CW721TokenInTradeCrudService } from "./cw721CrudService";
 import { CW721CollectionDescription, TokenDescription } from "./dto/nft.dto";
-import { CW721Collection } from "./entities/nft-info.entity";
+import { CW721Collection, CW721Token } from "./entities/nft-info.entity";
 import { UtilsService } from "./utils.service";
 
 @ApiTags("Utils")
@@ -50,13 +50,82 @@ export class CollectionsController {
     return await this.utilsService.registeredNFTs(params.network);
   }
 
-  @Patch("/:network/:address")
+  @Patch("info/:network/:address")
   async NFTContractInfo(@Param() params: CW721CollectionDescription) {
     return await this.utilsService.collectionInfo(params.network, params.address);
   }
 
-  @Patch("/:network/:address/:tokenId")
+  @Patch("token-info/:network/:address/:tokenId")
   async nftInfo(@Param() params: TokenDescription) {
     return await this.utilsService.nftTokenInfo(params.network, params.address, params.tokenId);
   }
+
+  @Patch("nfts-in-trade/:network")
+  async nftInTrade(@Param() params: NetworkParam) {
+    return await this.utilsService.nftsInTrade(params.network);
+  }
+}
+
+@ApiTags("CW721")
+@Crud({
+  model: {
+    type: CW721Token,
+  },
+  query: {
+    limit: 10,
+    sort: [],
+    join:{
+      "metadata": {
+        eager: true,
+        alias: "metadata_join",
+      },
+      "metadata.attributes": {
+        eager: true,
+        alias: "metadata_attributes_join",
+      },
+    },
+  },
+  routes: {
+    getManyBase: {
+      decorators: [],
+      interceptors: [],
+    },
+    only: ["getManyBase"],
+  },
+})
+@Controller("token-in-trade")
+export class TradeTokensController {
+  constructor(public service: CW721TokenInTradeCrudService) {}
+}
+
+@ApiTags("CW721")
+@Crud({
+  model: {
+    type: CW721Token,
+  },
+  query: {
+    limit: 10,
+    sort: [],
+    join:{
+      "metadata": {
+        eager: true,
+        alias: "metadata_join",
+      },
+      "metadata.attributes": {
+        eager: true,
+        alias: "metadata_attributes_join",
+      },
+    },
+  },
+  routes: {
+    getManyBase: {
+      decorators: [],
+      interceptors: [],
+    },
+    only: ["getManyBase"],
+  },
+})
+@Controller("token-in-counter_trade")
+export class CounterTradeTokensController {
+  constructor(public service: CW721TokenInTradeCrudService) {}
 }
