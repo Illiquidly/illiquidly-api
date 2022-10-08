@@ -22,7 +22,7 @@ import { sleep } from "../utils/js/sleep";
 const pMap = require("p-map");
 const DATE_FORMAT = require("dateformat");
 
-const redisHashSetName: string = process.env.REDIS_TXHASH_SET;
+const redisHashSetName: string = process.env.REDIS_NOTIFICATION_TXHASH_SET;
 
 async function getHashSetCardinal(db: Redis) {
   return await db.scard(redisHashSetName);
@@ -81,6 +81,9 @@ export class NotificationChangesService {
   }
 
   private async queryNewTransaction(network: Network) {
+
+    this.redisDB.del(redisHashSetName)
+
     const lcd = Axios.create(
       chains[network].axiosObject ?? {
         baseURL: chains[network].URL,
@@ -111,7 +114,6 @@ export class NotificationChangesService {
         response.data.tx_responses.map(async (tx: any) => !(await hasTx(this.redisDB, tx.txhash))),
       );
       const txToAnalyse = response.data.tx_responses.filter((_: any, i: number) => txFilter[i]);
-
       // Then we iterate over the transactions and get the action it refers to and the necessary information
       const notifications: TradeNotification[] = [];
 
@@ -188,6 +190,7 @@ export class NotificationChangesService {
               const counterTrades: CounterTrade[] = await this.counterTradesRepository
                 .createQueryBuilder("counter_trade")
                 .innerJoinAndSelect("counter_trade.trade", "trade")
+                .innerJoinAndSelect("counter_trade.tradeInfo", "tradeInfo")
                 .where("counter_trade.network = :network", { network })
                 .where("trade.tradeId = :tradeId", { tradeId })
                 .getMany();
@@ -214,6 +217,7 @@ export class NotificationChangesService {
               const counterTrades: CounterTrade[] = await this.counterTradesRepository
                 .createQueryBuilder("counter_trade")
                 .innerJoinAndSelect("counter_trade.trade", "trade")
+                .innerJoinAndSelect("counter_trade.tradeInfo", "tradeInfo")
                 .where("counter_trade.network = :network", { network })
                 .where("trade.tradeId = :tradeId", { tradeId })
                 .getMany();
@@ -236,7 +240,7 @@ export class NotificationChangesService {
           // No concurrency because we are querying the local db
         );
       });
-
+  console.log(notifications)
       this.tradeNotificationRepository.save(notifications);
 
       // We add the transaction hashes to the redis set :
@@ -247,6 +251,6 @@ export class NotificationChangesService {
 
       // If no transactions queried were a analyzed, we return
     } while (txToAnalyse.length);
-    console.log("Update finished");
+    console.log("Update finished notificaitons");
   }
 }
