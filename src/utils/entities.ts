@@ -12,6 +12,7 @@ import {
 import {
   CounterTrade,
   Trade,
+  TradeFavorite,
   TradeInfoORM,
   TradeNotification,
 } from "../trades/entities/trade.entity";
@@ -22,6 +23,7 @@ export default [
   CounterTrade,
   TradeInfoORM,
   TradeNotification,
+  TradeFavorite,
   ValuedCoin,
   CW20Coin,
   ValuedCW20Coin,

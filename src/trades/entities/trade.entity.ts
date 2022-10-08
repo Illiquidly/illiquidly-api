@@ -19,6 +19,7 @@ import {
 } from "typeorm";
 import { Network } from "../../utils/blockchain/dto/network.dto";
 import { TokenResponse } from "src/utils-api/dto/nft.dto";
+import { Address } from "cluster";
 
 // TODO table.text("whole_data");
 @Entity()
@@ -43,10 +44,10 @@ export class TradeInfoORM {
     nullable: true,
     type: "datetime",
   })
-  ownerCommentTime: string;
+  ownerCommentTime: Date;
 
   @Column({ type: "datetime" })
-  time: string;
+  time: Date;
 
   @Column({
     nullable: true,
@@ -57,7 +58,7 @@ export class TradeInfoORM {
     nullable: true,
     type: "datetime",
   })
-  traderCommentTime: string;
+  traderCommentTime: Date;
 
   @Column()
   state: string;
@@ -126,7 +127,11 @@ export class Trade {
   @ManyToMany(() => CW721Collection)
   nftsWanted: CW721Collection[];
 
-  @OneToOne(() => TradeInfoORM, tradeInfo => tradeInfo.trade, { cascade: true, onDelete: "CASCADE", onUpdate: "CASCADE" })
+  @OneToOne(() => TradeInfoORM, tradeInfo => tradeInfo.trade, {
+    cascade: true,
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
+  })
   @JoinColumn({ name: "UQ_TRADES" })
   tradeInfo: TradeInfoORM;
 
@@ -152,7 +157,11 @@ export class CounterTrade {
   @Column()
   counterTradeId: number;
 
-  @OneToOne(() => TradeInfoORM, tradeInfo => tradeInfo.counterTrade,  { onDelete: "CASCADE", onUpdate: "CASCADE", cascade: true })
+  @OneToOne(() => TradeInfoORM, tradeInfo => tradeInfo.counterTrade, {
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
+    cascade: true,
+  })
   @JoinColumn({ name: "UQ_COUNTER_TRADES" })
   tradeInfo: TradeInfoORM;
 }
@@ -206,4 +215,24 @@ export class TradeNotification {
     default: TradeNotificationStatus.unread,
   })
   status?: TradeNotificationStatus;
+}
+
+@Entity()
+@Unique(["network","user"])
+export class TradeFavorite {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({
+    type: "enum",
+    enum: Network,
+  })
+  network: Network;
+
+  @Column()
+  user: string;
+
+  @ManyToMany(() => Trade)
+  @JoinTable()
+  trades: Trade[];
 }

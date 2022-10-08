@@ -3,7 +3,11 @@ import { ApiTags } from "@nestjs/swagger";
 import { Crud } from "@rewiko/crud";
 import { contracts } from "../utils/blockchain/chains";
 import { Network, NetworkParam } from "../utils/blockchain/dto/network.dto";
-import { CW721CollectionCrudService, CW721TokenInCounterTradeCrudService, CW721TokenInTradeCrudService } from "./cw721CrudService";
+import {
+  CW721CollectionCrudService,
+  CW721TokenInCounterTradeCrudService,
+  CW721TokenInTradeCrudService,
+} from "./cw721CrudService";
 import { CW721CollectionDescription, TokenDescription } from "./dto/nft.dto";
 import { CW721Collection, CW721Token } from "./entities/nft-info.entity";
 import { UtilsService } from "./utils.service";
@@ -69,8 +73,8 @@ export class CollectionsController {
   query: {
     limit: 10,
     sort: [],
-    join:{
-      "metadata": {
+    join: {
+      metadata: {
         eager: true,
         alias: "metadata_join",
       },
@@ -101,8 +105,8 @@ export class TradeTokensController {
   query: {
     limit: 10,
     sort: [],
-    join:{
-      "metadata": {
+    join: {
+      metadata: {
         eager: true,
         alias: "metadata_join",
       },

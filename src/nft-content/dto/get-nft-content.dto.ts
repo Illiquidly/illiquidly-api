@@ -14,7 +14,7 @@ export enum UpdateMode {
   FORCE_UPDATE = "force_update",
 }
 
-export class GetNFTWalletContent {
+export class UserId {
   network: Network;
 
   @IsAddress()

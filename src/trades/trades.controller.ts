@@ -1,6 +1,8 @@
 import { Controller, Patch, Query } from "@nestjs/common";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Crud } from "@rewiko/crud";
+import { Network } from "../utils/blockchain/dto/network.dto";
+import { UserId } from "../nft-content/dto/get-nft-content.dto";
 import {
   CounterTradeResponse,
   SingleCounterTradeParameters,
@@ -8,7 +10,8 @@ import {
   TradeResponse,
 } from "./dto/getTrades.dto";
 import { NotificationsRead } from "./dto/notifications.dto";
-import { CounterTrade, Trade, TradeNotification } from "./entities/trade.entity";
+import { TradeFavoriteMessage } from "./dto/tradeFavorite.dto";
+import { CounterTrade, Trade, TradeFavorite, TradeNotification } from "./entities/trade.entity";
 import {
   CounterTradeResultInterceptor,
   TradeResultInterceptor,
@@ -16,6 +19,7 @@ import {
 import {
   CounterTradeCrudService,
   TradeCrudService,
+  TradeFavoriteCrudService,
   TradeNotificationCrudService,
 } from "./tradeCrud.service";
 import { TradesService } from "./trades.service";
@@ -195,5 +199,48 @@ export class TradeNotificationController {
   @Patch("/read")
   async getSingleTrade(@Query() params: NotificationsRead) {
     return await this.tradesService.readNotifications(params.network, params.user);
+  }
+}
+
+@ApiTags("Trades")
+@Crud({
+  model: {
+    type: TradeFavorite,
+  },
+  query: {
+    limit: 10,
+    sort: [],
+    join: {
+      trades: {
+        eager: true,
+      },
+    },
+  },
+  routes: { getOneBase: {},
+    deleteOneBase:{},
+    getManyBase: {},
+    only: ["getManyBase","getOneBase", "deleteOneBase"],
+  },
+})
+@Controller("trade-favorites")
+export class TradeFavoriteController {
+  constructor(
+    private readonly tradesService: TradesService,
+    public service: TradeFavoriteCrudService,
+  ) {}
+
+  @Patch("/add")
+  async addFavoriteTrade(@Query() params: TradeFavoriteMessage) {
+    return await this.tradesService.addFavoriteTrade(params.network, params.user, params.tradeId);
+  }
+
+  @Patch("/set")
+  async setFavoriteTrade(@Query() params: TradeFavoriteMessage) {
+    return await this.tradesService.addFavoriteTrade(params.network, params.user, params.tradeId);
+  }
+
+  @Patch("/remove")
+  async removeFavoriteTrade(@Query() params: TradeFavoriteMessage) {
+    return await this.tradesService.removeFavoriteTrade(params.network, params.user, params.tradeId);
   }
 }

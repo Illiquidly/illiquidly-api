@@ -12,6 +12,7 @@ import { BlockChainTradeInfo } from "../utils/blockchain/dto/trade-info.dto";
 import {
   CounterTrade,
   Trade,
+  TradeFavorite,
   TradeInfoORM,
   TradeNotification,
   TradeNotificationStatus,
@@ -32,6 +33,8 @@ export class TradesService {
     @InjectRepository(CW721Collection) private collectionRepository: Repository<CW721Collection>,
     @InjectRepository(TradeNotification)
     private notificationRepository: Repository<TradeNotification>,
+    @InjectRepository(TradeFavorite)
+    private favoriteRepository: Repository<TradeFavorite>,
     private readonly utilsService: UtilsService,
     private readonly queryLimitService: QueryLimitService,
   ) {
@@ -114,7 +117,6 @@ export class TradesService {
     const [, tradeInfo]: [any, Trade] = await asyncAction(
       this.tradesRepository.findOneBy({ tradeId, network }),
     );
-
     const tradeDBObject = await this.queryDistantTradeAndParseForDB(network, tradeId);
 
     // We save asyncronously to the database
@@ -186,20 +188,16 @@ export class TradesService {
     return {
       id: null,
       owner: tradeInfo.owner,
-      time: DATE_FORMAT(
-        new Date(parseInt(tradeInfo.additionalInfo.time) / 1000000),
-        "yyyy-mm-dd HH:MM:ss",
-      ),
+      time: new Date(parseInt(tradeInfo.additionalInfo.time) / 1000000),
       lastCounterId: tradeInfo.lastCounterId,
       ownerComment: tradeInfo.additionalInfo.ownerComment?.comment,
       ownerCommentTime: tradeInfo.additionalInfo.ownerComment?.time
-        ? DATE_FORMAT(
-            new Date(parseInt(tradeInfo.additionalInfo.ownerComment?.time) / 1000000),
-            "yyyy-mm-dd HH:MM:ss",
-          )
+        ? new Date(parseInt(tradeInfo.additionalInfo.ownerComment?.time) / 1000000)
         : null,
       traderComment: tradeInfo.additionalInfo.traderComment?.comment,
-      traderCommentTime: tradeInfo.additionalInfo.traderComment?.time,
+      traderCommentTime: tradeInfo.additionalInfo.traderComment?.time
+        ? new Date(parseInt(tradeInfo.additionalInfo.traderComment?.time) / 1000000)
+        : null,
       state: tradeInfo.state,
       acceptedCounterTradeId: tradeInfo.acceptedInfo?.counterId,
       assetsWithdrawn: tradeInfo.assetsWithdrawn,
@@ -356,14 +354,14 @@ export class TradesService {
       additionalInfo: {
         ownerComment: {
           comment: tradeInfo.ownerComment,
-          time: tradeInfo.ownerCommentTime,
+          time: tradeInfo?.ownerCommentTime?.toISOString(),
         },
-        time: tradeInfo.time,
+        time: tradeInfo?.time?.toISOString(),
         tokensWanted,
         tradePreview,
         traderComment: {
           comment: tradeInfo.traderComment,
-          time: tradeInfo.traderCommentTime,
+          time: tradeInfo?.traderCommentTime?.toISOString(),
         },
       },
       owner: tradeInfo.owner,
@@ -395,5 +393,78 @@ export class TradesService {
       .where("network = :network", { network })
       .andWhere("user = :user", { user })
       .execute();
+  }
+
+  async addFavoriteTrade(network: Network, user: string, tradeId: number[]) {
+    let currentFavorite: TradeFavorite = await this.favoriteRepository.findOne({
+      relations: {
+        trades: true,
+      },
+      where: {
+        network,
+        user,
+      },
+    });
+
+    if (!currentFavorite) {
+      currentFavorite = {
+        id: null,
+        network,
+        user,
+        trades: [],
+      };
+    }
+    // We query the trade informations
+    const trades = await pMap(tradeId, async (tradeId) => this.tradesRepository.findOneBy({ network, tradeId }));
+    currentFavorite.trades = currentFavorite.trades.concat(trades)
+
+    // We save to the database
+    this.favoriteRepository.save(currentFavorite);
+  }
+
+  async setFavoriteTrade(network: Network, user: string, tradeId: number[]) {
+    let currentFavorite: TradeFavorite = await this.favoriteRepository.findOne({
+      relations: {
+        trades: true,
+      },
+      where: {
+        network,
+        user,
+      },
+    });
+
+    if (!currentFavorite) {
+      currentFavorite = {
+        id: null,
+        network,
+        user,
+        trades: [],
+      };
+    }
+    // We query the trade informations
+    currentFavorite.trades = await pMap(tradeId, async (tradeId) => this.tradesRepository.findOneBy({ network, tradeId }));
+
+    // We save to the database
+    this.favoriteRepository.save(currentFavorite);
+  }
+
+  async removeFavoriteTrade(network: Network, user: string, tradeId: number[]) {
+    let currentFavorite: TradeFavorite = await this.favoriteRepository.findOne({
+      relations: {
+        trades: true,
+      },
+      where: {
+        network,
+        user,
+      },
+    });
+
+    if (!currentFavorite) {
+      return;
+    }
+
+    // We update the trades
+    currentFavorite.trades = currentFavorite.trades.filter(trade => !tradeId.includes(trade.tradeId));
+    this.favoriteRepository.save(currentFavorite);
   }
 }

@@ -8,7 +8,6 @@ import { CrudRequestOptions, Override } from "@rewiko/crud";
 import { ParsedRequestParams } from "@rewiko/crud-request";
 import { Repository, SelectQueryBuilder } from "typeorm";
 
-
 @Injectable()
 export class CW721CollectionCrudService extends TypeOrmCrudService<CW721Collection> {
   constructor(@InjectRepository(CW721Collection) repo) {
@@ -24,20 +23,19 @@ export class CW721TokenCrudService extends TypeOrmCrudService<CW721Token> {
 }
 
 export class CW721TokenInContractTypeOrmCrudService extends TypeOrmCrudService<CW721Token> {
-  
   constructor(@InjectRepository(CW721Token) repo: Repository<CW721Token>) {
     super(repo);
   }
 
   @Override()
-   public async createBuilder(
+  public async createBuilder(
     parsed: ParsedRequestParams,
     options: CrudRequestOptions,
     many = true,
     withDeleted = false,
   ): Promise<SelectQueryBuilder<CW721Token>> {
     const builder = await super.createBuilder(parsed, options, many, withDeleted);
-     // We add the builder join
+    // We add the builder join
     builder
       .innerJoin(
         "trade_info_orm_cw721_assets_cw721_token",
@@ -46,41 +44,37 @@ export class CW721TokenInContractTypeOrmCrudService extends TypeOrmCrudService<C
       )
       .innerJoin("trade_info_orm", "tradeInfo", "tradeInfo.id = token_join.trade_info_orm_id")
       //and their metadata
-      .leftJoinAndSelect(`${this.alias}.collection`, "token_collection")
-      return builder
-   }
+      .leftJoinAndSelect(`${this.alias}.collection`, "token_collection");
+    return builder;
+  }
 }
 
 export class CW721TokenInTradeCrudService extends CW721TokenInContractTypeOrmCrudService {
-
   @Override()
-   public async createBuilder(
+  public async createBuilder(
     parsed: ParsedRequestParams,
     options: CrudRequestOptions,
     many = true,
     withDeleted = false,
   ): Promise<SelectQueryBuilder<CW721Token>> {
     const builder = await super.createBuilder(parsed, options, many, withDeleted);
-      // We add the trade join
-      builder.innerJoin("tradeInfo.trade", "trade")
-      return builder
-   }
+    // We add the trade join
+    builder.innerJoin("tradeInfo.trade", "trade");
+    return builder;
+  }
 }
 
 export class CW721TokenInCounterTradeCrudService extends CW721TokenInContractTypeOrmCrudService {
-
-
-
   @Override()
-   public async createBuilder(
+  public async createBuilder(
     parsed: ParsedRequestParams,
     options: CrudRequestOptions,
     many = true,
     withDeleted = false,
   ): Promise<SelectQueryBuilder<CW721Token>> {
     const builder = await super.createBuilder(parsed, options, many, withDeleted);
-      // We add the trade join
-      builder.innerJoin("tradeInfo.counterTrade", "counterTrade")
-      return builder
-   }
+    // We add the trade join
+    builder.innerJoin("tradeInfo.counterTrade", "counterTrade");
+    return builder;
+  }
 }

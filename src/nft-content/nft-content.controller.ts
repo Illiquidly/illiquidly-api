@@ -1,7 +1,7 @@
 import { Controller, Get, Patch, Param } from "@nestjs/common";
 import { NftContentService } from "./nft-content.service";
 import {
-  GetNFTWalletContent,
+  UserId,
   UpdateNFTWalletContent,
   NFTContentResponse,
 } from "./dto/get-nft-content.dto";
@@ -21,7 +21,7 @@ export class NftContentController {
     type: () => NFTContentResponse,
     description: "Returns the content of a wallet",
   })
-  async findNfts(@Param() params: GetNFTWalletContent): Promise<NFTContentResponse> {
+  async findNfts(@Param() params: UserId): Promise<NFTContentResponse> {
     // Need to validate that network enum
     return await this.nftContentService.findNfts(params.network, params.address);
   }
