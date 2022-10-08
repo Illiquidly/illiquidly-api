@@ -28,6 +28,6 @@ export class NftContentController {
 
   @Patch(":network/:address/:mode")
   async update(@Param() params: UpdateNFTWalletContent) {
-    return await this.nftContentService.update(params.network, params.address, params.mode);
+    return this.nftContentService.update(params.network, params.address, params.mode);
   }
 }

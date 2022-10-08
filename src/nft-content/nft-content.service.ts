@@ -58,12 +58,22 @@ export class NftContentService {
     return this.nftContentQuerierService.mapWalletContentDBForResponse(network, currentData);
   }
 
-  async update(network: Network, address: string, mode: UpdateMode) {
+  async update(network: Network, address: string, mode: UpdateMode): Promise<NFTContentResponse> {
     // First we get the current data
-    let currentData: WalletContent = await this.walletContentRepository.findOneBy({
-      network,
-      user: address,
+    let currentData: WalletContent = await this.walletContentRepository.findOne({
+     relations: {
+        ownedTokens: {
+          metadata: {
+            attributes: true,
+          },
+        },
+      },
+      where: {
+        network,
+        user: address,
+      },
     });
+    console.log(currentData)
     if (!currentData) {
       currentData = new WalletContent();
       currentData.network = network;
@@ -84,6 +94,9 @@ export class NftContentService {
     this._internalUpdate(network, address, currentData).catch(error =>
       console.log("Error during update", error),
     );
+    const r = await this.nftContentQuerierService.mapWalletContentDBForResponse(network, currentData);
+    console.log(r)
+    return r
   }
 
   @RedisLock(
