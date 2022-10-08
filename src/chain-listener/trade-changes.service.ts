@@ -64,7 +64,6 @@ export class TradeChangesService {
   }
 
   private async queryNewTransaction(network: Network) {
-    await this.redisDB.del(redisHashSetName);
 
     const lcd = Axios.create(
       chains[network].axiosObject ?? {
