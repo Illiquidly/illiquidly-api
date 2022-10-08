@@ -240,7 +240,6 @@ export class NotificationChangesService {
           // No concurrency because we are querying the local db
         );
       });
-  console.log(notifications)
       this.tradeNotificationRepository.save(notifications);
 
       // We add the transaction hashes to the redis set :
@@ -251,6 +250,6 @@ export class NotificationChangesService {
 
       // If no transactions queried were a analyzed, we return
     } while (txToAnalyse.length);
-    console.log("Update finished notificaitons");
+    console.log("Update finished notifications");
   }
 }
