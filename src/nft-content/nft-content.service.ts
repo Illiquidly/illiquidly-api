@@ -73,7 +73,6 @@ export class NftContentService {
         user: address,
       },
     });
-    console.log(currentData)
     if (!currentData) {
       currentData = new WalletContent();
       currentData.network = network;
@@ -94,9 +93,7 @@ export class NftContentService {
     this._internalUpdate(network, address, currentData).catch(error =>
       console.log("Error during update", error),
     );
-    const r = await this.nftContentQuerierService.mapWalletContentDBForResponse(network, currentData);
-    console.log(r)
-    return r
+    return await this.nftContentQuerierService.mapWalletContentDBForResponse(network, currentData);
   }
 
   @RedisLock(

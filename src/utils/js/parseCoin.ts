@@ -7,7 +7,6 @@ const PRINT_DECIMAL_POINTS = 3;
 
 export const toDecimal = (num: BigSource, decimalPoints = 6): string => {
   const decimalNum = big(num).div(10 ** decimalPoints);
-  console.log(decimalNum);
   return (Math.floor(parseFloat(decimalNum.toString()) * 100) / 100)
     .toFixed(PRINT_DECIMAL_POINTS)
     .toString();

@@ -35,38 +35,48 @@ import { TradesService } from "./trades.service";
     join: {
       nftsWanted: {
         eager: true,
+        select: false
       },
       tradeInfo: {
         eager: true,
+        select: false
       },
       "tradeInfo.cw721Assets": {
         eager: true,
         alias: "tradeInfo_cw721Assets_join",
+        select: false
       },
       "tradeInfo.cw721Assets.collection": {
         eager: true,
         alias: "tradeInfo_cw721Assets_collection_join",
+        select: false
       },
       "tradeInfo.cw721Assets.metadata": {
         eager: true,
         alias: "tradeInfo_cw721Assets_metadata_join",
+        select: false
       },
       "tradeInfo.cw721Assets.metadata.attributes": {
         eager: true,
         alias: "tradeInfo_cw721Assets_metadata_attributes_join",
+        select: false
       },
       "tradeInfo.cw20Assets": {
         eager: true,
+        select: false
       },
       "tradeInfo.coinAssets": {
         eager: true,
+        select: false
       },
       counterTrades: {
         eager: true,
+        select: false
       },
       "counterTrades.tradeInfo": {
         eager: true,
         alias: "counterTrade_tradeInfo_join",
+        select: false
       },
     },
   },
