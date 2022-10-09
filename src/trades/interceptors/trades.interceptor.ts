@@ -2,11 +2,10 @@ import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from "@nes
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { TradesService } from "../trades.service";
-import { Network } from "../../utils/blockchain/dto/network.dto";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Trade } from "../entities/trade.entity";
+import { CounterTrade, Trade } from "../entities/trade.entity";
 import { Repository } from "typeorm";
-import { TradeResponse } from "../dto/getTrades.dto";
+import { CounterTradeResponse, TradeResponse } from "../dto/getTrades.dto";
 const pMap = require("p-map");
 
 @Injectable()
@@ -16,9 +15,9 @@ export class TradeResultInterceptor implements NestInterceptor {
     @InjectRepository(Trade) private tradesRepository: Repository<Trade>,
   ) {}
 
-  async getTradeInfo(data: Trade[]): Promise<TradeResponse[]>{
-    if(!data.length){
-      return []
+  async getTradeInfo(data: Trade[]): Promise<TradeResponse[]> {
+    if (!data.length) {
+      return [];
     }
     const dbTradeInfo = await this.tradesRepository.find({
       where: data,
@@ -29,23 +28,23 @@ export class TradeResultInterceptor implements NestInterceptor {
             collection: true,
             metadata: {
               attributes: true,
-            }
+            },
           },
           cw20Assets: true,
           coinAssets: true,
         },
-        counterTrades:{
-          tradeInfo: true
-        }
-      }
-    })
+        counterTrades: {
+          tradeInfo: true,
+        },
+      },
+    });
 
-    return pMap(dbTradeInfo, async (trade: Trade) : Promise<TradeResponse> =>
-      this.tradesService.parseTradeDBToResponse(Network.testnet, trade),
+    return pMap(
+      dbTradeInfo,
+      async (trade: Trade): Promise<TradeResponse> =>
+        this.tradesService.parseTradeDBToResponse(trade.network, trade),
     );
   }
-
-
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
@@ -60,10 +59,10 @@ export class TradeResultInterceptor implements NestInterceptor {
             data: parsedTrades,
             ...meta,
           };
-        } else if (Array.isArray(res)) {        
+        } else if (Array.isArray(res)) {
           return this.getTradeInfo(res);
         } else {
-          return await this.tradesService.parseTradeDBToResponse(Network.testnet, res);
+          return await this.getTradeInfo([res]);
         }
       }),
     );
@@ -72,26 +71,53 @@ export class TradeResultInterceptor implements NestInterceptor {
 
 @Injectable()
 export class CounterTradeResultInterceptor implements NestInterceptor {
-  constructor(private readonly tradesService: TradesService) {}
+  constructor(
+    private readonly tradesService: TradesService,
+    @InjectRepository(CounterTrade) private counterTradesRepository: Repository<CounterTrade>,
+  ) {}
+
+  async getCounterTradeInfo(data: CounterTrade[]): Promise<TradeResponse[]> {
+    if (!data.length) {
+      return [];
+    }
+    const dbCounterTradeInfo = await this.counterTradesRepository.find({
+      where: data,
+      relations: {
+        tradeInfo: {
+          cw721Assets: {
+            collection: true,
+            metadata: {
+              attributes: true,
+            },
+          },
+          cw20Assets: true,
+          coinAssets: true,
+        },
+        trade: true,
+      },
+    });
+
+    return pMap(
+      dbCounterTradeInfo,
+      async (counterTrade: CounterTrade): Promise<CounterTradeResponse> =>
+        this.tradesService.parseCounterTradeDBToResponse(counterTrade.network, counterTrade),
+    );
+  }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
       map(async res => {
         const { data, ...meta } = res;
         if (res?.data) {
-          const parsedCounterTrades = await pMap(data, async trade =>
-            this.tradesService.parseCounterTradeDBToResponse(Network.testnet, trade),
-          );
+          const parsedCounterTrades = await this.getCounterTradeInfo(data);
           return {
             data: parsedCounterTrades,
             ...meta,
           };
         } else if (Array.isArray(res)) {
-          return await pMap(res, async trade =>
-            this.tradesService.parseCounterTradeDBToResponse(Network.testnet, trade),
-          );
+          return this.getCounterTradeInfo(res);
         } else {
-          return await this.tradesService.parseCounterTradeDBToResponse(Network.testnet, res);
+          return this.getCounterTradeInfo([res]);
         }
       }),
     );

@@ -61,7 +61,7 @@ export class NftContentService {
   async update(network: Network, address: string, mode: UpdateMode): Promise<NFTContentResponse> {
     // First we get the current data
     let currentData: WalletContent = await this.walletContentRepository.findOne({
-     relations: {
+      relations: {
         ownedTokens: {
           metadata: {
             attributes: true,

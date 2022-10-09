@@ -1,8 +1,6 @@
 import { Controller, Patch, Query } from "@nestjs/common";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Crud } from "@rewiko/crud";
-import { Network } from "../utils/blockchain/dto/network.dto";
-import { UserId } from "../nft-content/dto/get-nft-content.dto";
 import {
   CounterTradeResponse,
   SingleCounterTradeParameters,
@@ -35,48 +33,48 @@ import { TradesService } from "./trades.service";
     join: {
       nftsWanted: {
         eager: true,
-        select: false
+        select: false,
       },
       tradeInfo: {
         eager: true,
-        select: false
+        select: false,
       },
       "tradeInfo.cw721Assets": {
         eager: true,
         alias: "tradeInfo_cw721Assets_join",
-        select: false
+        select: false,
       },
       "tradeInfo.cw721Assets.collection": {
         eager: true,
         alias: "tradeInfo_cw721Assets_collection_join",
-        select: false
+        select: false,
       },
       "tradeInfo.cw721Assets.metadata": {
         eager: true,
         alias: "tradeInfo_cw721Assets_metadata_join",
-        select: false
+        select: false,
       },
       "tradeInfo.cw721Assets.metadata.attributes": {
         eager: true,
         alias: "tradeInfo_cw721Assets_metadata_attributes_join",
-        select: false
+        select: false,
       },
       "tradeInfo.cw20Assets": {
         eager: true,
-        select: false
+        select: false,
       },
       "tradeInfo.coinAssets": {
         eager: true,
-        select: false
+        select: false,
       },
       counterTrades: {
         eager: true,
-        select: false
+        select: false,
       },
       "counterTrades.tradeInfo": {
         eager: true,
         alias: "counterTrade_tradeInfo_join",
-        select: false
+        select: false,
       },
     },
   },
@@ -118,31 +116,39 @@ export class TradesController {
     join: {
       tradeInfo: {
         eager: true,
+        select: false,
       },
       "tradeInfo.cw721Assets": {
         eager: true,
         alias: "tradeInfo_cw721Assets_join",
+        select: false,
       },
       "tradeInfo.cw721Assets.collection": {
         eager: true,
         alias: "tradeInfo_cw721Assets_collection_join",
+        select: false,
       },
       "tradeInfo.cw721Assets.metadata": {
         eager: true,
         alias: "tradeInfo_cw721Assets_metadata_join",
+        select: false,
       },
       "tradeInfo.cw721Assets.metadata.attributes": {
         eager: true,
         alias: "tradeInfo_cw721Assets_metadata_attributes_join",
+        select: false,
       },
       "tradeInfo.cw20Assets": {
         eager: true,
+        select: false,
       },
       "tradeInfo.coinAssets": {
         eager: true,
+        select: false,
       },
       trade: {
         eager: true,
+        select: false,
       },
     },
   },
@@ -226,10 +232,11 @@ export class TradeNotificationController {
       },
     },
   },
-  routes: { getOneBase: {},
-    deleteOneBase:{},
+  routes: {
+    getOneBase: {},
+    deleteOneBase: {},
     getManyBase: {},
-    only: ["getManyBase","getOneBase", "deleteOneBase"],
+    only: ["getManyBase", "getOneBase", "deleteOneBase"],
   },
 })
 @Controller("trade-favorites")
@@ -251,6 +258,10 @@ export class TradeFavoriteController {
 
   @Patch("/remove")
   async removeFavoriteTrade(@Query() params: TradeFavoriteMessage) {
-    return await this.tradesService.removeFavoriteTrade(params.network, params.user, params.tradeId);
+    return await this.tradesService.removeFavoriteTrade(
+      params.network,
+      params.user,
+      params.tradeId,
+    );
   }
 }

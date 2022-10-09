@@ -1,10 +1,6 @@
 import { Controller, Get, Patch, Param } from "@nestjs/common";
 import { NftContentService } from "./nft-content.service";
-import {
-  UserId,
-  UpdateNFTWalletContent,
-  NFTContentResponse,
-} from "./dto/get-nft-content.dto";
+import { UserId, UpdateNFTWalletContent, NFTContentResponse } from "./dto/get-nft-content.dto";
 import { IsEnum } from "class-validator";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Network } from "../utils/blockchain/dto/network.dto";

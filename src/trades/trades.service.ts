@@ -21,7 +21,6 @@ import { CW721Collection, ValuedCoin, ValuedCW20Coin } from "../utils-api/entiti
 import { formatNiceLuna } from "../utils/js/parseCoin";
 import { Asset, AssetResponse, Coin, CW20Coin, CW721Coin, RawCoin } from "../utils-api/dto/nft.dto";
 const pMap = require("p-map");
-const DATE_FORMAT = require("dateformat");
 
 @Injectable()
 export class TradesService {
@@ -415,8 +414,10 @@ export class TradesService {
       };
     }
     // We query the trade informations
-    const trades = await pMap(tradeId, async (tradeId) => this.tradesRepository.findOneBy({ network, tradeId }));
-    currentFavorite.trades = currentFavorite.trades.concat(trades)
+    const trades = await pMap(tradeId, async tradeId =>
+      this.tradesRepository.findOneBy({ network, tradeId }),
+    );
+    currentFavorite.trades = currentFavorite.trades.concat(trades);
 
     // We save to the database
     this.favoriteRepository.save(currentFavorite);
@@ -442,14 +443,16 @@ export class TradesService {
       };
     }
     // We query the trade informations
-    currentFavorite.trades = await pMap(tradeId, async (tradeId) => this.tradesRepository.findOneBy({ network, tradeId }));
+    currentFavorite.trades = await pMap(tradeId, async tradeId =>
+      this.tradesRepository.findOneBy({ network, tradeId }),
+    );
 
     // We save to the database
     this.favoriteRepository.save(currentFavorite);
   }
 
   async removeFavoriteTrade(network: Network, user: string, tradeId: number[]) {
-    let currentFavorite: TradeFavorite = await this.favoriteRepository.findOne({
+    const currentFavorite: TradeFavorite = await this.favoriteRepository.findOne({
       relations: {
         trades: true,
       },
@@ -464,7 +467,9 @@ export class TradesService {
     }
 
     // We update the trades
-    currentFavorite.trades = currentFavorite.trades.filter(trade => !tradeId.includes(trade.tradeId));
+    currentFavorite.trades = currentFavorite.trades.filter(
+      trade => !tradeId.includes(trade.tradeId),
+    );
     this.favoriteRepository.save(currentFavorite);
   }
 }

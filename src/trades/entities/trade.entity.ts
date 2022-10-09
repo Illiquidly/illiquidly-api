@@ -19,7 +19,6 @@ import {
 } from "typeorm";
 import { Network } from "../../utils/blockchain/dto/network.dto";
 import { TokenResponse } from "src/utils-api/dto/nft.dto";
-import { Address } from "cluster";
 
 // TODO table.text("whole_data");
 @Entity()
@@ -218,7 +217,7 @@ export class TradeNotification {
 }
 
 @Entity()
-@Unique(["network","user"])
+@Unique(["network", "user"])
 export class TradeFavorite {
   @PrimaryGeneratedColumn()
   id: number;

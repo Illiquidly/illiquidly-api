@@ -18,7 +18,6 @@ import { Repository } from "typeorm";
 import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
 
 import { BlockchainCW721Token, NFTAttribute, TokenResponse } from "./dto/nft.dto";
-import { TradeInfoORM } from "../trades/entities/trade.entity";
 const _ = require("lodash");
 
 @Injectable()

@@ -64,7 +64,6 @@ export class TradeChangesService {
   }
 
   private async queryNewTransaction(network: Network) {
-
     const lcd = Axios.create(
       chains[network].axiosObject ?? {
         baseURL: chains[network].URL,

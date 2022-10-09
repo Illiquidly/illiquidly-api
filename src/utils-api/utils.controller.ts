@@ -1,8 +1,8 @@
-import { Controller, Get, Param, Patch, Query } from "@nestjs/common";
+import { Controller, Get, Param, Patch } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { Crud } from "@rewiko/crud";
 import { contracts } from "../utils/blockchain/chains";
-import { Network, NetworkParam } from "../utils/blockchain/dto/network.dto";
+import { NetworkParam } from "../utils/blockchain/dto/network.dto";
 import {
   CW721CollectionCrudService,
   CW721TokenInCounterTradeCrudService,

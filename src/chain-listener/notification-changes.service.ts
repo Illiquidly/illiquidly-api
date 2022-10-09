@@ -81,8 +81,7 @@ export class NotificationChangesService {
   }
 
   private async queryNewTransaction(network: Network) {
-
-    this.redisDB.del(redisHashSetName)
+    this.redisDB.del(redisHashSetName);
 
     const lcd = Axios.create(
       chains[network].axiosObject ?? {
