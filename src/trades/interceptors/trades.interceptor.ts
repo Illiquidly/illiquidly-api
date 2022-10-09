@@ -15,32 +15,9 @@ export class TradeResultInterceptor implements NestInterceptor {
     @InjectRepository(Trade) private tradesRepository: Repository<Trade>,
   ) {}
 
-  async getTradeInfo(data: Trade[]): Promise<TradeResponse[]> {
-    if (!data.length) {
-      return [];
-    }
-    const dbTradeInfo = await this.tradesRepository.find({
-      where: data,
-      relations: {
-        nftsWanted: true,
-        tradeInfo: {
-          cw721Assets: {
-            collection: true,
-            metadata: {
-              attributes: true,
-            },
-          },
-          cw20Assets: true,
-          coinAssets: true,
-        },
-        counterTrades: {
-          tradeInfo: true,
-        },
-      },
-    });
-
+  async getTradeInfo(context: ExecutionContext, data: Trade[]): Promise<TradeResponse[]> {
     return pMap(
-      dbTradeInfo,
+      data,
       async (trade: Trade): Promise<TradeResponse> =>
         this.tradesService.parseTradeDBToResponse(trade.network, trade),
     );
@@ -52,7 +29,7 @@ export class TradeResultInterceptor implements NestInterceptor {
         const { data, ...meta } = res;
         if (res?.data) {
           // First we get all the trade Info needed (what arrives is only an object with an id)
-          const parsedTrades = await this.getTradeInfo(data);
+          const parsedTrades = await this.getTradeInfo(context, data);
 
           // Then we return the whole data
           return {
@@ -60,9 +37,9 @@ export class TradeResultInterceptor implements NestInterceptor {
             ...meta,
           };
         } else if (Array.isArray(res)) {
-          return this.getTradeInfo(res);
+          return this.getTradeInfo(context, res);
         } else {
-          return await this.getTradeInfo([res]);
+          return await this.getTradeInfo(context, [res]);
         }
       }),
     );
@@ -77,28 +54,8 @@ export class CounterTradeResultInterceptor implements NestInterceptor {
   ) {}
 
   async getCounterTradeInfo(data: CounterTrade[]): Promise<TradeResponse[]> {
-    if (!data.length) {
-      return [];
-    }
-    const dbCounterTradeInfo = await this.counterTradesRepository.find({
-      where: data,
-      relations: {
-        tradeInfo: {
-          cw721Assets: {
-            collection: true,
-            metadata: {
-              attributes: true,
-            },
-          },
-          cw20Assets: true,
-          coinAssets: true,
-        },
-        trade: true,
-      },
-    });
-
     return pMap(
-      dbCounterTradeInfo,
+      data,
       async (counterTrade: CounterTrade): Promise<CounterTradeResponse> =>
         this.tradesService.parseCounterTradeDBToResponse(counterTrade.network, counterTrade),
     );
