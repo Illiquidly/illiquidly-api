@@ -17,6 +17,9 @@ export class TradeResultInterceptor implements NestInterceptor {
   ) {}
 
   async getTradeInfo(data: Trade[]): Promise<TradeResponse[]>{
+    if(!data.length){
+      return []
+    }
     const dbTradeInfo = await this.tradesRepository.find({
       where: data,
       relations: {
