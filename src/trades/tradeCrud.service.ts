@@ -5,71 +5,73 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Trade, CounterTrade, TradeNotification, TradeFavorite } from "./entities/trade.entity";
 import { CrudRequest, GetManyDefaultResponse } from "@rewiko/crud";
 
-@Injectable()
-export class TradeCrudService extends TypeOrmCrudService<Trade> {
-  constructor(@InjectRepository(Trade) repo) {
-    super(repo);
+function getResponseIds(res: any) {
+  if (res?.data) {
+    return res.data.map(r => r.id);
+  } else if (Array.isArray(res)) {
+    return res.map(r => r.id);
+  } else {
+    return [res.id];
   }
+}
 
-  public async getMany(req: CrudRequest): Promise<GetManyDefaultResponse<Trade> | Trade[]> {
+function parseForResponse(dataToReturn, oldRes) {
+  if (oldRes?.data) {
+    const { data, ...metadata } = oldRes;
+    return {
+      data: dataToReturn,
+      ...metadata,
+    };
+  } else {
+    return dataToReturn;
+  }
+}
+
+export class AbstractTradeCrudService<T> extends TypeOrmCrudService<T> {
+  public async getMany(req: CrudRequest): Promise<GetManyDefaultResponse<T> | T[]> {
     const { parsed, options } = req;
 
-    // We start by querying the trade ids that match the filters
-    let tradeIds = await (await this.createBuilder(parsed, options)).getMany();
-    if (!Array.isArray(tradeIds)) {
-      tradeIds = [tradeIds];
+     // We start by querying the trade ids that match the filters
+    const builder = await this.createBuilder(parsed, options);
+    const objectIdsQueryResult = await this.doGetMany(builder, parsed, options);
+
+    const objectIds = getResponseIds(objectIdsQueryResult);
+    if (!objectIds.length) {
+      return parseForResponse([], objectIdsQueryResult);
     }
 
-    // Then we select all info of this trade
-    // Parsed stays the same, you remove filter, you remove search, you add or for all ids selected
-    parsed.search = {};
-    parsed.filter = [];
-    parsed.or = tradeIds.map(trade => ({
-      field: "id",
-      operator: "$eq",
-      value: trade.id,
-    }));
+    // Then we select all info of this counterTrade, we simply modify the search argument
+    parsed.search = {
+      $or: objectIds.map(id => ({
+        id,
+      })),
+    };
+
     // We make sure we select all field we need now
-    Object.keys(options?.query?.join ?? []).forEach(function (key, index) {
+    Object.keys(options?.query?.join ?? []).forEach(function (key) {
       options.query.join[key].select = true;
     });
 
-    const builder = await this.createBuilder(parsed, options);
-    return this.doGetMany(builder, parsed, options);
+    const finalBuilder = await this.createBuilder(parsed, options);
+    const data = await finalBuilder.getMany();
+
+    return parseForResponse(data, objectIdsQueryResult);
+  }
+}
+
+
+
+@Injectable()
+export class TradeCrudService extends AbstractTradeCrudService<Trade>{
+  constructor(@InjectRepository(Trade) repo) {
+    super(repo);
   }
 }
 
 @Injectable()
-export class CounterTradeCrudService extends TypeOrmCrudService<CounterTrade> {
+export class CounterTradeCrudService extends AbstractTradeCrudService<CounterTrade> {
   constructor(@InjectRepository(CounterTrade) repo) {
     super(repo);
-  }
-
-  public async getMany(req: CrudRequest): Promise<GetManyDefaultResponse<CounterTrade> | CounterTrade[]> {
-    const { parsed, options } = req;
-
-    // We start by querying the trade ids that match the filters
-    let counterTradeIds = await (await this.createBuilder(parsed, options)).getMany();
-    if (!Array.isArray(counterTradeIds)) {
-      counterTradeIds = [counterTradeIds];
-    }
-
-    // Then we select all info of this counterTrade
-    // Parsed stays the same, you remove filter, you remove search, you add or for all ids selected
-    parsed.search = {};
-    parsed.filter = [];
-    parsed.or = counterTradeIds.map(counterTrade => ({
-      field: "id",
-      operator: "$eq",
-      value: counterTrade.id,
-    }));
-    // We make sure we select all field we need now
-    Object.keys(options?.query?.join ?? []).forEach(function (key, index) {
-      options.query.join[key].select = true;
-    });
-
-    const builder = await this.createBuilder(parsed, options);
-    return this.doGetMany(builder, parsed, options);
   }
 }
 
