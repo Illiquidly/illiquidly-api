@@ -17,6 +17,7 @@ function getResponseIds(res: any) {
 
 function parseForResponse(dataToReturn, oldRes) {
   if (oldRes?.data) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data, ...metadata } = oldRes;
     return {
       data: dataToReturn,
@@ -31,7 +32,7 @@ export class AbstractTradeCrudService<T> extends TypeOrmCrudService<T> {
   public async getMany(req: CrudRequest): Promise<GetManyDefaultResponse<T> | T[]> {
     const { parsed, options } = req;
 
-     // We start by querying the trade ids that match the filters
+    // We start by querying the trade ids that match the filters
     const builder = await this.createBuilder(parsed, options);
     const objectIdsQueryResult = await this.doGetMany(builder, parsed, options);
 
@@ -39,6 +40,11 @@ export class AbstractTradeCrudService<T> extends TypeOrmCrudService<T> {
     if (!objectIds.length) {
       return parseForResponse([], objectIdsQueryResult);
     }
+    
+    parsed.limit = undefined;
+    parsed.offset = undefined;
+    parsed.page = undefined;
+
 
     // Then we select all info of this counterTrade, we simply modify the search argument
     parsed.search = {
@@ -59,10 +65,8 @@ export class AbstractTradeCrudService<T> extends TypeOrmCrudService<T> {
   }
 }
 
-
-
 @Injectable()
-export class TradeCrudService extends AbstractTradeCrudService<Trade>{
+export class TradeCrudService extends AbstractTradeCrudService<Trade> {
   constructor(@InjectRepository(Trade) repo) {
     super(repo);
   }
