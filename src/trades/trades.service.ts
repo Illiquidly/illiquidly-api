@@ -421,6 +421,7 @@ export class TradesService {
 
     // We save to the database
     this.favoriteRepository.save(currentFavorite);
+    return currentFavorite
   }
 
   async setFavoriteTrade(network: Network, user: string, tradeId: number[]) {
@@ -449,6 +450,7 @@ export class TradesService {
 
     // We save to the database
     this.favoriteRepository.save(currentFavorite);
+    return currentFavorite
   }
 
   async removeFavoriteTrade(network: Network, user: string, tradeId: number[]) {
@@ -471,5 +473,6 @@ export class TradesService {
       trade => !tradeId.includes(trade.tradeId),
     );
     this.favoriteRepository.save(currentFavorite);
+    return currentFavorite
   }
 }
