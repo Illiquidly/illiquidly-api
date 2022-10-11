@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { NftContentModule } from "./nft-content/nft-content.module";
 import { UtilsModule } from "./utils-api/utils.module";
 import { TradesModule } from "./trades/trades.module";
@@ -8,6 +8,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { typeOrmOptions } from "./utils/typeormOptions";
 import { ChainListenerModule } from "./chain-listener/chain-listener.module";
 import { RedisLockModule } from "./utils/lock";
+import { AppLoggerMiddleware } from "./utils/request-logger";
 
 @Module({
   imports: [
@@ -45,4 +46,8 @@ import { RedisLockModule } from "./utils/lock";
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule  implements NestModule{
+   configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(AppLoggerMiddleware).forRoutes('*');
+  }
+}

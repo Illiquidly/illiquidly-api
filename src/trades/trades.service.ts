@@ -307,7 +307,6 @@ export class TradesService {
     network: Network,
     tradeInfo: TradeInfoORM,
   ): Promise<TradeInfoResponse> {
-    console.log(tradeInfo)
     // We fetch metadata for the associated assets :
     let associatedAssets: AssetResponse[] = (tradeInfo.coinAssets ?? []).map((coin: ValuedCoin) => {
       if (coin.denom != "uluna") {
@@ -420,7 +419,6 @@ export class TradesService {
     const trades = await pMap(tradeId, async tradeId =>
       this.tradesRepository.findOneBy({ network, tradeId }),
     );
-    console.log(_)
     currentFavorite.trades = _.uniqBy(currentFavorite.trades.concat(trades), (trade: Trade) => trade.id);
 
     // We save to the database
