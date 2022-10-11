@@ -253,7 +253,7 @@ export class TradeFavoriteController {
 
   @Patch("/set")
   async setFavoriteTrade(@Query() params: TradeFavoriteMessage) {
-    return await this.tradesService.addFavoriteTrade(params.network, params.user, params.tradeId);
+    return await this.tradesService.setFavoriteTrade(params.network, params.user, params.tradeId);
   }
 
   @Patch("/remove")

@@ -21,6 +21,7 @@ import { CW721Collection, ValuedCoin, ValuedCW20Coin } from "../utils-api/entiti
 import { formatNiceLuna } from "../utils/js/parseCoin";
 import { Asset, AssetResponse, Coin, CW20Coin, CW721Coin, RawCoin } from "../utils-api/dto/nft.dto";
 const pMap = require("p-map");
+const _  = require("lodash")
 
 @Injectable()
 export class TradesService {
@@ -417,7 +418,8 @@ export class TradesService {
     const trades = await pMap(tradeId, async tradeId =>
       this.tradesRepository.findOneBy({ network, tradeId }),
     );
-    currentFavorite.trades = currentFavorite.trades.concat(trades);
+    console.log(_)
+    currentFavorite.trades = _.uniqBy(currentFavorite.trades.concat(trades), (trade: Trade) => trade.id);
 
     // We save to the database
     this.favoriteRepository.save(currentFavorite);
@@ -444,7 +446,7 @@ export class TradesService {
       };
     }
     // We query the trade informations
-    currentFavorite.trades = await pMap(tradeId, async tradeId =>
+    currentFavorite.trades = await pMap(_.uniq(tradeId), async tradeId =>
       this.tradesRepository.findOneBy({ network, tradeId }),
     );
 
