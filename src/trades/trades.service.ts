@@ -424,7 +424,7 @@ export class TradesService {
     currentFavorite.trades = _.uniqBy(currentFavorite.trades.concat(trades), (trade: Trade) => trade.id);
 
     // We save to the database
-    this.favoriteRepository.save(currentFavorite);
+    await this.favoriteRepository.save(currentFavorite);
     return currentFavorite
   }
 
@@ -453,7 +453,7 @@ export class TradesService {
     );
 
     // We save to the database
-    this.favoriteRepository.save(currentFavorite);
+    await this.favoriteRepository.save(currentFavorite);
     return currentFavorite
   }
 
@@ -476,7 +476,7 @@ export class TradesService {
     currentFavorite.trades = currentFavorite.trades.filter(
       trade => !tradeId.includes(trade.tradeId),
     );
-    this.favoriteRepository.save(currentFavorite);
+    await this.favoriteRepository.save(currentFavorite);
     return currentFavorite
   }
 }
