@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+  import { Injectable } from "@nestjs/common";
 import { TypeOrmCrudService } from "@rewiko/crud-typeorm";
 
 import { InjectRepository } from "@nestjs/typeorm";
@@ -92,7 +92,7 @@ export class TradeNotificationCrudService extends TypeOrmCrudService<TradeNotifi
 }
 
 @Injectable()
-export class TradeFavoriteCrudService extends TypeOrmCrudService<TradeNotification> {
+export class TradeFavoriteCrudService extends TypeOrmCrudService<TradeFavorite> {
   constructor(@InjectRepository(TradeFavorite) repo) {
     super(repo);
   }
