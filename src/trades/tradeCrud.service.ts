@@ -35,7 +35,7 @@ export class AbstractTradeCrudService<T> extends TypeOrmCrudService<T> {
 
     // We start by querying the trade ids that match the filters
     // We don't want to select all the fields
-    const initialJoin = _.deepCopy(options?.query?.join)
+    const initialJoin = _.cloneDeep(options?.query?.join)
     Object.keys(options?.query?.join ?? []).forEach(function (key) {
       options.query.join[key].select = true;
     });
