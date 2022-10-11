@@ -79,6 +79,7 @@ export class TradesService {
         ),
       ),
       counterTrades: [],
+      tradeFavorites: []
     };
   }
 
@@ -306,6 +307,7 @@ export class TradesService {
     network: Network,
     tradeInfo: TradeInfoORM,
   ): Promise<TradeInfoResponse> {
+    console.log(tradeInfo)
     // We fetch metadata for the associated assets :
     let associatedAssets: AssetResponse[] = (tradeInfo.coinAssets ?? []).map((coin: ValuedCoin) => {
       if (coin.denom != "uluna") {

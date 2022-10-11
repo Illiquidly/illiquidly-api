@@ -4,6 +4,7 @@ import { TypeOrmCrudService } from "@rewiko/crud-typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Trade, CounterTrade, TradeNotification, TradeFavorite } from "./entities/trade.entity";
 import { CrudRequest, GetManyDefaultResponse } from "@rewiko/crud";
+const _ = require("lodash");
 
 function getResponseIds(res: any) {
   if (res?.data) {
@@ -33,6 +34,12 @@ export class AbstractTradeCrudService<T> extends TypeOrmCrudService<T> {
     const { parsed, options } = req;
 
     // We start by querying the trade ids that match the filters
+    // We don't want to select all the fields
+    const initialJoin = _.deepCopy(options?.query?.join)
+    Object.keys(options?.query?.join ?? []).forEach(function (key) {
+      options.query.join[key].select = true;
+    });
+
     const builder = await this.createBuilder(parsed, options);
     const objectIdsQueryResult = await this.doGetMany(builder, parsed, options);
 
@@ -40,7 +47,7 @@ export class AbstractTradeCrudService<T> extends TypeOrmCrudService<T> {
     if (!objectIds.length) {
       return parseForResponse([], objectIdsQueryResult);
     }
-    
+
     parsed.limit = undefined;
     parsed.offset = undefined;
     parsed.page = undefined;
@@ -54,9 +61,7 @@ export class AbstractTradeCrudService<T> extends TypeOrmCrudService<T> {
     };
 
     // We make sure we select all field we need now
-    Object.keys(options?.query?.join ?? []).forEach(function (key) {
-      options.query.join[key].select = true;
-    });
+    options.query.join = initialJoin;
 
     const finalBuilder = await this.createBuilder(parsed, options);
     const data = await finalBuilder.getMany();

@@ -27,6 +27,7 @@ export class TradeResultInterceptor implements NestInterceptor {
     return next.handle().pipe(
       map(async res => {
         const { data, ...meta } = res;
+      console.log(res)
         if (res?.data) {
           // First we get all the trade Info needed (what arrives is only an object with an id)
           const parsedTrades = await this.getTradeInfo(context, data);

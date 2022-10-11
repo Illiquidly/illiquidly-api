@@ -122,6 +122,9 @@ export class Trade {
   @Column()
   tradeId: number;
 
+  @ManyToMany(() => TradeFavorite, favorite => favorite.trades)
+  tradeFavorites: TradeFavorite[];
+
   @JoinTable()
   @ManyToMany(() => CW721Collection)
   nftsWanted: CW721Collection[];
@@ -231,7 +234,7 @@ export class TradeFavorite {
   @Column()
   user: string;
 
-  @ManyToMany(() => Trade)
+  @ManyToMany(() => Trade, trade => trade.tradeFavorites)
   @JoinTable()
   trades: Trade[];
 }
