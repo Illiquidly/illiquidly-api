@@ -124,6 +124,7 @@ export class TradesService {
     if (tradeInfo) {
       tradeDBObject.id = tradeInfo.id;
       tradeDBObject.counterTrades = tradeInfo.counterTrades;
+      tradeDBObject.tradeFavorites = tradeInfo.tradeFavorites;
     }
 
     await this.tradesRepository.save([tradeDBObject]);
@@ -406,6 +407,7 @@ export class TradesService {
         user,
       },
     });
+    console.log(tradeId)
 
     if (!currentFavorite) {
       currentFavorite = {
