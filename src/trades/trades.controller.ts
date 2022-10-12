@@ -37,9 +37,9 @@ import { TradesService } from "./trades.service";
       tradeInfo: {
         eager: true,
       },
-      tradeFavorites:{
-        eager: true, 
-        select: false
+      tradeFavorites: {
+        eager: true,
+        select: false,
       },
       "tradeInfo.cw721Assets": {
         eager: true,

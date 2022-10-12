@@ -21,7 +21,7 @@ import { CW721Collection, ValuedCoin, ValuedCW20Coin } from "../utils-api/entiti
 import { formatNiceLuna } from "../utils/js/parseCoin";
 import { Asset, AssetResponse, Coin, CW20Coin, CW721Coin, RawCoin } from "../utils-api/dto/nft.dto";
 const pMap = require("p-map");
-const _  = require("lodash")
+const _ = require("lodash");
 
 @Injectable()
 export class TradesService {
@@ -30,6 +30,7 @@ export class TradesService {
   constructor(
     @InjectRepository(Trade) private tradesRepository: Repository<Trade>,
     @InjectRepository(CounterTrade) private counterTradesRepository: Repository<CounterTrade>,
+    @InjectRepository(TradeInfoORM) private tradeInfoRepository: Repository<TradeInfoORM>,
     @InjectRepository(CW721Collection) private collectionRepository: Repository<CW721Collection>,
     @InjectRepository(TradeNotification)
     private notificationRepository: Repository<TradeNotification>,
@@ -47,7 +48,7 @@ export class TradesService {
     );
   }
 
-  private async queryDistantTradeAndParseForDB(network: Network, tradeId: number): Promise<Trade> {
+  private async queryDistantTradeAndParseForDB(network: Network, tradeId: number, tradeInfoORM: TradeInfoORM = new TradeInfoORM()): Promise<Trade> {
     // We try to query the trade on_chain directly :
     const [queryErr, distantTradeInfo]: [any, BlockChainTradeInfo] = await asyncAction(
       this.tradeQuery.getTradeInfo(network, tradeId),
@@ -61,7 +62,7 @@ export class TradesService {
       id: null,
       network,
       tradeId,
-      tradeInfo: await this.mapDistantTradeToDB(network, distantTradeInfo),
+      tradeInfo: await this.mapDistantTradeToDB(network, distantTradeInfo, tradeInfoORM),
       nftsWanted: await Promise.all(
         distantTradeInfo.additionalInfo.nftsWanted.map(
           async (collectionAddress): Promise<CW721Collection> => {
@@ -78,26 +79,26 @@ export class TradesService {
           },
         ),
       ),
-      counterTrades: [],
-      tradeFavorites: []
+      counterTrades: undefined,
+      tradeFavorites: undefined
     };
   }
 
   async updateTradeAndCounterTrades(network: Network, tradeId: number) {
     const [, tradeInfo]: [any, Trade] = await asyncAction(
-      this.tradesRepository.findOneBy({ tradeId, network }),
+      this.tradesRepository.findOne({
+        relations: { tradeInfo: true, counterTrades: true },
+        where: { tradeId, network },
+      }),
     );
 
-    const tradeDBObject = await this.queryDistantTradeAndParseForDB(network, tradeId);
+    const tradeDBObject = await this.queryDistantTradeAndParseForDB(network, tradeId, tradeInfo?.tradeInfo);
     // We save asyncronously to the database
-    if (tradeInfo) {
-      tradeDBObject.id = tradeInfo.id;
-      tradeDBObject.counterTrades = tradeInfo.counterTrades;
-    }
+    tradeDBObject.id = tradeInfo?.id;
     await this.tradesRepository.save([tradeDBObject]);
 
     // Then we update every counterTrade associated with the trade in the database
-    await pMap(tradeDBObject.counterTrades ?? [], async (counterTrade: CounterTrade) => {
+    await pMap(tradeInfo.counterTrades ?? [], async (counterTrade: CounterTrade) => {
       // We try to query the counter_trade on_chain directly :
       const [queryErr, distantCounterTradeInfo] = await asyncAction(
         this.tradeQuery.getCounterTradeInfo(network, tradeId, counterTrade.counterTradeId),
@@ -107,8 +108,9 @@ export class TradesService {
       }
 
       // We save the new queried trade Info To the database
+      const id = counterTrade?.tradeInfo?.id;
       counterTrade.tradeInfo = await this.mapDistantTradeToDB(network, distantCounterTradeInfo);
-
+      counterTrade.tradeInfo.id = id;
       // We save asyncronously to the database
       await this.counterTradesRepository.save([counterTrade]);
     });
@@ -116,18 +118,17 @@ export class TradesService {
 
   async getTradeById(network: Network, tradeId: number): Promise<TradeResponse> {
     const [, tradeInfo]: [any, Trade] = await asyncAction(
-      this.tradesRepository.findOneBy({ tradeId, network }),
+      this.tradesRepository.findOne({
+        relations: { tradeInfo: true },
+        where: { tradeId, network },
+      }),
     );
-    const tradeDBObject = await this.queryDistantTradeAndParseForDB(network, tradeId);
+    const tradeDBObject = await this.queryDistantTradeAndParseForDB(network, tradeId, tradeInfo?.tradeInfo);
 
-    // We save asyncronously to the database
-    if (tradeInfo) {
-      tradeDBObject.id = tradeInfo.id;
-      tradeDBObject.counterTrades = tradeInfo.counterTrades;
-      tradeDBObject.tradeFavorites = tradeInfo.tradeFavorites;
-    }
-
+    // We save to the database
+    tradeDBObject.id = tradeInfo?.id;
     await this.tradesRepository.save([tradeDBObject]);
+
     // Now we return the database response
     return await this.parseTradeDBToResponse(network, tradeDBObject);
   }
@@ -138,7 +139,10 @@ export class TradesService {
     counterTradeId: number,
   ): Promise<CounterTradeResponse> {
     const [, counterTradeInfo] = await asyncAction(
-      this.counterTradesRepository.findOneBy({ network, trade: { tradeId }, counterTradeId }),
+      this.counterTradesRepository.findOne({
+        relations: { tradeInfo: true },
+        where: { network, trade: { tradeId }, counterTradeId },
+      }),
     );
 
     // We try to query the counter_trade on_chain directly :
@@ -154,9 +158,10 @@ export class TradesService {
       id: counterTradeInfo?.id,
       network,
       counterTradeId,
-      tradeInfo: await this.mapDistantTradeToDB(network, distantCounterTradeInfo),
+      tradeInfo: await this.mapDistantTradeToDB(network, distantCounterTradeInfo, counterTradeInfo?.tradeInfo),
       trade: counterTradeInfo?.trade,
     };
+    counterTradeDBObject.tradeInfo.id = counterTradeInfo?.tradeInfo?.id;
     // If it's the first time we save this counter Trade, we need to link it to its Trade
     if (!counterTradeInfo?.trade) {
       // We query the database to look for the corresponding trade
@@ -184,65 +189,65 @@ export class TradesService {
   async mapDistantTradeToDB(
     network: Network,
     tradeInfo: BlockChainTradeInfo,
+    tradeInfoORM: TradeInfoORM = new TradeInfoORM()
   ): Promise<TradeInfoORM> {
     // First we get the objects corresponding to the NFTs Wanted :
+   
+    tradeInfoORM.owner = tradeInfo.owner;
+    tradeInfoORM.time =  new Date(parseInt(tradeInfo.additionalInfo.time) / 1000000);
+    tradeInfoORM.lastCounterId =  tradeInfo.lastCounterId;
+    tradeInfoORM.ownerComment= tradeInfo.additionalInfo.ownerComment?.comment;
+    tradeInfoORM.ownerCommentTime= tradeInfo.additionalInfo.ownerComment?.time
+      ? new Date(parseInt(tradeInfo.additionalInfo.ownerComment?.time) / 1000000)
+      : null;
+    tradeInfoORM.traderComment= tradeInfo.additionalInfo.traderComment?.comment,
+    tradeInfoORM.traderCommentTime= tradeInfo.additionalInfo.traderComment?.time
+      ? new Date(parseInt(tradeInfo.additionalInfo.traderComment?.time) / 1000000)
+      : null;
+    tradeInfoORM.state= tradeInfo.state;
+    tradeInfoORM.acceptedCounterTradeId= tradeInfo.acceptedInfo?.counterId;
+    tradeInfoORM.assetsWithdrawn= tradeInfo.assetsWithdrawn;
+    // Difficult fields
+    tradeInfoORM.coinAssets= tradeInfo.associatedAssets
+      .filter((asset: Asset) => !!asset.coin)
+      .map((asset: Coin) => {
+        const coin = new ValuedCoin();
+        coin.id = null;
+        coin.amount = asset.coin.amount;
+        coin.denom = asset.coin.denom;
+        coin.network = network;
+        return coin;
+      });
+    tradeInfoORM.cw20Assets= await pMap(
+      tradeInfo.associatedAssets.filter((asset: Asset) => !!asset.cw20Coin),
+      async (asset: CW20Coin) => {
+        const coin = new ValuedCW20Coin();
+        coin.id = null;
+        coin.amount = asset.cw20Coin.amount;
+        coin.cw20Coin = await this.utilsService.CW20CoinInfo(network, asset.cw20Coin.address);
+        return coin;
+      },
+    );
+    tradeInfoORM.cw721Assets= await pMap(
+      tradeInfo.associatedAssets.filter((asset: Asset) => !!asset.cw721Coin),
+      async (asset: CW721Coin) => {
+        const token = await this.utilsService.nftTokenInfoFromDB(
+          network,
+          asset.cw721Coin.address,
+          asset.cw721Coin.tokenId,
+        );
+        return token;
+      },
+    );
+    tradeInfoORM.cw1155Assets= JSON.stringify(
+      tradeInfo.associatedAssets.filter((asset: Asset) => asset.cw1155Coin),
+    );
 
-    return {
-      id: null,
-      owner: tradeInfo.owner,
-      time: new Date(parseInt(tradeInfo.additionalInfo.time) / 1000000),
-      lastCounterId: tradeInfo.lastCounterId,
-      ownerComment: tradeInfo.additionalInfo.ownerComment?.comment,
-      ownerCommentTime: tradeInfo.additionalInfo.ownerComment?.time
-        ? new Date(parseInt(tradeInfo.additionalInfo.ownerComment?.time) / 1000000)
-        : null,
-      traderComment: tradeInfo.additionalInfo.traderComment?.comment,
-      traderCommentTime: tradeInfo.additionalInfo.traderComment?.time
-        ? new Date(parseInt(tradeInfo.additionalInfo.traderComment?.time) / 1000000)
-        : null,
-      state: tradeInfo.state,
-      acceptedCounterTradeId: tradeInfo.acceptedInfo?.counterId,
-      assetsWithdrawn: tradeInfo.assetsWithdrawn,
-      // Difficult fields
-      coinAssets: tradeInfo.associatedAssets
-        .filter((asset: Asset) => !!asset.coin)
-        .map((asset: Coin) => {
-          const coin = new ValuedCoin();
-          coin.id = null;
-          coin.amount = asset.coin.amount;
-          coin.denom = asset.coin.denom;
-          coin.network = network;
-          return coin;
-        }),
-      cw20Assets: await pMap(
-        tradeInfo.associatedAssets.filter((asset: Asset) => !!asset.cw20Coin),
-        async (asset: CW20Coin) => {
-          const coin = new ValuedCW20Coin();
-          coin.id = null;
-          coin.amount = asset.cw20Coin.amount;
-          coin.cw20Coin = await this.utilsService.CW20CoinInfo(network, asset.cw20Coin.address);
-          return coin;
-        },
-      ),
-      cw721Assets: await pMap(
-        tradeInfo.associatedAssets.filter((asset: Asset) => !!asset.cw721Coin),
-        async (asset: CW721Coin) => {
-          const token = await this.utilsService.nftTokenInfoFromDB(
-            network,
-            asset.cw721Coin.address,
-            asset.cw721Coin.tokenId,
-          );
-          return token;
-        },
-      ),
-      cw1155Assets: JSON.stringify(
-        tradeInfo.associatedAssets.filter((asset: Asset) => asset.cw1155Coin),
-      ),
+    tradeInfoORM.whitelistedUsers= JSON.stringify(tradeInfo.whitelistedUsers);
+    tradeInfoORM.tokensWanted= JSON.stringify(tradeInfo.additionalInfo.tokensWanted);
+    tradeInfoORM.tradePreview= JSON.stringify(tradeInfo.additionalInfo.tradePreview);
+    return tradeInfoORM;
 
-      whitelistedUsers: JSON.stringify(tradeInfo.whitelistedUsers),
-      tokensWanted: JSON.stringify(tradeInfo.additionalInfo.tokensWanted),
-      tradePreview: JSON.stringify(tradeInfo.additionalInfo.tradePreview),
-    };
   }
 
   async parseTradeDBToResponse(network: Network, trade: Trade): Promise<TradeResponse> {
@@ -407,7 +412,7 @@ export class TradesService {
         user,
       },
     });
-    console.log(tradeId)
+    console.log(tradeId);
 
     if (!currentFavorite) {
       currentFavorite = {
@@ -421,11 +426,14 @@ export class TradesService {
     const trades = await pMap(tradeId, async tradeId =>
       this.tradesRepository.findOneBy({ network, tradeId }),
     );
-    currentFavorite.trades = _.uniqBy(currentFavorite.trades.concat(trades), (trade: Trade) => trade.id);
+    currentFavorite.trades = _.uniqBy(
+      currentFavorite.trades.concat(trades),
+      (trade: Trade) => trade.id,
+    );
 
     // We save to the database
     await this.favoriteRepository.save(currentFavorite);
-    return currentFavorite
+    return currentFavorite;
   }
 
   async setFavoriteTrade(network: Network, user: string, tradeId: number[]) {
@@ -454,7 +462,7 @@ export class TradesService {
 
     // We save to the database
     await this.favoriteRepository.save(currentFavorite);
-    return currentFavorite
+    return currentFavorite;
   }
 
   async removeFavoriteTrade(network: Network, user: string, tradeId: number[]) {
@@ -477,6 +485,6 @@ export class TradesService {
       trade => !tradeId.includes(trade.tradeId),
     );
     await this.favoriteRepository.save(currentFavorite);
-    return currentFavorite
+    return currentFavorite;
   }
 }

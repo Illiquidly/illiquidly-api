@@ -46,8 +46,8 @@ import { AppLoggerMiddleware } from "./utils/request-logger";
   controllers: [],
   providers: [],
 })
-export class AppModule  implements NestModule{
-   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(AppLoggerMiddleware).forRoutes('*');
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(AppLoggerMiddleware).forRoutes("*");
   }
 }
