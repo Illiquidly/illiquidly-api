@@ -17,6 +17,8 @@ import {
   TradeFavoriteCrudService,
   TradeNotificationCrudService,
 } from "./tradeCrud.service";
+import { TradeFavoritesService } from "./trades.favorites.service";
+import { TradeNotificationsService } from "./trades.notifications.service";
 
 @Module({
   imports: [UtilsModule, TypeOrmModule.forFeature(Entities)],
@@ -28,6 +30,8 @@ import {
   ],
   providers: [
     TradesService,
+    TradeNotificationsService,
+    TradeFavoritesService,
     UtilsService,
     QueryLimitService,
     TradeCrudService,

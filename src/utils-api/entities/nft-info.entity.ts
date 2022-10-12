@@ -121,30 +121,23 @@ export class CW1155Collection {
 }
 
 @Entity()
-@Unique("UNIQUE_TOKEN_ID", ["collectionId", "tokenId"])
-export class CW721Token {
+export class CW721TokenAttribute {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: "token_id" })
-  tokenId: string;
-
   @Column({ nullable: true })
-  collectionId: number;
+  displayType: string;
 
-  @ManyToOne(() => CW721Collection, nft => nft.tokens, { eager: true })
-  @JoinColumn()
-  collection: CW721Collection;
+  @Column()
+  traitType: string;
 
-  @OneToOne(() => CW721TokenMetadata, {
-    cascade: true,
-    eager: true,
+  @Column()
+  value: string;
+
+  @ManyToOne(() => CW721TokenMetadata, metadata => metadata.attributes, {
+    onDelete: "CASCADE",
   })
-  @JoinColumn()
   metadata: Relation<CW721TokenMetadata>;
-
-  @Column({ type: "text" })
-  allNftInfo: string;
 }
 
 @Entity()
@@ -184,27 +177,34 @@ export class CW721TokenMetadata {
     eager: true,
   })
   @JoinColumn()
-  attributes: Relation<CW721TokenAttribute>[];
+  attributes: CW721TokenAttribute[];
 }
 
 @Entity()
-export class CW721TokenAttribute {
+@Unique("UNIQUE_TOKEN_ID", ["collectionId", "tokenId"])
+export class CW721Token {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ name: "token_id" })
+  tokenId: string;
+
   @Column({ nullable: true })
-  displayType: string;
+  collectionId: number;
 
-  @Column()
-  traitType: string;
+  @ManyToOne(() => CW721Collection, nft => nft.tokens, { eager: true })
+  @JoinColumn()
+  collection: CW721Collection;
 
-  @Column()
-  value: string;
-
-  @ManyToOne(() => CW721TokenMetadata, metadata => metadata.attributes, {
-    onDelete: "CASCADE",
+  @OneToOne(() => CW721TokenMetadata, {
+    cascade: true,
+    eager: true,
   })
-  metadata: Relation<CW721TokenMetadata>;
+  @JoinColumn()
+  metadata: CW721TokenMetadata;
+
+  @Column({ type: "text" })
+  allNftInfo: string;
 }
 
 @Entity()
