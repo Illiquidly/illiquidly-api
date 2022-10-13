@@ -115,7 +115,7 @@ export class TradeChangesService {
         })
         .flat();
 
-      console.log(_.uniqWith(_.compact(idsToQuery), _.isEqual));
+      console.log("Trade Ids to update", _.uniqWith(_.compact(idsToQuery), _.isEqual));
 
       // The we query the blockchain for trade info and put it into the database
       await pMap(

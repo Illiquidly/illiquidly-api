@@ -92,7 +92,7 @@ export class NotificationChangesService {
     );
 
     // We loop query the lcd for new transactions on the p2p trade contract from the last one registered, until there is no tx left
-    const txToAnalyse = [];
+    let txToAnalyse = [];
     do {
       // We start querying after we left off
       const offset = await getHashSetCardinal(this.redisDB);
@@ -114,7 +114,7 @@ export class NotificationChangesService {
       const txFilter = await Promise.all(
         response.data.tx_responses.map(async (tx: any) => !(await hasTx(this.redisDB, tx.txhash))),
       );
-      const txToAnalyse = response.data.tx_responses.filter((_: any, i: number) => txFilter[i]);
+      txToAnalyse = response.data.tx_responses.filter((_: any, i: number) => txFilter[i]);
       // Then we iterate over the transactions and get the action it refers to and the necessary information
       const notifications: TradeNotification[] = [];
 
@@ -243,6 +243,8 @@ export class NotificationChangesService {
           // No concurrency because we are querying the local db
         );
       });
+      
+
       this.tradeNotificationRepository.save(notifications);
 
       // We add the transaction hashes to the redis set :
@@ -250,6 +252,7 @@ export class NotificationChangesService {
         redisHashSetName,
         response.data.tx_responses.map((tx: any) => tx.txhash),
       );
+      console.log("Notification update finished for offset", offset)
 
       // If no transactions queried were a analyzed, we return
     } while (txToAnalyse.length);

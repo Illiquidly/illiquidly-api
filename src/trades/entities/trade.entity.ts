@@ -202,7 +202,7 @@ export class TradeNotification {
   @Column()
   tradeId: number;
 
-  @Column({ type: "json" })
+  @Column({ type: "json", default: null })
   notificationPreview: {cw721Coin?: TokenResponse}
 
   @Column()
