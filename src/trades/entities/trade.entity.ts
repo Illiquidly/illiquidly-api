@@ -110,7 +110,7 @@ export class RawAsset {
 @Entity()
 @Unique("UQ_TRADES", ["network", "tradeId"])
 export class Trade {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({name: "primary_generated_id"})
   id: number;
 
   @Column({
@@ -144,7 +144,7 @@ export class Trade {
 @Entity()
 @Unique("UQ_COUNTER_TRADES", ["network", "trade", "counterTradeId"])
 export class CounterTrade {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({name: "primary_generated_id"})
   id: number;
 
   @Column({
