@@ -12,7 +12,15 @@ import { BlockChainTradeInfo } from "../utils/blockchain/dto/trade-info.dto";
 import { CounterTrade, Trade, TradeInfoORM } from "./entities/trade.entity";
 import { CW721Collection, ValuedCoin, ValuedCW20Coin } from "../utils-api/entities/nft-info.entity";
 import { formatNiceLuna } from "../utils/js/parseCoin";
-import { Asset, AssetResponse, Coin, CW20Coin, CW721Coin, RawCoin, TokenResponse } from "../utils-api/dto/nft.dto";
+import {
+  Asset,
+  AssetResponse,
+  Coin,
+  CW20Coin,
+  CW721Coin,
+  RawCoin,
+  TokenResponse,
+} from "../utils-api/dto/nft.dto";
 const pMap = require("p-map");
 
 @Injectable()
@@ -304,16 +312,18 @@ export class TradesService {
     };
   }
 
-
   // Allows to parse a token preview (address, token_id) object to it's metadata
-  async parseTokenPreview(network: Network, preview: string): Promise<{cw721Coin: TokenResponse}> {
-      let parsedPreview = JSON.parse(preview);
+  async parseTokenPreview(
+    network: Network,
+    preview: string,
+  ): Promise<{ cw721Coin: TokenResponse }> {
+    let parsedPreview = JSON.parse(preview);
 
     // And now we add the metadata do the same for the preview NFT
     if (parsedPreview?.cw721Coin) {
       parsedPreview = await this.addCW721Info(network, parsedPreview);
     }
-    return parsedPreview
+    return parsedPreview;
   }
 
   private async parseTradeDBToResponseInfo(
@@ -351,7 +361,7 @@ export class TradesService {
     associatedAssets = associatedAssets.concat(JSON.parse(tradeInfo.cw1155Assets) ?? []);
     // We don't want all the collections NFTs here, that's a bit heavy
     const tokensWanted = JSON.parse(tradeInfo.tokensWanted);
-    let tradePreview = await this.parseTokenPreview(network, tradeInfo.tradePreview);
+    const tradePreview = await this.parseTokenPreview(network, tradeInfo.tradePreview);
 
     return {
       acceptedInfo: {
@@ -381,7 +391,7 @@ export class TradesService {
 
   // We get the collection name
 
-  async addCW721Info(network: Network, asset): Promise<{cw721Coin: TokenResponse}> {
+  async addCW721Info(network: Network, asset): Promise<{ cw721Coin: TokenResponse }> {
     const address = asset.cw721Coin.address;
     const tokenId = asset.cw721Coin.tokenId;
 

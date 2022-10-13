@@ -44,7 +44,7 @@ export class NotificationChangesService {
     @InjectRepository(TradeNotification)
     private tradeNotificationRepository: Repository<TradeNotification>,
     @InjectRepository(CounterTrade) private counterTradesRepository: Repository<CounterTrade>,
-    private readonly tradesService: TradesService
+    private readonly tradesService: TradesService,
   ) {
     this.redisSubscriber.subscribe(process.env.P2P_QUEUE_NAME, (err: any) => {
       if (err) {
@@ -82,8 +82,18 @@ export class NotificationChangesService {
     });
   }
 
-  private async queryNewTransaction(network: Network) {
+  private async createNotification(network: Network, tradeId: number, tx: any) {
+    const notification: TradeNotification = new TradeNotification();
+    notification.network = network;
+    notification.time = DATE_FORMAT(tx.timestamp, "yyyy-mm-dd HH:MM:ss");
+    const trade = await this.tradesService.updateTrade(network, tradeId);
+    notification.tradeId = tradeId;
+    notification.notificationPreview =
+      (await this.tradesService.parseTokenPreview(network, trade.tradeInfo.tradePreview)) ?? {};
+    return notification;
+  }
 
+  private async queryNewTransaction(network: Network) {
     const lcd = Axios.create(
       chains[network].axiosObject ?? {
         baseURL: chains[network].URL,
@@ -126,50 +136,33 @@ export class NotificationChangesService {
             // New counter_trade published
             if (contractEvents?.action?.[0] == "confirm_counter_trade") {
               // If there is a new counter_trade, we notify the owner of the trade
-              const notification: TradeNotification = new TradeNotification();
-              notification.network = network;
-              notification.time = DATE_FORMAT(tx.timestamp, "yyyy-mm-dd HH:MM:ss");
+              const tradeId = parseInt(contractEvents.trade_id?.[0] ?? contractEvents.trade?.[0]);
+              const notification = await this.createNotification(network, tradeId, tx);
               notification.user = contractEvents.trader[0];
-              notification.tradeId = parseInt(
-                contractEvents.trade_id?.[0] ?? contractEvents.trade?.[0],
-              );
-              let trade = await this.tradesService.updateTrade(network, notification.tradeId)
-              notification.notificationPreview = await this.tradesService.parseTokenPreview(network, trade.tradeInfo.tradePreview) ?? {};
               notification.counterTradeId = parseInt(
                 contractEvents.counter_id?.[0] ?? contractEvents.counter?.[0],
               );
               notification.notificationType = TradeNotificationType.newCounterTrade;
-              notification.status = TradeNotificationStatus.unread;
               notifications.push(notification);
             } else if (contractEvents?.action?.[0] == "review_counter_trade") {
               // If there is a new review of a counter_trade, we notify the owner of the counter trade
-              const notification: TradeNotification = new TradeNotification();
-              notification.network = network;
-              notification.time = tx.timestamp;
+              const tradeId = parseInt(contractEvents.trade_id?.[0] ?? contractEvents.trade?.[0]);
+              const notification = await this.createNotification(network, tradeId, tx);
               notification.user = contractEvents.counter_trader[0];
-              notification.tradeId = parseInt(
-                contractEvents.trade_id?.[0] ?? contractEvents.trade?.[0],
-              );
               notification.counterTradeId = parseInt(
                 contractEvents.counter_id?.[0] ?? contractEvents.counter?.[0],
               );
               notification.notificationType = TradeNotificationType.counterTradeReview;
-              notification.status = TradeNotificationStatus.unread;
               notifications.push(notification);
             } else if (contractEvents?.action?.[0] == "refuse_counter_trade") {
               // If a counter_trade was refused, we notify the owner of the counter trade
-              const notification: TradeNotification = new TradeNotification();
-              notification.network = network;
-              notification.time = tx.timestamp;
+              const tradeId = parseInt(contractEvents.trade_id?.[0] ?? contractEvents.trade?.[0]);
+              const notification = await this.createNotification(network, tradeId, tx);
               notification.user = contractEvents.counter_trader[0];
-              notification.tradeId = parseInt(
-                contractEvents.trade_id?.[0] ?? contractEvents.trade?.[0],
-              );
               notification.counterTradeId = parseInt(
                 contractEvents.counter_id?.[0] ?? contractEvents.counter?.[0],
               );
               notification.notificationType = TradeNotificationType.refuseCounterTrade;
-              notification.status = TradeNotificationStatus.unread;
               notifications.push(notification);
             } else if (contractEvents?.action?.[0] == "accept_counter_trade") {
               // If a counter_trade was accepted, we notify the owner of the counter trade
@@ -177,15 +170,10 @@ export class NotificationChangesService {
                 contractEvents.counter_id?.[0] ?? contractEvents.counter?.[0],
               );
               const tradeId = parseInt(contractEvents.trade_id?.[0] ?? contractEvents.trade?.[0]);
-
-              const notification: TradeNotification = new TradeNotification();
-              notification.network = network;
-              notification.time = tx.timestamp;
+              const notification = await this.createNotification(network, tradeId, tx);
               notification.user = contractEvents.counter_trader[0];
-              notification.tradeId = tradeId;
               notification.counterTradeId = acceptedCounterId;
               notification.notificationType = TradeNotificationType.counterTradeAccepted;
-              notification.status = TradeNotificationStatus.unread;
               notifications.push(notification);
 
               // But we also notify all the other counter traders that their counter_trade is cancelled
@@ -198,19 +186,18 @@ export class NotificationChangesService {
                 .getMany();
 
               notifications.concat(
-                counterTrades
-                  .filter(counterInfo => counterInfo.counterTradeId != acceptedCounterId)
-                  .map(counterInfo => {
-                    const notification: TradeNotification = new TradeNotification();
-                    notification.network = network;
-                    notification.time = tx.timestamp;
+                await pMap(
+                  counterTrades.filter(
+                    counterInfo => counterInfo.counterTradeId != acceptedCounterId,
+                  ),
+                  async counterInfo => {
+                    const notification = await this.createNotification(network, tradeId, tx);
                     notification.user = counterInfo.tradeInfo.owner;
-                    notification.tradeId = tradeId;
                     notification.counterTradeId = counterInfo.counterTradeId;
                     notification.notificationType = TradeNotificationType.otherCounterTradeAccepted;
-                    notification.status = TradeNotificationStatus.unread;
                     return notification;
-                  }),
+                  },
+                ),
               );
             } else if (contractEvents?.action?.[0] == "cancel_trade") {
               // If a trade was cancelled, we notify the owner of all the counter trades
@@ -225,15 +212,11 @@ export class NotificationChangesService {
                 .getMany();
 
               notifications.concat(
-                counterTrades.map(counterInfo => {
-                  const notification: TradeNotification = new TradeNotification();
-                  notification.network = network;
-                  notification.time = tx.timestamp;
+                await pMap(counterTrades, async counterInfo => {
+                  const notification = await this.createNotification(network, tradeId, tx);
                   notification.user = counterInfo.tradeInfo.owner;
-                  notification.tradeId = tradeId;
                   notification.counterTradeId = counterInfo.counterTradeId;
                   notification.notificationType = TradeNotificationType.tradeCancelled;
-                  notification.status = TradeNotificationStatus.unread;
                   return notification;
                 }),
               );
@@ -242,7 +225,6 @@ export class NotificationChangesService {
           // No concurrency because we are querying the local db
         );
       });
-      
 
       this.tradeNotificationRepository.save(notifications);
 
@@ -251,7 +233,7 @@ export class NotificationChangesService {
         redisHashSetName,
         response.data.tx_responses.map((tx: any) => tx.txhash),
       );
-      console.log("Notification update finished for offset", offset)
+      console.log("Notification update finished for offset", offset);
 
       // If no transactions queried were a analyzed, we return
     } while (txToAnalyse.length);

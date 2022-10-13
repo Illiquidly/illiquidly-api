@@ -110,7 +110,7 @@ export class RawAsset {
 @Entity()
 @Unique("UQ_TRADES", ["network", "tradeId"])
 export class Trade {
-  @PrimaryGeneratedColumn({name: "primary_generated_id"})
+  @PrimaryGeneratedColumn({ name: "primary_generated_id" })
   id: number;
 
   @Column({
@@ -144,7 +144,7 @@ export class Trade {
 @Entity()
 @Unique("UQ_COUNTER_TRADES", ["network", "trade", "counterTradeId"])
 export class CounterTrade {
-  @PrimaryGeneratedColumn({name: "primary_generated_id"})
+  @PrimaryGeneratedColumn({ name: "primary_generated_id" })
   id: number;
 
   @Column({
@@ -194,7 +194,7 @@ export class TradeNotification {
   network: Network;
 
   @Column({ type: "datetime" })
-  time: string;
+  time: Date;
 
   @Column()
   user: string;
@@ -203,7 +203,7 @@ export class TradeNotification {
   tradeId: number;
 
   @Column({ type: "json", default: null })
-  notificationPreview: {cw721Coin?: TokenResponse}
+  notificationPreview: { cw721Coin?: TokenResponse };
 
   @Column()
   counterTradeId: number;
