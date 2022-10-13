@@ -106,10 +106,10 @@ export class TradeChangesService {
               const tradeIds = (
                 txLog.eventsByType.wasm.trade_id ?? txLog.eventsByType.wasm.trade
               )?.map((id: string) => parseInt(id));
-              const counterIds = (
+              const counterTradeIds = (
                 txLog.eventsByType.wasm.counter_id ?? txLog.eventsByType.wasm.counter
               )?.map((id: string) => parseInt(id));
-              return _.unzip([tradeIds, counterIds]);
+              return _.unzip([tradeIds, counterTradeIds]);
             })
             .flat();
         })
@@ -121,12 +121,12 @@ export class TradeChangesService {
       await pMap(
         _.uniqWith(_.compact(idsToQuery), _.isEqual),
         async (id: number[]) => {
-          const [tradeId, counterId] = id;
+          const [tradeId, counterTradeId] = id;
           // We update the tradeInfo and all its associated counter_trades in the database
           await this.tradesService.updateTradeAndCounterTrades(network, tradeId);
-          if (counterId != undefined) {
+          if (counterTradeId != undefined) {
             // If a counterId is defined, we also update that specific counterId
-            await this.tradesService.getCounterTradeById(network, tradeId, counterId);
+            await this.tradesService.updateCounterTrade(network, tradeId, counterTradeId);
           }
         },
         { concurrency: 1 },

@@ -21,7 +21,7 @@ export interface TradeInfoResponse {
     time: string;
     nftsWanted?: CW721Collection[];
     tokensWanted: AssetResponse[];
-    tradePreview: AssetResponse[];
+    tradePreview: AssetResponse;
     traderComment: {
       comment?: string;
       time?: string;

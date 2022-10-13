@@ -99,11 +99,6 @@ export class TradesController {
   async getSingleTrade(@Query() params: SingleTradeParameters) {
     return await this.tradesService.getTradeById(params.network, params.tradeId);
   }
-
-  @Patch("test")
-  async updateTradeTest(@Query() params: SingleTradeParameters) {
-    return await this.tradesService.updateTradeAndCounterTrades(params.network, params.tradeId);
-  }
 }
 
 @ApiTags("Trades")

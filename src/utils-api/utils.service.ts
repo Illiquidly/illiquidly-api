@@ -113,7 +113,7 @@ export class UtilsService {
   }
 
   /// This function is used to load and cache Token info variables
-  async nftTokenInfo(network: Network, address: string, tokenId: string) {
+  async nftTokenInfo(network: Network, address: string, tokenId: string): Promise<TokenResponse> {
     const nftInfo = await this.nftTokenInfoFromDB(network, address, tokenId);
     return this.parseTokenDBToResponse(nftInfo);
   }

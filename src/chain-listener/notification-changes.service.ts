@@ -19,6 +19,7 @@ import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { QueueMessage } from "./websocket-listener.service";
 import { sleep } from "../utils/js/sleep";
+import { TradesService } from "../trades/trades.service";
 const pMap = require("p-map");
 const DATE_FORMAT = require("dateformat");
 
@@ -43,6 +44,7 @@ export class NotificationChangesService {
     @InjectRepository(TradeNotification)
     private tradeNotificationRepository: Repository<TradeNotification>,
     @InjectRepository(CounterTrade) private counterTradesRepository: Repository<CounterTrade>,
+    private readonly tradesService: TradesService
   ) {
     this.redisSubscriber.subscribe(process.env.P2P_QUEUE_NAME, (err: any) => {
       if (err) {
@@ -132,6 +134,8 @@ export class NotificationChangesService {
               notification.tradeId = parseInt(
                 contractEvents.trade_id?.[0] ?? contractEvents.trade?.[0],
               );
+              let trade = await this.tradesService.updateTrade(network, notification.tradeId)
+              notification.notificationPreview = await this.tradesService.parseTokenPreview(network, trade.tradeInfo.tradePreview) ?? {};
               notification.counterTradeId = parseInt(
                 contractEvents.counter_id?.[0] ?? contractEvents.counter?.[0],
               );
