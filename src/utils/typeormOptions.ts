@@ -4,8 +4,8 @@ const SnakeNamingStrategy = require("typeorm-naming-strategies").SnakeNamingStra
 export const typeOrmOptions = {
   host: "127.0.0.1",
   port: 3306,
-  username: "root",
-  password: "root",
+  username: "illiquidly",
+  password: "illiquidly",
   database: "ILLIQUIDLY",
   entities: Entities,
   autoLoadEntities: true,
