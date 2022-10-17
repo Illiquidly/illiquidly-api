@@ -104,6 +104,7 @@ export class NotificationChangesService {
       },
     );
 
+    console.log("Start trade notification update for ", network)
     // We loop query the lcd for new transactions on the p2p trade contract from the last one registered, until there is no tx left
     let txToAnalyse = [];
     do {

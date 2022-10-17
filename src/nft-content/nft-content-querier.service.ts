@@ -97,7 +97,7 @@ export class NftContentQuerierService {
       // We first remove all tokens associated with the collection
       data.ownedTokens =
         data?.ownedTokens?.filter(token => {
-          return token.collection.collectionAddress != collectionAddress;
+          return token.collection?.collectionAddress != collectionAddress;
         }) ?? [];
 
       // We then add all the tokens associated from the address
