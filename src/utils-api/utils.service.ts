@@ -124,8 +124,8 @@ export class UtilsService {
       this.collectionRepository.findOneBy({ network, collectionAddress }),
     );
 
-    // If this info has been found in the database, we simply return it
-    if (!err && collection) {
+    // If this info has been found in the database and they have a collection Name we simply return it
+    if (!err && collection?.collectionName != "" && collection?.collectionName != null) {
       return collection;
     }
 
