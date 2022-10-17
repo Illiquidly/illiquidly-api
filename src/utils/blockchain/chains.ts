@@ -50,12 +50,16 @@ export const contracts: AllContracts = {
     p2pTrade: "terra14dcwvg4zplrc28g5q3802n2mmnp3fsp2yh7mn7gkxssnrjqp4ycq676kqf",
   },
   testnet: {
-	p2pTrade: "terra1d3xtfkumcxl6225mhfvgwjt0sql30x5yc0hrap2qdfwfs762aj5sa2we47",
-    fee: "terra1f0u8h08a8eyvyg770tkcln6l78080kafrmnlw0f5qd89qcydqv6s0y0wcc",
-    fee_distributor: "terra1atf60kd7ckyry2e3mn0txzamjvlhne0fesf6y7zqtj3tf9w5qd9sm03l2j"
+	  "p2pTrade": "terra1405pwjpdl629uemdqaf57gf765ufv7y3e2xszch4y8zhhwczapwsse2eh0",
+    "fee": "terra1uh0vx5eh5tu49g5hw98r622m805vg533j3kjf8c2mtqhz6qfyyxqms5tmw",
+    "fee_distributor": "terra1dnlq6uxmmqn56uspjh9wecc5mcu56hq5ckvzd90tmfqfn36paa6sfr6llq"
   },
   classic: {},
-  mainnet: {},
+  mainnet: {
+    "p2pTrade": "terra1vvwcxnrhzvwjw7c0t7ks3pe0fvj82rcyrmpsejj22csg0rawpc9qs9fyv4",
+    "fee": "terra14j02llvrly27dzw9zqumfql9uw5ea3kl0f0wujp42p8uq7g8w67srcyfdw",
+    "fee_distributor": "terra1vjyhmjnj79xlzk2s3n6k06wxmg0h8djkq27cwvmduhq62qcqq4tq4ff3t8",
+  },
 };
 
 export const fcds: any = {

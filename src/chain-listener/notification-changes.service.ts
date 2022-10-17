@@ -25,12 +25,16 @@ const DATE_FORMAT = require("dateformat");
 
 const redisHashSetName: string = process.env.REDIS_NOTIFICATION_TXHASH_SET;
 
-async function getHashSetCardinal(db: Redis) {
-  return await db.scard(redisHashSetName);
+function getSetName(network: Network){
+  return `${redisHashSetName} - ${network}`
 }
 
-async function hasTx(db: Redis, txHash: string): Promise<boolean> {
-  return (await db.sismember(redisHashSetName, txHash)) == 1;
+async function getHashSetCardinal(network: Network, db: Redis) {
+  return await db.scard(getSetName(network));
+}
+
+async function hasTx(network: Network, db: Redis, txHash: string): Promise<boolean> {
+  return (await db.sismember(getSetName(network), txHash)) == 1;
 }
 
 @Injectable()
@@ -54,7 +58,7 @@ export class NotificationChangesService {
       } else {
         // `count` represents the number of channels this client are currently subscribed to.
         console.log(
-          "Subscribed successfully! This client is currently subscribed to the trade channel.",
+          "Subscribed successfully! This client is currently subscribed to the trade notification channel.",
         );
       }
     });
@@ -104,7 +108,7 @@ export class NotificationChangesService {
     let txToAnalyse = [];
     do {
       // We start querying after we left off
-      const offset = await getHashSetCardinal(this.redisDB);
+      const offset = await getHashSetCardinal(network, this.redisDB);
       const [err, response] = await asyncAction(
         lcd.get("/cosmos/tx/v1beta1/txs", {
           params: {
@@ -121,7 +125,7 @@ export class NotificationChangesService {
 
       // We start by querying only new transactions (We do this in two steps, as the filter function doesn't wait for async results)
       const txFilter = await Promise.all(
-        response.data.tx_responses.map(async (tx: any) => !(await hasTx(this.redisDB, tx.txhash))),
+        response.data.tx_responses.map(async (tx: any) => !(await hasTx(network, this.redisDB, tx.txhash))),
       );
       txToAnalyse = response.data.tx_responses.filter((_: any, i: number) => txFilter[i]);
       // Then we iterate over the transactions and get the action it refers to and the necessary information
@@ -230,7 +234,7 @@ export class NotificationChangesService {
 
       // We add the transaction hashes to the redis set :
       await this.redisDB.sadd(
-        redisHashSetName,
+        getSetName(network),
         response.data.tx_responses.map((tx: any) => tx.txhash),
       );
       console.log("Notification update finished for offset", offset);
