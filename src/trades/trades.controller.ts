@@ -112,39 +112,39 @@ export class TradesController {
     join: {
       tradeInfo: {
         eager: true,
-        select: false,
+        select: true,
       },
       "tradeInfo.cw721Assets": {
         eager: true,
         alias: "tradeInfo_cw721Assets_join",
-        select: false,
+        select: true,
       },
       "tradeInfo.cw721Assets.collection": {
         eager: true,
         alias: "tradeInfo_cw721Assets_collection_join",
-        select: false,
+        select: true,
       },
       "tradeInfo.cw721Assets.metadata": {
         eager: true,
         alias: "tradeInfo_cw721Assets_metadata_join",
-        select: false,
+        select: true,
       },
       "tradeInfo.cw721Assets.metadata.attributes": {
         eager: true,
         alias: "tradeInfo_cw721Assets_metadata_attributes_join",
-        select: false,
+        select: true,
       },
       "tradeInfo.cw20Assets": {
         eager: true,
-        select: false,
+        select: true,
       },
       "tradeInfo.coinAssets": {
         eager: true,
-        select: false,
+        select: true,
       },
       trade: {
         eager: true,
-        select: false,
+        select: true,
       },
     },
   },

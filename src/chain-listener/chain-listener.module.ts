@@ -9,6 +9,7 @@ import { TradesService } from "../trades/trades.service";
 import { NotificationChangesService } from "./notification-changes.service";
 import { TradesModule } from "../trades/trades.module";
 import { WebsocketListenerService } from "./websocket-listener.service";
+import { RedisLockService } from "../utils/lock";
 
 @Module({
   imports: [TradesModule, TypeOrmModule.forFeature(Entities)],
@@ -20,6 +21,7 @@ import { WebsocketListenerService } from "./websocket-listener.service";
     TradesService,
     UtilsService,
     QueryLimitService,
+    RedisLockService,
   ],
 })
 export class ChainListenerModule {}

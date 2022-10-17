@@ -12,6 +12,7 @@ import { BlockChainTradeInfo } from "../utils/blockchain/dto/trade-info.dto";
 import { CounterTrade, Trade, TradeInfoORM } from "./entities/trade.entity";
 import { CW721Collection, ValuedCoin, ValuedCW20Coin } from "../utils-api/entities/nft-info.entity";
 import { formatNiceLuna } from "../utils/js/parseCoin";
+import { RedisLock, RedisLockService } from "../utils/lock";
 import {
   Asset,
   AssetResponse,
@@ -22,6 +23,11 @@ import {
   TokenResponse,
 } from "../utils-api/dto/nft.dto";
 const pMap = require("p-map");
+
+if (process.env.UPDATE_DESPITE_LOCK_TIME == undefined) {
+  process.env.UPDATE_DESPITE_LOCK_TIME = "120000";
+}
+const UPDATE_DESPITE_LOCK_TIME = parseInt(process.env.UPDATE_DESPITE_LOCK_TIME);
 
 @Injectable()
 export class TradesService {
@@ -34,6 +40,7 @@ export class TradesService {
     @InjectRepository(CW721Collection) private collectionRepository: Repository<CW721Collection>,
     private readonly utilsService: UtilsService,
     private readonly queryLimitService: QueryLimitService,
+    protected readonly lockService: RedisLockService,
   ) {
     this.tradeQuery = new BlockchainTradeQuery(
       this.queryLimitService.sendIndependentQuery.bind(this.queryLimitService),
@@ -103,6 +110,7 @@ export class TradesService {
     };
   }
 
+
   // When updating a trade directly from the Blockchain, you want to update their tradeInfo only
   async updateTrade(network: Network, tradeId: number) {
     const [, tradeInfo]: [any, Trade] = await asyncAction(
@@ -117,8 +125,13 @@ export class TradesService {
     // We assign the old id to the new object, to save it in place
     tradeDBObject.id = tradeInfo?.id;
     tradeDBObject.counterTrades = tradeInfo?.counterTrades ?? [];
-    await this.tradesRepository.save(tradeDBObject);
 
+    // We try to update the trade. If the trade already exists, we don't care
+    // This is a workaround, because we don't have functionnal lock 
+    let [error, _] = await asyncAction(this.tradesRepository.save(tradeDBObject));
+    if(error){
+      console.log("We don't care if this fails")
+    }
     // We delete the old tradeInfo, or it cloggs the memory for nothing
     if (tradeInfo?.tradeInfo) {
       await this.tradeInfoRepository.remove(tradeInfo?.tradeInfo);
@@ -396,7 +409,6 @@ export class TradesService {
     const tokenId = asset.cw721Coin.tokenId;
 
     const tokenInfo = await this.utilsService.nftTokenInfo(network, address, tokenId);
-
     return {
       cw721Coin: {
         ...tokenInfo,

@@ -15,6 +15,9 @@ import {
   TradeNotificationStatus,
   TradeNotificationType,
 } from "../trades/entities/trade.entity";
+import {
+  CW721TokenAttribute
+} from "../utils-api/entities/nft-info.entity"
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { QueueMessage } from "./websocket-listener.service";
@@ -94,10 +97,18 @@ export class NotificationChangesService {
     notification.tradeId = tradeId;
     notification.notificationPreview =
       (await this.tradesService.parseTokenPreview(network, trade.tradeInfo.tradePreview)) ?? {};
+    // We need to make sure we don't send the Metadata back with the attribute
+    notification.notificationPreview.cw721Coin.attributes = notification.notificationPreview.cw721Coin.attributes.map(
+      (attribute: CW721TokenAttribute) => {
+        attribute.metadata = null;
+        return attribute;
+      },
+    );
     return notification;
   }
 
   private async queryNewTransaction(network: Network) {
+
     const lcd = Axios.create(
       chains[network].axiosObject ?? {
         baseURL: chains[network].URL,

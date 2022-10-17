@@ -37,7 +37,7 @@ export class AbstractTradeCrudService<T> extends TypeOrmCrudService<T> {
     // We don't want to select all the fields
     const initialJoin = _.cloneDeep(options?.query?.join);
     Object.keys(options?.query?.join ?? []).forEach(function (key) {
-      options.query.join[key].select = true;
+      options.query.join[key].select = false;
     });
 
     const builder = await this.createBuilder(parsed, options);

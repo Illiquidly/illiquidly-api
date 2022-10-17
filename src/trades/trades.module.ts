@@ -19,6 +19,7 @@ import {
 } from "./tradeCrud.service";
 import { TradeFavoritesService } from "./trades.favorites.service";
 import { TradeNotificationsService } from "./trades.notifications.service";
+import { RedisLockService } from "../utils/lock";
 
 @Module({
   imports: [UtilsModule, TypeOrmModule.forFeature(Entities)],
@@ -38,6 +39,7 @@ import { TradeNotificationsService } from "./trades.notifications.service";
     CounterTradeCrudService,
     TradeNotificationCrudService,
     TradeFavoriteCrudService,
+    RedisLockService,
   ],
 })
 export class TradesModule {}

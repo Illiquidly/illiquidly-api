@@ -107,8 +107,7 @@ export class UtilsService {
     );
 
     tokenDBObject.allNftInfo = JSON.stringify(allNftInfo);
-
-    await this.NFTTokenRepository.save([tokenDBObject]);
+    await asyncAction(this.NFTTokenRepository.save([tokenDBObject]));
     return tokenDBObject;
   }
 
