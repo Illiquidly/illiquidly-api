@@ -39,7 +39,7 @@ export interface Contracts {
   p2pTrade?: string;
   fee?: string;
   fee_distributor?: string;
-  raffle?: String
+  raffle?: string;
 }
 
 export type AllContracts = {
@@ -48,14 +48,12 @@ export type AllContracts = {
 
 export const contracts: AllContracts = {
   devnet: {
-    p2pTrade: "terra14dcwvg4zplrc28g5q3802n2mmnp3fsp2yh7mn7gkxssnrjqp4ycq676kqf",
   },
   testnet: {
 	  "p2pTrade": "terra1405pwjpdl629uemdqaf57gf765ufv7y3e2xszch4y8zhhwczapwsse2eh0",
     "fee": "terra1uh0vx5eh5tu49g5hw98r622m805vg533j3kjf8c2mtqhz6qfyyxqms5tmw",
     "fee_distributor": "terra1dnlq6uxmmqn56uspjh9wecc5mcu56hq5ckvzd90tmfqfn36paa6sfr6llq",
     "raffle": "terra1vmrf7z6yr34rgpkkv2yk0t28hdlfzwunql9ldusum9cc8ef272ksy6kjgz"
-
   },
   classic: {},
   mainnet: {
