@@ -24,6 +24,7 @@ export class WebsocketListenerService {
 
       const wsclient = new WebSocketClient(ws[chain], -1, 8000);
 
+      // For the P2P contract
       if (contracts.p2pTrade) {
         wsclient.subscribeTx(
           {
@@ -36,11 +37,40 @@ export class WebsocketListenerService {
               message: process.env.TRIGGER_P2P_TRADE_QUERY_MSG,
               network: Network[chain],
             };
-            await this.redisPublisher.publish(process.env.P2P_QUEUE_NAME, JSON.stringify(message));
-            console.log("New contract transaction");
+            await this.redisPublisher.publish(
+              process.env.CONTRACT_UPDATE_QUEUE_NAME,
+              JSON.stringify(message),
+            );
+            console.log("New contract transaction for trades");
           },
         );
         console.log("Subscribed to the Trade contract on", chain);
+      }
+
+      // For the raffle contract
+      if (contracts.raffle) {
+        wsclient.subscribeTx(
+          {
+            "message.action": "/cosmwasm.wasm.v1.MsgExecuteContract",
+            "wasm._contract_address": contracts.raffle,
+          },
+          async () => {
+            // If we get a new transaction on the contract, we send a message to the worker
+            const message: QueueMessage = {
+              message: process.env.TRIGGER_RAFFLE_QUERY_MSG,
+              network: Network[chain],
+            };
+            await this.redisPublisher.publish(
+              process.env.CONTRACT_UPDATE_QUEUE_NAME,
+              JSON.stringify(message),
+            );
+            console.log("New contract transaction for raffles");
+          },
+        );
+        console.log("Subscribed to the Raffle contract on", chain);
+      }
+
+      if (contracts.raffle || contracts.p2pTrade) {
         wsclient.start();
       }
     });

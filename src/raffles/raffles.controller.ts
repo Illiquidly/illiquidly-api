@@ -6,6 +6,7 @@ import { SingleRaffleParameters } from "./dto/getRaffles.dto";
 import { NotificationsRead } from "./dto/notifications.dto";
 import { RaffleFavoriteMessage } from "./dto/raffleFavorite.dto";
 import { Raffle, RaffleFavorite, RaffleNotification } from "./entities/raffle.entity";
+import { RaffleResultInterceptor } from "./interceptors/raffles.interceptor";
 
 import {
   RaffleCrudService,
@@ -23,21 +24,21 @@ import { RafflesService } from "./raffles.service";
     limit: 10,
     sort: [],
     join: {
-      cw721Asset: {
+      cw721Assets: {
         eager: true,
-        alias: "cw721Asset_join",
+        alias: "cw721Assets_join",
       },
-      "cw721Asset.collection": {
+      "cw721Assets.collection": {
         eager: true,
-        alias: "cw721Asset_collection_join",
+        alias: "cw721Assets_collection_join",
       },
-      "cw721Asset.metadata": {
+      "cw721Assets.metadata": {
         eager: true,
         alias: "cw721Asset_metadata_join",
       },
-      "cw721Asset.metadata.attributes": {
+      "cw721Assets.metadata.attributes": {
         eager: true,
-        alias: "cw721Asset_metadata_attributes_join",
+        alias: "cw721Assets_metadata_attributes_join",
       },
       cw20TicketPrice: {
         eager: true,
@@ -47,23 +48,25 @@ import { RafflesService } from "./raffles.service";
       },
       raffleFavorites: {
         eager: true,
-        select: false
-      }
+        select: false,
+      },
     },
   },
   routes: {
     getOneBase: {
       decorators: [],
+      interceptors: [RaffleResultInterceptor],
     },
     getManyBase: {
       decorators: [],
+      interceptors: [RaffleResultInterceptor],
     },
     only: ["getOneBase", "getManyBase"],
   },
 })
 @Controller("raffles")
 export class RafflesController {
-  constructor(private readonly rafflesService: RaffleService, public service: RaffleCrudService) {}
+  constructor(private readonly rafflesService: RafflesService, public service: RaffleCrudService) {}
 
   @Patch("")
   @ApiResponse({
@@ -138,12 +141,20 @@ export class RaffleFavoriteController {
 
   @Patch("/add")
   async addFavoriteRaffle(@Query() params: RaffleFavoriteMessage) {
-    return await this.rafflesService.addFavoriteRaffle(params.network, params.user, params.raffleId);
+    return await this.rafflesService.addFavoriteRaffle(
+      params.network,
+      params.user,
+      params.raffleId,
+    );
   }
 
   @Patch("/set")
   async setFavoriteRaffle(@Query() params: RaffleFavoriteMessage) {
-    return await this.rafflesService.setFavoriteRaffle(params.network, params.user, params.raffleId);
+    return await this.rafflesService.setFavoriteRaffle(
+      params.network,
+      params.user,
+      params.raffleId,
+    );
   }
 
   @Patch("/remove")

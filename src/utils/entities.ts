@@ -17,6 +17,12 @@ import {
   TradeNotification,
 } from "../trades/entities/trade.entity";
 import { WalletContent } from "../nft-content/entities/nft-content.entity";
+import {
+  Participant,
+  Raffle,
+  RaffleFavorite,
+  RaffleNotification,
+} from "../raffles/entities/raffle.entity";
 
 export default [
   Trade,
@@ -34,4 +40,8 @@ export default [
   CW1155Collection,
   CW1155Token,
   WalletContent,
+  Raffle,
+  Participant,
+  RaffleNotification,
+  RaffleFavorite,
 ];

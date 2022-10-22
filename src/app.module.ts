@@ -9,12 +9,19 @@ import { typeOrmOptions } from "./utils/typeormOptions";
 import { ChainListenerModule } from "./chain-listener/chain-listener.module";
 import { RedisLockModule } from "./utils/lock";
 import { AppLoggerMiddleware } from "./utils/request-logger";
+import { RafflesModule } from "./raffles/raffle.module";
+import { ConfigModule } from "@nestjs/config";
+import { redisQueueConfig, NFTContentAPIConfig } from "./utils/configuration";
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      load: [redisQueueConfig, NFTContentAPIConfig],
+    }),
     NftContentModule,
     UtilsModule,
     TradesModule,
+    RafflesModule,
     ChainListenerModule,
     KnexModule.forRoot({
       config: {
@@ -33,7 +40,9 @@ import { AppLoggerMiddleware } from "./utils/request-logger";
         { namespace: "lock" },
         { namespace: "default-client" },
         { namespace: "trade-subscriber" },
-        { namespace: "notification-subscriber" },
+        { namespace: "trade-notification-subscriber" },
+        { namespace: "raffle-subscriber" },
+        { namespace: "raffle-notification-subscriber" },
         { namespace: "trade-publisher" },
       ],
     }),

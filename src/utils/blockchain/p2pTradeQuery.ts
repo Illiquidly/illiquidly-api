@@ -15,7 +15,7 @@ export class BlockchainTradeQuery {
   async getTradeInfo(network: Network, tradeId: number): Promise<BlockChainTradeInfo> {
     const terra = new LCDClient(chains[network]);
     return camelCaseObjectDeep(
-      await terra.wasm.contractQuery(contracts[network].p2pTrade, {
+      await sendIndependentQuery(network, contracts[network].p2pTrade, {
         trade_info: {
           trade_id: tradeId,
         },
@@ -26,7 +26,7 @@ export class BlockchainTradeQuery {
   async getCounterTradeInfo(network: Network, tradeId: number, counterId: number): Promise<any> {
     const terra = new LCDClient(chains[network]);
     return camelCaseObjectDeep(
-      await terra.wasm.contractQuery(contracts[network].p2pTrade, {
+      await sendIndependentQuery(network, contracts[network].p2pTrade, {
         counter_trade_info: {
           trade_id: tradeId,
           counter_id: counterId,

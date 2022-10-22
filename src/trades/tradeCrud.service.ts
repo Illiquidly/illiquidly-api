@@ -29,7 +29,7 @@ function parseForResponse(dataToReturn, oldRes) {
   }
 }
 
-export class AbstractTradeCrudService<T> extends TypeOrmCrudService<T> {
+export class AbstractFilterToSelectCrudService<T> extends TypeOrmCrudService<T> {
   public async getMany(req: CrudRequest): Promise<GetManyDefaultResponse<T> | T[]> {
     const { parsed, options } = req;
 
@@ -73,14 +73,14 @@ export class AbstractTradeCrudService<T> extends TypeOrmCrudService<T> {
 }
 
 @Injectable()
-export class TradeCrudService extends AbstractTradeCrudService<Trade> {
+export class TradeCrudService extends AbstractFilterToSelectCrudService<Trade> {
   constructor(@InjectRepository(Trade) repo) {
     super(repo);
   }
 }
 
 @Injectable()
-export class CounterTradeCrudService extends AbstractTradeCrudService<CounterTrade> {
+export class CounterTradeCrudService extends AbstractFilterToSelectCrudService<CounterTrade> {
   constructor(@InjectRepository(CounterTrade) repo) {
     super(repo);
   }

@@ -1,84 +1,50 @@
-import { Injectable } from "@nestjs/common";
-import { asyncAction } from "../utils/js/asyncAction";
+import { Inject, Injectable } from "@nestjs/common";
+import { asyncAction } from "../../utils/js/asyncAction";
 
-import { Network } from "../utils/blockchain/dto/network.dto";
+import { Network } from "../../utils/blockchain/dto/network.dto";
 import Axios from "axios";
-import { chains, contracts } from "../utils/blockchain/chains";
+import { chains, contracts } from "../../utils/blockchain/chains";
 import { InjectRedis } from "@liaoliaots/nestjs-redis";
 import Redis from "ioredis";
 import { TxLog } from "@terra-money/terra.js";
-import { TradesService } from "../trades/trades.service";
-import { QueueMessage } from "./websocket-listener.service";
-import { sleep } from "../utils/js/sleep";
+import { TradesService } from "../../trades/trades.service";
+import { QueueMessage } from "../websocket-listener.service";
+import { sleep } from "../../utils/js/sleep";
+import { ConfigType } from "@nestjs/config";
+import { redisQueueConfig } from "../../utils/configuration";
+import { ChangeListenerService } from "../change-listener.service";
 const pMap = require("p-map");
 const _ = require("lodash");
 
-const redisHashSetName: string = process.env.REDIS_TXHASH_SET;
-
-function getSetName(network: Network){
-  return `${redisHashSetName} - ${network}`
-}
-
-async function getHashSetCardinal(network: Network, db: Redis) {
-  return await db.scard(getSetName(network));
-}
-
-async function hasTx(network: Network, db: Redis, txHash: string): Promise<boolean> {
-  return (await db.sismember(getSetName(network), txHash)) == 1;
-}
-
 @Injectable()
-export class TradeChangesService {
+export class TradeChangesService extends ChangeListenerService {
   constructor(
-    private readonly tradesService: TradesService,
-    @InjectRedis("trade-subscriber") private readonly redisSubscriber: Redis,
-    @InjectRedis("default-client") private readonly redisDB: Redis,
+    @InjectRedis("trade-subscriber") readonly redisSubscriber: Redis,
+    @InjectRedis("default-client") readonly redisDB: Redis,
+    readonly tradesService: TradesService,
+    @Inject(redisQueueConfig.KEY) queueConfig: ConfigType<typeof redisQueueConfig>,
   ) {
-    // We subsribe to the redis reg-sub channel
-    this.redisSubscriber.subscribe(process.env.P2P_QUEUE_NAME, (err: any) => {
-      if (err) {
-        // Just like other commands, subscribe() can fail for some reasons,
-        // ex network issues.
-        console.error("Failed to subscribe: %s", err.message);
-      } else {
-        // `count` represents the number of channels this client are currently subscribed to.
-        console.log(
-          "Subscribed successfully! This client is currently subscribed to the trade channel.",
-        );
-      }
-    });
-
-    const isAlreadyQuerying = {};
-    this.redisSubscriber.on("message", async (channel, message) => {
-      if (channel == process.env.P2P_QUEUE_NAME) {
-        const parsedMessage: QueueMessage = JSON.parse(message);
-        if (
-          parsedMessage.message == process.env.TRIGGER_P2P_TRADE_QUERY_MSG &&
-          !isAlreadyQuerying[parsedMessage.network]
-        ) {
-          console.log("New Trade Message Received", new Date().toLocaleString(), parsedMessage);
-          isAlreadyQuerying[parsedMessage.network] = true;
-          // We await 2 seconds for the fcd to update
-          await sleep(2000);
-          await this.queryNewTransaction(parsedMessage.network);
-          isAlreadyQuerying[parsedMessage.network] = false;
-        }
-      }
-    });
+    super(
+      redisSubscriber,
+      redisDB,
+      queueConfig.CONTRACT_UPDATE_QUEUE_NAME,
+      queueConfig.TRIGGER_P2P_TRADE_QUERY_MSG,
+      queueConfig.REDIS_TRADE_TXHASH_SET,
+    );
   }
 
-  private async queryNewTransaction(network: Network) {
+  async queryNewTransaction(network: Network) {
     const lcd = Axios.create(
       chains[network].axiosObject ?? {
         baseURL: chains[network].URL,
       },
     );
-    console.log("Start trade update for ", network)
+    console.log("Start trade update for ", network);
     // We loop query the lcd for new transactions on the p2p trade contract from the last one registered, until there is no tx left
     let txToAnalyse = [];
     do {
       // We start querying after we left off
-      const offset = await getHashSetCardinal(network, this.redisDB);
+      const offset = await this.getHashSetCardinal(network);
       const [err, response] = await asyncAction(
         lcd.get("/cosmos/tx/v1beta1/txs", {
           params: {
@@ -97,7 +63,7 @@ export class TradeChangesService {
 
       // We start by querying only new transactions (We do this in two steps, as the filter function doesn't wait for async results)
       const txFilter = await Promise.all(
-        response.data.tx_responses.map(async (tx: any) => !(await hasTx(network, this.redisDB, tx.txhash))),
+        response.data.tx_responses.map(async (tx: any) => !(await this.hasTx(network, tx.txhash))),
       );
       txToAnalyse = response.data.tx_responses.filter((_1: any, i: number) => txFilter[i]);
 
@@ -138,7 +104,7 @@ export class TradeChangesService {
 
       // We add the transaction hashes to the redis set :
       await this.redisDB.sadd(
-        getSetName(network),
+        this.getSetName(network),
         response.data.tx_responses.map((tx: any) => tx.txhash),
       );
 

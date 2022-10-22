@@ -124,7 +124,6 @@ export class UtilsService {
       this.collectionRepository.findOneBy({ network, collectionAddress }),
     );
 
-
     // If this info has been found in the database and they have a collection Name we simply return it
     if (!err && collection?.collectionName != "" && collection?.collectionName != null) {
       return collection;
@@ -135,16 +134,18 @@ export class UtilsService {
       this.nftQuery.newCW721Contract(network, collectionAddress),
     );
 
-
     // We save the new collection or get the one that has be saved in the meanwhile while updating
-    //
+
     if (newCollection) {
       newCollection.id = collection?.id;
-      return (
-        await this.collectionRepository
-          .save([newCollection])
-          .catch(() => this.collectionRepository.findOneBy({ network, collectionAddress }))
-      )[0];
+
+      const [err] = await asyncAction(this.collectionRepository.save(newCollection));
+
+      if (err) {
+        return await this.collectionRepository.findOneBy({ network, collectionAddress });
+      } else {
+        return newCollection;
+      }
     }
 
     // If there was an error when creating the collection object, we simply return empty info (with null collectionName)

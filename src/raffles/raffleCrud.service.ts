@@ -3,10 +3,10 @@ import { TypeOrmCrudService } from "@rewiko/crud-typeorm";
 
 import { InjectRepository } from "@nestjs/typeorm";
 import { Raffle, RaffleFavorite, RaffleNotification } from "./entities/raffle.entity";
-
+import { AbstractFilterToSelectCrudService } from "../trades/tradeCrud.service";
 
 @Injectable()
-export class RaffleCrudService extends TypeOrmCrudService<Raffle> {
+export class RaffleCrudService extends AbstractFilterToSelectCrudService<Raffle> {
   constructor(@InjectRepository(Raffle) repo) {
     super(repo);
   }

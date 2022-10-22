@@ -1,20 +1,19 @@
 import { Asset } from "./trade-info.dto";
 
-export class Randomness{
+export class Randomness {
   randomness: number[];
   randomnessRound: number;
-  randomnessOwner:string;
+  randomnessOwner: string;
 }
 
 export class BlockChainRaffleInfo {
-
   owner: string;
-  asset: Asset;
+  assets: Asset[];
   raffleTicketPrice: Asset;
   numberOfTickets: number;
-  randomness?: Randomness;  
+  randomness?: Randomness;
   winner?: string;
-  associatedAssets: Asset[];
+  //is_cancelled: boolean; --> Shouldn't be used off the contract
   state: string;
   raffleOptions: {
     raffleStartTimestamp: number;
@@ -23,5 +22,12 @@ export class BlockChainRaffleInfo {
     comment?: string;
     maxParticipantNumber?: number;
     maxTicketPerAddress?: number;
-  }
+    rafflePreview: number;
+  };
+}
+
+export class BlockChainRaffleResponse {
+  raffleId: number;
+  raffleState: string;
+  raffleInfo: BlockChainRaffleInfo;
 }

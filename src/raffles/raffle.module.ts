@@ -1,10 +1,9 @@
 import { Module } from "@nestjs/common";
-import { TradesService } from "./trades.service";
+import { RafflesService } from "./raffles.service";
 import {
-  CounterTradesController,
-  TradeNotificationController,
-  TradesController,
-  TradeFavoriteController,
+  RafflesController,
+  RaffleNotificationController,
+  RaffleFavoriteController,
 } from "./raffles.controller";
 import { UtilsService } from "../utils-api/utils.service";
 import { UtilsModule } from "../utils-api/utils.module";
@@ -12,28 +11,21 @@ import { QueryLimitService } from "../utils/queryLimit.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import Entities from "../utils/entities";
 import {
-  CounterTradeCrudService,
-  TradeCrudService,
-  TradeFavoriteCrudService,
-  TradeNotificationCrudService,
+  RaffleCrudService,
+  RaffleFavoriteCrudService,
+  RaffleNotificationCrudService,
 } from "./raffleCrud.service";
 
 @Module({
   imports: [UtilsModule, TypeOrmModule.forFeature(Entities)],
-  controllers: [
-    TradesController,
-    CounterTradesController,
-    TradeNotificationController,
-    TradeFavoriteController,
-  ],
+  controllers: [RafflesController, RaffleNotificationController, RaffleFavoriteController],
   providers: [
-    TradesService,
+    RafflesService,
     UtilsService,
     QueryLimitService,
-    TradeCrudService,
-    CounterTradeCrudService,
-    TradeNotificationCrudService,
-    TradeFavoriteCrudService,
+    RaffleCrudService,
+    RaffleNotificationCrudService,
+    RaffleFavoriteCrudService,
   ],
 })
-export class TradesModule {}
+export class RafflesModule {}

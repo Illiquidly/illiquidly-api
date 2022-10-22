@@ -110,7 +110,6 @@ export class TradesService {
     };
   }
 
-
   // When updating a trade directly from the Blockchain, you want to update their tradeInfo only
   async updateTrade(network: Network, tradeId: number) {
     const [, tradeInfo]: [any, Trade] = await asyncAction(
@@ -127,10 +126,10 @@ export class TradesService {
     tradeDBObject.counterTrades = tradeInfo?.counterTrades ?? [];
 
     // We try to update the trade. If the trade already exists, we don't care
-    // This is a workaround, because we don't have functionnal lock 
-    let [error, _] = await asyncAction(this.tradesRepository.save(tradeDBObject));
-    if(error){
-      console.log("We don't care if this fails")
+    // This is a workaround, because we don't have functionnal lock
+    const [error, _] = await asyncAction(this.tradesRepository.save(tradeDBObject));
+    if (error) {
+      console.log("We don't care if this fails");
     }
     // We delete the old tradeInfo, or it cloggs the memory for nothing
     if (tradeInfo?.tradeInfo) {

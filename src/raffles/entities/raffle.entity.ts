@@ -1,19 +1,38 @@
-import {
-  CW721Token,
-  ValuedCoin,
-  ValuedCW20Coin,
-} from "../../utils-api/entities/nft-info.entity";
+import { CW721Token, ValuedCoin, ValuedCW20Coin } from "../../utils-api/entities/nft-info.entity";
 import {
   Column,
   Entity,
+  JoinColumn,
   JoinTable,
   ManyToMany,
   ManyToOne,
+  OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
+  Relation,
   Unique,
 } from "typeorm";
 import { Network } from "../../utils/blockchain/dto/network.dto";
+import { TokenResponse } from "src/utils-api/dto/nft.dto";
 
+@Entity()
+@Unique("UQ_PARTICIPATION_PER_TRADE", ["raffleId", "user"])
+export class Participant {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column()
+  raffleId: string;
+
+  @Column()
+  user: string;
+
+  @Column()
+  ticketNumber: number;
+
+  @ManyToOne(() => Raffle, raffle => raffle.participants)
+  raffle: Relation<Raffle>;
+}
 
 @Entity()
 @Unique("UQ_TRADES", ["network", "raffleId"])
@@ -31,18 +50,24 @@ export class Raffle {
   raffleId: number;
 
   @Column()
+  state: string;
+
+  @Column()
   owner: string;
 
-  @ManyToOne(() => CW721Token)
-  cw721Asset: CW721Token;
+  @ManyToMany(() => CW721Token)
+  @JoinTable()
+  cw721Assets: CW721Token[];
 
-  @Column({ type: "text" })
-  cw1155Asset: string;
+  @Column({ type: "json" })
+  cw1155Assets: any[];
 
-  @ManyToOne(() => ValuedCW20Coin, { cascade: true, nullable: true})
+  @OneToOne(() => ValuedCW20Coin, { cascade: true, nullable: true })
+  @JoinColumn()
   cw20TicketPrice?: ValuedCW20Coin;
 
-  @ManyToOne(() => ValuedCoin, { cascade: true, nullable: true })
+  @OneToOne(() => ValuedCoin, { cascade: true, nullable: true })
+  @JoinColumn()
   coinTicketPrice?: ValuedCoin;
 
   @Column()
@@ -56,12 +81,12 @@ export class Raffle {
   @Column({
     nullable: true,
   })
-  randomness?: string;
+  randomnessOwner?: string;
 
   @Column({
-    type: "date"
+    type: "datetime",
   })
-  raffleStartTimestamp: Date;
+  raffleStartDate: Date;
 
   @Column()
   raffleDuration: number;
@@ -77,18 +102,30 @@ export class Raffle {
   @Column({
     nullable: true,
   })
-  maxParticipantNumber?: number
+  maxParticipantNumber?: number;
 
   @Column({
     nullable: true,
   })
   maxTicketPerAddress?: number;
 
+  @Column({ type: "json" })
+  rafflePreview: any;
+
+  @OneToMany(() => Participant, participant => participant.raffle, {
+    cascade: true,
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
+  })
+  participants: Participant[];
+
   @ManyToMany(() => RaffleFavorite, favorite => favorite.raffles)
+  @JoinTable()
   raffleFavorites: RaffleFavorite[];
 }
 
 export enum RaffleNotificationType {
+  newTicketBought = "new_ticket_bought",
   raffleFinished = "raffle_finished",
 }
 
@@ -97,6 +134,7 @@ export enum NotificationStatus {
   read = "read",
 }
 
+@Unique("UQ_NOTIFICATION_TYPE", ["network", "user", "raffleId", "notificationType", "status"])
 @Entity()
 export class RaffleNotification {
   @PrimaryGeneratedColumn()
@@ -116,6 +154,9 @@ export class RaffleNotification {
 
   @Column()
   raffleId: number;
+
+  @Column({ type: "json", default: null })
+  notificationPreview: { cw721Coin?: TokenResponse };
 
   @Column({
     type: "enum",
@@ -148,5 +189,5 @@ export class RaffleFavorite {
 
   @ManyToMany(() => Raffle, raffle => raffle.raffleFavorites)
   @JoinTable()
-  raffles:  Raffle[];
+  raffles: Raffle[];
 }

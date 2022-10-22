@@ -1,35 +1,31 @@
-import { Injectable } from "@nestjs/common";
-import { asyncAction } from "../utils/js/asyncAction";
+import { Inject, Injectable } from "@nestjs/common";
+import { asyncAction } from "../../utils/js/asyncAction";
 
-import { Network } from "../utils/blockchain/dto/network.dto";
-import { BlockchainTradeQuery } from "../utils/blockchain/p2pTradeQuery";
-import { BlockchainNFTQuery } from "../utils/blockchain/nft_query";
+import { Network } from "../../utils/blockchain/dto/network.dto";
 import Axios from "axios";
-import { chains, contracts } from "../utils/blockchain/chains";
+import { chains, contracts } from "../../utils/blockchain/chains";
 import { InjectRedis } from "@liaoliaots/nestjs-redis";
 import Redis from "ioredis";
 import { TxLog } from "@terra-money/terra.js";
 import {
   CounterTrade,
   TradeNotification,
-  TradeNotificationStatus,
   TradeNotificationType,
-} from "../trades/entities/trade.entity";
-import {
-  CW721TokenAttribute
-} from "../utils-api/entities/nft-info.entity"
+} from "../../trades/entities/trade.entity";
+import { CW721TokenAttribute } from "../../utils-api/entities/nft-info.entity";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
-import { QueueMessage } from "./websocket-listener.service";
-import { sleep } from "../utils/js/sleep";
-import { TradesService } from "../trades/trades.service";
+import { TradesService } from "../../trades/trades.service";
+import { redisQueueConfig } from "../../utils/configuration";
+import { ConfigType } from "@nestjs/config";
+import { ChangeListenerService } from "../change-listener.service";
 const pMap = require("p-map");
 const DATE_FORMAT = require("dateformat");
 
 const redisHashSetName: string = process.env.REDIS_NOTIFICATION_TXHASH_SET;
 
-function getSetName(network: Network){
-  return `${redisHashSetName} - ${network}`
+function getSetName(network: Network) {
+  return `${redisHashSetName} - ${network}`;
 }
 
 async function getHashSetCardinal(network: Network, db: Redis) {
@@ -41,52 +37,23 @@ async function hasTx(network: Network, db: Redis, txHash: string): Promise<boole
 }
 
 @Injectable()
-export class NotificationChangesService {
-  tradeQuery: BlockchainTradeQuery;
-  nftQuery: BlockchainNFTQuery;
-
+export class NotificationChangesService extends ChangeListenerService {
   constructor(
-    @InjectRedis("notification-subscriber") private readonly redisSubscriber: Redis,
-    @InjectRedis("default-client") private readonly redisDB: Redis,
+    @InjectRedis("trade-notification-subscriber") readonly redisSubscriber: Redis,
+    @InjectRedis("default-client") readonly redisDB: Redis,
     @InjectRepository(TradeNotification)
     private tradeNotificationRepository: Repository<TradeNotification>,
     @InjectRepository(CounterTrade) private counterTradesRepository: Repository<CounterTrade>,
     private readonly tradesService: TradesService,
+    @Inject(redisQueueConfig.KEY) queueConfig: ConfigType<typeof redisQueueConfig>,
   ) {
-    this.redisSubscriber.subscribe(process.env.P2P_QUEUE_NAME, (err: any) => {
-      if (err) {
-        // Just like other commands, subscribe() can fail for some reasons,
-        // ex network issues.
-        console.error("Failed to subscribe: %s", err.message);
-      } else {
-        // `count` represents the number of channels this client are currently subscribed to.
-        console.log(
-          "Subscribed successfully! This client is currently subscribed to the trade notification channel.",
-        );
-      }
-    });
-
-    const isAlreadyQuerying = {};
-    this.redisSubscriber.on("message", async (channel, message) => {
-      if (channel == process.env.P2P_QUEUE_NAME) {
-        const parsedMessage: QueueMessage = JSON.parse(message);
-        if (
-          parsedMessage.message == process.env.TRIGGER_P2P_TRADE_QUERY_MSG &&
-          !isAlreadyQuerying[parsedMessage.network]
-        ) {
-          console.log(
-            "New Notification Message Received",
-            new Date().toLocaleString(),
-            parsedMessage,
-          );
-          isAlreadyQuerying[parsedMessage.network] = true;
-          // We await 2 seconds for the fcd to update
-          await sleep(2000);
-          await this.queryNewTransaction(parsedMessage.network);
-          isAlreadyQuerying[parsedMessage.network] = false;
-        }
-      }
-    });
+    super(
+      redisSubscriber,
+      redisDB,
+      queueConfig.CONTRACT_UPDATE_QUEUE_NAME,
+      queueConfig.TRIGGER_P2P_TRADE_QUERY_MSG,
+      queueConfig.REDIS_TRADE_NOTIFICATION_TXHASH_SET,
+    );
   }
 
   private async createNotification(network: Network, tradeId: number, tx: any) {
@@ -98,24 +65,24 @@ export class NotificationChangesService {
     notification.notificationPreview =
       (await this.tradesService.parseTokenPreview(network, trade.tradeInfo.tradePreview)) ?? {};
     // We need to make sure we don't send the Metadata back with the attribute
-    notification.notificationPreview.cw721Coin.attributes = notification.notificationPreview.cw721Coin.attributes.map(
-      (attribute: CW721TokenAttribute) => {
-        attribute.metadata = null;
-        return attribute;
-      },
-    );
+    notification.notificationPreview.cw721Coin.attributes =
+      notification.notificationPreview.cw721Coin.attributes.map(
+        (attribute: CW721TokenAttribute) => {
+          attribute.metadata = null;
+          return attribute;
+        },
+      );
     return notification;
   }
 
-  private async queryNewTransaction(network: Network) {
-
+  async queryNewTransaction(network: Network) {
     const lcd = Axios.create(
       chains[network].axiosObject ?? {
         baseURL: chains[network].URL,
       },
     );
 
-    console.log("Start trade notification update for ", network)
+    console.log("Start trade notification update for ", network);
     // We loop query the lcd for new transactions on the p2p trade contract from the last one registered, until there is no tx left
     let txToAnalyse = [];
     do {
@@ -137,7 +104,9 @@ export class NotificationChangesService {
 
       // We start by querying only new transactions (We do this in two steps, as the filter function doesn't wait for async results)
       const txFilter = await Promise.all(
-        response.data.tx_responses.map(async (tx: any) => !(await hasTx(network, this.redisDB, tx.txhash))),
+        response.data.tx_responses.map(
+          async (tx: any) => !(await hasTx(network, this.redisDB, tx.txhash)),
+        ),
       );
       txToAnalyse = response.data.tx_responses.filter((_: any, i: number) => txFilter[i]);
       // Then we iterate over the transactions and get the action it refers to and the necessary information

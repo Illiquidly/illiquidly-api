@@ -7,9 +7,7 @@ const PRINT_DECIMAL_POINTS = 3;
 
 export const toDecimal = (num: BigSource, decimalPoints = 6): string => {
   const decimalNum = big(num).div(10 ** decimalPoints);
-  return parseFloat(decimalNum.toString())
-    .toFixed(PRINT_DECIMAL_POINTS)
-    .toString();
+  return parseFloat(decimalNum.toString()).toFixed(PRINT_DECIMAL_POINTS).toString();
 };
 
 export const formatDecimal = (num: BigSource) => {
