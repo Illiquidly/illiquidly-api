@@ -46,6 +46,9 @@ import { RafflesService } from "./raffles.service";
       coinTicketPrice: {
         eager: true,
       },
+      participants: {
+        eager: true,
+      },
       raffleFavorites: {
         eager: true,
         select: false,

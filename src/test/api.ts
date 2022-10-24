@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const url = "http://localhost:3000/trades";
+const url = "http://localhost:3000/raffles";
 
 import { RequestQueryBuilder } from "@rewiko/crud-request";
 
@@ -35,18 +35,9 @@ qb.setLimit(5);
 qb.search({
   $or: [
     {
-      "tradeInfo.whitelistedUsers": "[]",
-    },
-    {
-      "tradeInfo.whitelistedUsers": {
-        $cont: "terra1hzttzrf2yge4pepnlalvt5zuaphpzk3nnc8x7s",
-      },
-    },
-    {
-      "tradeInfo.whitelistedUsers": {
-        $ne: "[]",
-      },
-      "tradeInfo.owner": "uy",
+      "participants.user": {
+        "$eq": "terra1kj6vwwvsw7vy7x35mazqfxyln2gk5xy00r87qy"
+      }
     },
   ],
 });

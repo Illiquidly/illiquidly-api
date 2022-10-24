@@ -103,10 +103,13 @@ export class TradeChangesService extends ChangeListenerService {
       );
 
       // We add the transaction hashes to the redis set :
-      await this.redisDB.sadd(
-        this.getSetName(network),
-        response.data.tx_responses.map((tx: any) => tx.txhash),
-      );
+      let txHashes = response.data.tx_responses.map((tx: any) => tx.txhash);
+      if(txHashes.length){
+         await this.redisDB.sadd(
+          this.getSetName(network),
+          response.data.tx_responses.map((tx: any) => tx.txhash),
+        );
+      }
 
       // If no transactions queried were a analyzed, we return
     } while (txToAnalyse.length);
