@@ -120,10 +120,13 @@ export class RaffleNotificationChangesService extends ChangeListenerService {
       asyncAction(this.raffleNotificationRepository.save(notifications));
 
       // We add the transaction hashes to the redis set :
-      await this.redisDB.sadd(
-        this.getSetName(network),
-        response.data.tx_responses.map((tx: any) => tx.txhash),
-      );
+      let txHashes = response.data.tx_responses.map((tx: any) => tx.txhash);
+      if(txHashes.length){
+         await this.redisDB.sadd(
+          this.getSetName(network),
+          response.data.tx_responses.map((tx: any) => tx.txhash),
+        );
+      }
       console.log("Notification update finished for offset", offset);
 
       // If no transactions queried were a analyzed, we return
