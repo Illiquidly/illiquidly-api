@@ -43,6 +43,7 @@ qb.search({
 });
 
 const test = qb.query();
+console.log(test)
 
 axios
   .get(`${url}/?${test}`)
