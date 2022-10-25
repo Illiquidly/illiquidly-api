@@ -26,7 +26,6 @@ import { RafflesService } from "./raffles.service";
     join: {
       cw721Assets: {
         eager: true,
-        alias: "cw721Assets_join",
       },
       "cw721Assets.collection": {
         eager: true,

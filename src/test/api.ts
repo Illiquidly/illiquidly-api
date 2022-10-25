@@ -35,8 +35,8 @@ qb.setLimit(5);
 qb.search({
   $or: [
     {
-      "participants.user": {
-        "$eq": "terra1kj6vwwvsw7vy7x35mazqfxyln2gk5xy00r87qy"
+      "cw721Assets.allNftInfo": {
+        "$cont": "Galactic"
       }
     },
   ],
