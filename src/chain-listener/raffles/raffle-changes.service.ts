@@ -71,6 +71,7 @@ export class RaffleChangesService extends ChangeListenerService {
           return tx.logs
             .map((log: any): number[] => {
               const txLog = new TxLog(log.msg_index, log.log, log.events);
+              console.log(txLog.eventsByType.wasm)
               const raffleIds = txLog.eventsByType.wasm.raffle_id?.map((id: string) =>
                 parseInt(id),
               );

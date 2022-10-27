@@ -2,7 +2,7 @@ import { Transform } from "class-transformer";
 
 import { IsInt } from "class-validator";
 import { Network } from "../../utils/blockchain/dto/network.dto";
-import { AssetResponse } from "../../utils-api/dto/nft.dto";
+import { AssetResponse, RawCoin } from "../../utils-api/dto/nft.dto";
 import { Participant } from "../entities/raffle.entity";
 
 export class SingleRaffleParameters {
@@ -11,6 +11,11 @@ export class SingleRaffleParameters {
   @IsInt()
   @Transform(({ value }) => Number.parseInt(value))
   raffleId: number;
+}
+
+export class TicketPrice{
+  coin?: RawCoin;
+  cw20Coin?: RawCoin;
 }
 
 export class RaffleOptionsResponse {
@@ -27,7 +32,7 @@ export class RaffleInfoResponse {
   id: number;
   owner: string;
   allAssociatedAssets: AssetResponse[];
-  raffleTicketPrice: AssetResponse;
+  raffleTicketPrice: TicketPrice;
   numberOfTickets: number;
   randomnessOwner?: string;
   winner?: string;

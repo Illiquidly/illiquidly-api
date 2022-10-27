@@ -22,7 +22,7 @@ import {
   BlockChainRaffleInfo,
   BlockChainRaffleResponse,
 } from "src/utils/blockchain/dto/raffle-info.dto";
-import { RaffleInfoResponse, RaffleResponse } from "./dto/getRaffles.dto";
+import { RaffleInfoResponse, RaffleResponse, TicketPrice } from "./dto/getRaffles.dto";
 const pMap = require("p-map");
 const _ = require("lodash");
 
@@ -112,14 +112,17 @@ export class RafflesService {
         (participant: Participant) => participant.user == key,
       );
       // 2. If it exists we update the number of tickets
+      // ANd we update the timestamp at which the object was last updated
       if (existingParticipantObject.length != 0) {
         existingParticipantObject[0].ticketNumber += value;
+        existingParticipantObject[0].updatedAt = new Date(Date.now());
       }
       //3. If it doesn't exists, we create a new
       else {
         const p = new Participant();
         p.user = key;
         p.ticketNumber = value;
+        p.updatedAt = new Date(Date.now());
         raffle.participants.push(p);
       }
       return null;
@@ -169,7 +172,7 @@ export class RafflesService {
       cw20TicketPrice,
       coinTicketPrice,
       numberOfTickets: raffleInfo.raffleInfo.numberOfTickets,
-      winner: raffleInfo.raffleInfo.owner,
+      winner: raffleInfo.raffleInfo.winner,
       randomnessOwner: raffleInfo.raffleInfo.randomness?.randomnessOwner,
       raffleStartDate: new Date(raffleInfo.raffleInfo.raffleOptions.raffleStartTimestamp / 1000000),
       raffleDuration: raffleInfo.raffleInfo.raffleOptions.raffleDuration,
@@ -185,6 +188,31 @@ export class RafflesService {
   }
 
   async parseRaffleDBToResponse(network: Network, raffle: Raffle): Promise<RaffleResponse> {
+
+    let raffleTicketPrice: TicketPrice;
+    if(raffle.cw20TicketPrice){
+      raffleTicketPrice = {
+        cw20Coin: {
+            currency: raffle.cw20TicketPrice.cw20Coin.coinAddress,
+            amount: raffle.cw20TicketPrice.amount,
+          }
+        };
+    }else if (raffle.coinTicketPrice){
+      if (raffle.coinTicketPrice.denom == "uluna") {
+        raffleTicketPrice = {
+          coin:  formatNiceLuna(raffle.coinTicketPrice.amount)
+        }
+      }else
+        raffleTicketPrice = {
+          coin:  {
+            currency: raffle.coinTicketPrice.denom,
+            amount: raffle.coinTicketPrice.amount,
+          }
+      }
+    }else{
+      raffleTicketPrice = {};
+    }
+    
     const raffleInfo: RaffleInfoResponse = {
       id: raffle.id,
       owner: raffle.owner,
@@ -195,15 +223,7 @@ export class RafflesService {
           };
         })
         .concat(raffle.cw1155Assets ?? []),
-      raffleTicketPrice: {
-        cw20Coin: raffle.cw20TicketPrice
-          ? {
-              address: raffle.cw20TicketPrice.cw20Coin.coinAddress,
-              amount: raffle.cw20TicketPrice.amount,
-            }
-          : null,
-        coin: raffle.coinTicketPrice ?? null,
-      },
+      raffleTicketPrice,
       numberOfTickets: raffle.numberOfTickets,
       randomnessOwner: raffle.randomnessOwner,
       winner: raffle.winner,

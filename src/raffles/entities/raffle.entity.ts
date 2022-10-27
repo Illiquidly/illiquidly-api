@@ -30,6 +30,9 @@ export class Participant {
   @Column()
   ticketNumber: number;
 
+  @Column( {type: "datetime", nullable: true} )
+  updatedAt?: Date;
+
   @ManyToOne(() => Raffle, raffle => raffle.participants)
   raffle: Relation<Raffle>;
 }

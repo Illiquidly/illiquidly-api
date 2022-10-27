@@ -49,10 +49,11 @@ export abstract class ChangeListenerService {
   }
 
   getSetName(network: Network) {
-    return `${this.redisHashSetName} - ${network}`;
+    return `${this.redisHashSetName}-${network}`;
   }
 
   async getHashSetCardinal(network: Network) {
+    console.log(this.getSetName(network))
     return await this.redisDB.scard(this.getSetName(network));
   }
 
