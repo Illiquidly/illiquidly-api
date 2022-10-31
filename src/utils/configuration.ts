@@ -25,3 +25,7 @@ export const NFTContentAPIConfig = registerAs("wallet-content-config", () => ({
   // Database options
   DB_VERSION: process.env.DB_VERSION,
 }));
+
+export const signingTerraConfig = registerAs("signing-terra-config", () => ({
+  testnet: process.env.TERRA_TESTNET_MNEMONIC,
+}));

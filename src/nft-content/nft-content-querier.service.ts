@@ -3,7 +3,7 @@ import { NFTContentResponse } from "./dto/get-nft-content.dto";
 import { asyncAction } from "../utils/js/asyncAction.js";
 import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
 import { Network } from "../utils/blockchain/dto/network.dto";
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { UtilsService } from "../utils-api/utils.service";
 import { BlockchainNFTQuery } from "../utils/blockchain/nft_query";
 import { QueryLimitService } from "../utils/queryLimit.service";
@@ -17,6 +17,7 @@ const pMap = require("p-map");
 
 @Injectable()
 export class NftContentQuerierService {
+  readonly logger = new Logger(NftContentQuerierService.name);
   nftQuery: BlockchainNFTQuery;
   constructor(
     private readonly utilsService: UtilsService,
@@ -51,7 +52,7 @@ export class NftContentQuerierService {
           this.utilsService.nftTokenInfoFromDB(network, nft, id),
         );
         if (innerErr) {
-          console.log("Error Fetching NFT Info From DB", innerErr);
+          this.logger.log("Error Fetching NFT Info From DB", innerErr);
         }
         return tokenInfo;
       }),

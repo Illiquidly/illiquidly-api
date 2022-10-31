@@ -188,31 +188,30 @@ export class RafflesService {
   }
 
   async parseRaffleDBToResponse(network: Network, raffle: Raffle): Promise<RaffleResponse> {
-
     let raffleTicketPrice: TicketPrice;
-    if(raffle.cw20TicketPrice){
+    if (raffle.cw20TicketPrice) {
       raffleTicketPrice = {
         cw20Coin: {
-            currency: raffle.cw20TicketPrice.cw20Coin.coinAddress,
-            amount: raffle.cw20TicketPrice.amount,
-          }
-        };
-    }else if (raffle.coinTicketPrice){
+          currency: raffle.cw20TicketPrice.cw20Coin.coinAddress,
+          amount: raffle.cw20TicketPrice.amount,
+        },
+      };
+    } else if (raffle.coinTicketPrice) {
       if (raffle.coinTicketPrice.denom == "uluna") {
         raffleTicketPrice = {
-          coin:  formatNiceLuna(raffle.coinTicketPrice.amount)
-        }
-      }else
+          coin: formatNiceLuna(raffle.coinTicketPrice.amount),
+        };
+      } else
         raffleTicketPrice = {
-          coin:  {
+          coin: {
             currency: raffle.coinTicketPrice.denom,
             amount: raffle.coinTicketPrice.amount,
-          }
-      }
-    }else{
+          },
+        };
+    } else {
       raffleTicketPrice = {};
     }
-    
+
     const raffleInfo: RaffleInfoResponse = {
       id: raffle.id,
       owner: raffle.owner,

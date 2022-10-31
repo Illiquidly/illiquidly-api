@@ -36,14 +36,14 @@ qb.search({
   $or: [
     {
       "cw721Assets.allNftInfo": {
-        "$cont": "Galactic"
-      }
+        $cont: "Galactic",
+      },
     },
   ],
 });
 
 const test = qb.query();
-console.log(test)
+console.log(test);
 
 axios
   .get(`${url}/?${test}`)

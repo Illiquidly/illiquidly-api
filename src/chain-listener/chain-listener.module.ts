@@ -19,7 +19,8 @@ import { WebsocketListenerService } from "./websocket-listener.service";
 import { RedisLockService } from "../utils/lock";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 
-import { redisQueueConfig } from "../utils/configuration";
+import { redisQueueConfig, signingTerraConfig } from "../utils/configuration";
+import { RandomnessProviderService } from "./raffles/provide_randomness";
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { redisQueueConfig } from "../utils/configuration";
     RafflesModule,
     TypeOrmModule.forFeature(Entities),
     ConfigModule.forRoot({
-      load: [redisQueueConfig],
+      load: [redisQueueConfig, signingTerraConfig],
     }),
   ],
   controllers: [],
@@ -39,6 +40,8 @@ import { redisQueueConfig } from "../utils/configuration";
     RafflesService,
     RaffleChangesService,
     RaffleNotificationChangesService,
+
+    RandomnessProviderService,
 
     WebsocketListenerService,
     UtilsService,

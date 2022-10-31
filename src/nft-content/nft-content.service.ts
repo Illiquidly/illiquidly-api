@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import "dotenv/config";
 import { NFTContentResponse, UpdateMode } from "./dto/get-nft-content.dto";
 import { Network } from "../utils/blockchain/dto/network.dto";
@@ -35,6 +35,7 @@ const IDLE_UPDATE_INTERVAL = parseInt(process.env.IDLE_UPDATE_INTERVAL);
 export class NftContentService {
   redisDB: Redis;
 
+  readonly logger = new Logger(NftContentService.name);
   constructor(
     private readonly nftContentQuerierService: NftContentQuerierService,
     protected readonly lockService: RedisLockService,
@@ -91,7 +92,7 @@ export class NftContentService {
 
     // We update the saved data
     this._internalUpdate(network, address, currentData).catch(error =>
-      console.log("Error during update", error),
+      this.logger.error("Error during update", error),
     );
     return await this.nftContentQuerierService.mapWalletContentDBForResponse(network, currentData);
   }
@@ -131,7 +132,7 @@ export class NftContentService {
     data.state = UpdateState.isUpdating;
     await this.walletContentRepository.save([data]);
 
-    console.log("Update Triggered");
+    this.logger.log(`Update Triggered for ${address}`);
 
     const queryCallback = async (newContracts: string[], txSeen: WalletContentTransactions) => {
       if (!network || !address || !data) {

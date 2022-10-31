@@ -12,9 +12,11 @@ import { AppLoggerMiddleware } from "./utils/request-logger";
 import { RafflesModule } from "./raffles/raffle.module";
 import { ConfigModule } from "@nestjs/config";
 import { redisQueueConfig, NFTContentAPIConfig } from "./utils/configuration";
+import { ScheduleModule } from "@nestjs/schedule";
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       load: [redisQueueConfig, NFTContentAPIConfig],
     }),

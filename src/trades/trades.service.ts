@@ -127,10 +127,8 @@ export class TradesService {
 
     // We try to update the trade. If the trade already exists, we don't care
     // This is a workaround, because we don't have functionnal lock
-    const [error, _] = await asyncAction(this.tradesRepository.save(tradeDBObject));
-    if (error) {
-      console.log("We don't care if this fails");
-    }
+    await asyncAction(this.tradesRepository.save(tradeDBObject));
+
     // We delete the old tradeInfo, or it cloggs the memory for nothing
     if (tradeInfo?.tradeInfo) {
       await this.tradeInfoRepository.remove(tradeInfo?.tradeInfo);

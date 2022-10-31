@@ -3,10 +3,12 @@ import { InjectRedis } from "@liaoliaots/nestjs-redis";
 import Redis from "ioredis";
 import { QueueMessage } from "./websocket-listener.service";
 import { sleep } from "../utils/js/sleep";
+import { Logger } from "@nestjs/common";
 
 export abstract class ChangeListenerService {
   redisHashSetName: string;
 
+  readonly logger = new Logger(ChangeListenerService.name);
   constructor(
     readonly redisSubscriber: Redis,
     readonly redisDB: Redis,
@@ -20,10 +22,10 @@ export abstract class ChangeListenerService {
       if (err) {
         // Just like other commands, subscribe() can fail for some reasons,
         // ex network issues.
-        console.error("Failed to subscribe: %s", err.message);
+        this.logger.error("Failed to subscribe: %s", err.message);
       } else {
         // `count` represents the number of channels this client are currently subscribed to.
-        console.log(
+        this.logger.log(
           `Subscribed successfully! This client is currently subscribed to the ${redisHashSetName} channel.`,
         );
       }
@@ -34,7 +36,7 @@ export abstract class ChangeListenerService {
       if (channel == queueName) {
         const parsedMessage: QueueMessage = JSON.parse(message);
         if (parsedMessage.message == queueMessage && !isAlreadyQuerying[parsedMessage.network]) {
-          console.log(
+          this.logger.log(
             `New Trade Message Received by ${redisHashSetName}`,
             new Date().toLocaleString(),
           );
@@ -53,7 +55,6 @@ export abstract class ChangeListenerService {
   }
 
   async getHashSetCardinal(network: Network) {
-    console.log(this.getSetName(network))
     return await this.redisDB.scard(this.getSetName(network));
   }
 

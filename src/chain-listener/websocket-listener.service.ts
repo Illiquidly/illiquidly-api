@@ -8,7 +8,7 @@ export interface QueueMessage {
   message: string;
   network: Network;
 }
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { Network } from "../utils/blockchain/dto/network.dto";
 import { contracts, ws } from "../utils/blockchain/chains";
 import Redis from "ioredis";
@@ -16,6 +16,8 @@ import { InjectRedis } from "@liaoliaots/nestjs-redis";
 
 @Injectable()
 export class WebsocketListenerService {
+
+  private readonly logger = new Logger(WebsocketListenerService.name);
   constructor(@InjectRedis("trade-publisher") private readonly redisPublisher: Redis) {
     // P2P Transaction tracker
     // We subscribe to each network
@@ -41,10 +43,10 @@ export class WebsocketListenerService {
               process.env.CONTRACT_UPDATE_QUEUE_NAME,
               JSON.stringify(message),
             );
-            console.log("New contract transaction for trades");
+            this.logger.log("New contract transaction for trades");
           },
         );
-        console.log("Subscribed to the Trade contract on", chain);
+        this.logger.log(`Subscribed to the Trade contract on ${chain}`);
       }
 
       // For the raffle contract
@@ -64,10 +66,10 @@ export class WebsocketListenerService {
               process.env.CONTRACT_UPDATE_QUEUE_NAME,
               JSON.stringify(message),
             );
-            console.log("New contract transaction for raffles");
+            this.logger.log("New contract transaction for raffles");
           },
         );
-        console.log("Subscribed to the Raffle contract on", chain);
+        this.logger.log(`Subscribed to the Raffle contract on ${chain}`);
       }
 
       if (contracts.raffle || contracts.p2pTrade) {

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { asyncAction } from "../../utils/js/asyncAction";
 
 import { Network } from "../../utils/blockchain/dto/network.dto";
@@ -20,7 +20,8 @@ const pMap = require("p-map");
 const DATE_FORMAT = require("dateformat");
 
 @Injectable()
-export class RaffleNotificationChangesService extends ChangeListenerService {
+export class RaffleNotificationChangesService extends ChangeListenerService { 
+  
   constructor(
     @InjectRedis("raffle-notification-subscriber") readonly redisSubscriber: Redis,
     @InjectRedis("default-client") readonly redisDB: Redis,
@@ -66,7 +67,6 @@ export class RaffleNotificationChangesService extends ChangeListenerService {
       },
     );
 
-    console.log("Start raffle notification update for ", network);
     // We loop query the lcd for new transactions on the p2p trade contract from the last one registered, until there is no tx left
     let txToAnalyse = [];
     do {
@@ -82,15 +82,13 @@ export class RaffleNotificationChangesService extends ChangeListenerService {
       );
       // If we get no lcd tx result
       if (err) {
-        console.log(err);
+        this.logger.error(err);
         return;
       }
 
       // We start by querying only new transactions (We do this in two steps, as the filter function doesn't wait for async results)
       const txFilter = await Promise.all(
-        response.data.tx_responses.map(
-          async (tx: any) => !(await this.hasTx(network, tx.txhash)),
-        ),
+        response.data.tx_responses.map(async (tx: any) => !(await this.hasTx(network, tx.txhash))),
       );
       txToAnalyse = response.data.tx_responses.filter((_: any, i: number) => txFilter[i]);
       // Then we iterate over the transactions and get the action it refers to and the necessary information
@@ -120,17 +118,17 @@ export class RaffleNotificationChangesService extends ChangeListenerService {
       asyncAction(this.raffleNotificationRepository.save(notifications));
 
       // We add the transaction hashes to the redis set :
-      let txHashes = response.data.tx_responses.map((tx: any) => tx.txhash);
-      if(txHashes.length){
-         await this.redisDB.sadd(
+      const txHashes = response.data.tx_responses.map((tx: any) => tx.txhash);
+      if (txHashes.length) {
+        await this.redisDB.sadd(
           this.getSetName(network),
           response.data.tx_responses.map((tx: any) => tx.txhash),
         );
       }
-      console.log("Notification update finished for offset", offset);
+      this.logger.log("Notification update finished for offset", offset);
 
       // If no transactions queried were a analyzed, we return
     } while (txToAnalyse.length);
-    console.log("Update finished notifications");
+    this.logger.log("Update finished notifications");
   }
 }

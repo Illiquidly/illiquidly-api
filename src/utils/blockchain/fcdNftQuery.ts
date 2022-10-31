@@ -87,7 +87,7 @@ export async function updateInteractedNfts(
     );
     clearTimeout(axiosTimeout);
     if (error) {
-      console.log(error);
+      console.error(error);
     }
     if (txData == null) {
       break;
@@ -133,7 +133,5 @@ export async function updateInteractedNfts(
       queryNext = false;
     }
   }
-
-  console.log("End updateInteractedNfts");
   return;
 }

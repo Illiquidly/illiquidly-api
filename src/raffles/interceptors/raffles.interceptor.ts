@@ -24,8 +24,6 @@ export class RaffleResultInterceptor implements NestInterceptor {
   }
 
   async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
-
-
     // First we start by updating the state if raffles that have expired
     // 1. We update raffles that come from the created state and that are after the raffle start timestamp
     await this.rafflesRepository.query(`
@@ -33,14 +31,14 @@ export class RaffleResultInterceptor implements NestInterceptor {
         SET state = 'started'
         WHERE NOW() > raffle_start_date
         AND state = 'created' 
-      `)
+      `);
 
     await this.rafflesRepository.query(`
         UPDATE raffle
         SET state = 'closed'
         WHERE NOW() > DATE_ADD(raffle_start_date, INTERVAL raffle_duration second)
         AND state = 'started' 
-      `)
+      `);
 
     await this.rafflesRepository.query(`
         UPDATE raffle
@@ -48,8 +46,7 @@ export class RaffleResultInterceptor implements NestInterceptor {
         WHERE NOW() > DATE_ADD(DATE_ADD(raffle_start_date, INTERVAL raffle_duration second), INTERVAL raffle_timeout second)
         AND state = 'closed' 
         AND randomness_owner IS NOT NULL
-      `)
-
+      `);
 
     return next.handle().pipe(
       map(async res => {

@@ -39,7 +39,6 @@ export class TradeChangesService extends ChangeListenerService {
         baseURL: chains[network].URL,
       },
     );
-    console.log("Start trade update for ", network);
     // We loop query the lcd for new transactions on the p2p trade contract from the last one registered, until there is no tx left
     let txToAnalyse = [];
     do {
@@ -54,10 +53,9 @@ export class TradeChangesService extends ChangeListenerService {
         }),
       );
 
-      console.log(offset);
       // If we get no lcd tx result
       if (err) {
-        console.log(err);
+        this.logger.error(err);
         return;
       }
 
@@ -85,7 +83,7 @@ export class TradeChangesService extends ChangeListenerService {
         })
         .flat();
 
-      console.log("Trade Ids to update", _.uniqWith(_.compact(idsToQuery), _.isEqual));
+      this.logger.log("Trade Ids to update", _.uniqWith(_.compact(idsToQuery), _.isEqual));
 
       // The we query the blockchain for trade info and put it into the database
       await pMap(
@@ -103,9 +101,9 @@ export class TradeChangesService extends ChangeListenerService {
       );
 
       // We add the transaction hashes to the redis set :
-      let txHashes = response.data.tx_responses.map((tx: any) => tx.txhash);
-      if(txHashes.length){
-         await this.redisDB.sadd(
+      const txHashes = response.data.tx_responses.map((tx: any) => tx.txhash);
+      if (txHashes.length) {
+        await this.redisDB.sadd(
           this.getSetName(network),
           response.data.tx_responses.map((tx: any) => tx.txhash),
         );
@@ -113,6 +111,6 @@ export class TradeChangesService extends ChangeListenerService {
 
       // If no transactions queried were a analyzed, we return
     } while (txToAnalyse.length);
-    console.log("Update finished");
+    this.logger.log("Trade Update finished");
   }
 }

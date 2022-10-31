@@ -37,7 +37,6 @@ export class RaffleChangesService extends ChangeListenerService {
         baseURL: chains[network].URL,
       },
     );
-    console.log("Start raffle update for ", network);
     // We loop query the lcd for new transactions on the raffle contract from the last one registered, until there is no tx left
     let txToAnalyse = [];
     do {
@@ -52,10 +51,9 @@ export class RaffleChangesService extends ChangeListenerService {
         }),
       );
 
-      console.log(offset);
       // If we get no lcd tx result
       if (err) {
-        console.log(err);
+        this.logger.error(err);
         return;
       }
 
@@ -71,7 +69,7 @@ export class RaffleChangesService extends ChangeListenerService {
           return tx.logs
             .map((log: any): number[] => {
               const txLog = new TxLog(log.msg_index, log.log, log.events);
-              console.log(txLog.eventsByType.wasm)
+              console.log(txLog.eventsByType.wasm);
               const raffleIds = txLog.eventsByType.wasm.raffle_id?.map((id: string) =>
                 parseInt(id),
               );
@@ -81,7 +79,7 @@ export class RaffleChangesService extends ChangeListenerService {
         })
         .flat();
 
-      console.log("Raffle Ids to update", _.uniqWith(_.compact(idsToQuery), _.isEqual));
+      this.logger.log("Raffle Ids to update", _.uniqWith(_.compact(idsToQuery), _.isEqual));
 
       // Then we query the blockchain for raffle info and put it into the database
       await pMap(
@@ -94,9 +92,9 @@ export class RaffleChangesService extends ChangeListenerService {
       );
 
       // We add the transaction hashes to the redis set :
-      let txHashes = response.data.tx_responses.map((tx: any) => tx.txhash);
-      if(txHashes.length){
-         await this.redisDB.sadd(
+      const txHashes = response.data.tx_responses.map((tx: any) => tx.txhash);
+      if (txHashes.length) {
+        await this.redisDB.sadd(
           this.getSetName(network),
           response.data.tx_responses.map((tx: any) => tx.txhash),
         );
@@ -104,6 +102,6 @@ export class RaffleChangesService extends ChangeListenerService {
 
       // If no transactions queried were a analyzed, we return
     } while (txToAnalyse.length);
-    console.log("Update finished");
+    this.logger.log("Raffle Update finished");
   }
 }

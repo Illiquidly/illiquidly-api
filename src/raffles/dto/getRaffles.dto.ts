@@ -13,7 +13,7 @@ export class SingleRaffleParameters {
   raffleId: number;
 }
 
-export class TicketPrice{
+export class TicketPrice {
   coin?: RawCoin;
   cw20Coin?: RawCoin;
 }
