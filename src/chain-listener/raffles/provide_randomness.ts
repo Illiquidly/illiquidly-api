@@ -99,7 +99,10 @@ export class RandomnessProviderService {
         });
       if (updateMessages.length) {
         const [error, response] = await asyncAction(handler.post(updateMessages));
-        this.logger.log("Posted transaction for raffle randomness : ", response);
+        if(error){
+          this.logger.error(error)
+        }
+        this.logger.log(`Posted transaction for raffle randomness : ${response}`);
 
       }
     });
