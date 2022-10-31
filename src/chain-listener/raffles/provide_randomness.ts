@@ -48,7 +48,7 @@ export class RandomnessProviderService {
     return fetchBeacon(client);
   }
 
-  @Cron(CronExpression.EVERY_SECOND)
+  @Cron(CronExpression.EVERY_30_SECONDS)
   async provideRandomness() {
     // 1. We query all raffles with a closed status and no randomness in the database
 
