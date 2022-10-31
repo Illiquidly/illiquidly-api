@@ -212,6 +212,8 @@ export class RafflesService {
       raffleTicketPrice = {};
     }
 
+    console.log(raffle)
+
     const raffleInfo: RaffleInfoResponse = {
       id: raffle.id,
       owner: raffle.owner,

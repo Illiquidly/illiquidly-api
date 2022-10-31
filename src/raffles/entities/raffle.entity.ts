@@ -97,7 +97,7 @@ export class Raffle {
   @Column({
     type: "datetime",
     generatedType: "VIRTUAL",
-    asExpression: `DATE(DATE_ADD(raffle_start_date, INTERVAL raffle_duration second))`
+    asExpression: `DATE_ADD(raffle_start_date, INTERVAL raffle_duration second)`
   })
   raffleEndDate?: Date;
 
