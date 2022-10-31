@@ -83,7 +83,7 @@ export class TradeChangesService extends ChangeListenerService {
         })
         .flat();
 
-      this.logger.log("Trade Ids to update", _.uniqWith(_.compact(idsToQuery), _.isEqual));
+      //this.logger.log("Trade Ids to update", _.uniqWith(_.compact(idsToQuery), _.isEqual));
 
       // The we query the blockchain for trade info and put it into the database
       await pMap(
@@ -111,6 +111,6 @@ export class TradeChangesService extends ChangeListenerService {
 
       // If no transactions queried were a analyzed, we return
     } while (txToAnalyse.length);
-    this.logger.log("Trade Update finished");
+    //this.logger.log("Trade Update finished");
   }
 }

@@ -36,10 +36,12 @@ export abstract class ChangeListenerService {
       if (channel == queueName) {
         const parsedMessage: QueueMessage = JSON.parse(message);
         if (parsedMessage.message == queueMessage && !isAlreadyQuerying[parsedMessage.network]) {
+          /*
           this.logger.log(
             `New Trade Message Received by ${redisHashSetName}`,
             new Date().toLocaleString(),
           );
+          */
           isAlreadyQuerying[parsedMessage.network] = true;
           // We await 2 seconds for the fcd to update
           await sleep(2000);

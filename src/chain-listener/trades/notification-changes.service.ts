@@ -205,10 +205,7 @@ export class NotificationChangesService extends ChangeListenerService {
         );
       }
 
-      this.logger.log("Notification update finished for offset", offset);
-
       // If no transactions queried were a analyzed, we return
     } while (txToAnalyse.length);
-    this.logger.log("Update finished notifications");
   }
 }

@@ -230,6 +230,7 @@ export class RafflesService {
       raffleOptions: {
         raffleStartDate: raffle.raffleStartDate.toISOString(),
         raffleDuration: raffle.raffleDuration,
+        raffleEndDate: raffle.raffleEndDate?.toISOString(),
         raffleTimeout: raffle.raffleTimeout,
         comment: raffle.comment,
         maxParticipantNumber: raffle.maxParticipantNumber,

@@ -21,6 +21,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 
 import { redisQueueConfig, signingTerraConfig } from "../utils/configuration";
 import { RandomnessProviderService } from "./raffles/provide_randomness";
+import { TriggerDbUpdateService } from "./trigger_db_update";
 
 @Module({
   imports: [
@@ -40,7 +41,8 @@ import { RandomnessProviderService } from "./raffles/provide_randomness";
     RafflesService,
     RaffleChangesService,
     RaffleNotificationChangesService,
-
+    
+    TriggerDbUpdateService,
     RandomnessProviderService,
 
     WebsocketListenerService,

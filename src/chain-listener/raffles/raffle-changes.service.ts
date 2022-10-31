@@ -79,7 +79,6 @@ export class RaffleChangesService extends ChangeListenerService {
         })
         .flat();
 
-      this.logger.log("Raffle Ids to update", _.uniqWith(_.compact(idsToQuery), _.isEqual));
 
       // Then we query the blockchain for raffle info and put it into the database
       await pMap(
@@ -99,9 +98,9 @@ export class RaffleChangesService extends ChangeListenerService {
           response.data.tx_responses.map((tx: any) => tx.txhash),
         );
       }
+      this.logger.log(`Raffle Update done for offset ${offset} for queue ${this.getSetName(network)}`);
 
       // If no transactions queried were a analyzed, we return
     } while (txToAnalyse.length);
-    this.logger.log("Raffle Update finished");
   }
 }

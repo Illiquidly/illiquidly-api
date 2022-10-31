@@ -21,6 +21,7 @@ export class TicketPrice {
 export class RaffleOptionsResponse {
   raffleStartDate: string;
   raffleDuration: number;
+  raffleEndDate: string;
   raffleTimeout: number;
   comment?: string;
   maxParticipantNumber?: number;
