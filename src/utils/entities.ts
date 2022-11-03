@@ -23,6 +23,7 @@ import {
   RaffleFavorite,
   RaffleNotification,
 } from "../raffles/entities/raffle.entity";
+import { NFTTransfer, NFTTransferTransaction } from "../nft-transfers/entities/nft-transfer.entity";
 
 export default [
   Trade,
@@ -44,4 +45,7 @@ export default [
   Participant,
   RaffleNotification,
   RaffleFavorite,
+
+  NFTTransfer,
+  NFTTransferTransaction,
 ];

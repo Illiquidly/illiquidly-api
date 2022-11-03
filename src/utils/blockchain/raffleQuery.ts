@@ -1,6 +1,5 @@
 import "dotenv/config";
-import { LCDClient } from "@terra-money/terra.js";
-import { chains, contracts } from "./chains";
+import { contracts } from "./chains";
 import { Network } from "./dto/network.dto";
 import { sendIndependentQuery } from "./sendIndependentQuery";
 import { BlockChainRaffleInfo } from "./dto/raffle-info.dto";

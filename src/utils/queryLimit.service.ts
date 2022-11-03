@@ -8,7 +8,11 @@ import PQueue from "p-queue";
 export class QueryLimitService {
   queue: PQueue;
   constructor() {
-    this.queue = new PQueue({ concurrency: 10, interval: 10000000, intervalCap: 90 }); //100req/10s
+    /// We limit the requests to :
+    /// 10 simultaneous requests
+    /// 1 requests every consecutive 0.111 seconds (setten limits to 100/ 10 secs + cloudflare limits the requests that are too sudden)
+
+    this.queue = new PQueue({ concurrency: 10, interval: 111, intervalCap: 1 }); //100req/10s
   }
 
   private async internalAddToQueue(func: () => Promise<any>): Promise<[any, void]> {
@@ -18,9 +22,7 @@ export class QueryLimitService {
     };
 
     this.queue.add(async () => {
-      payload.data = await func().catch(error => {
-        error;
-      });
+      payload.data = await func().catch(error => error);
       await collector.signal();
     });
     return Promise.all([payload, collector.promise]);
@@ -28,6 +30,8 @@ export class QueryLimitService {
 
   private async addToQueue(func: () => Promise<any>) {
     const result = await this.internalAddToQueue(func);
+
+    // We verify the number of elements in the queue
     if (result[0].error) {
       throw result[0].error;
     }
@@ -39,8 +43,15 @@ export class QueryLimitService {
     contractAddress: string,
     query: object,
   ): Promise<any> {
+    console.log("One Contract LCD QUERY");
     const lcdClient = new LCDClient(chains[networkId]);
-
     return this.addToQueue(() => lcdClient.wasm.contractQuery(contractAddress, query));
+  }
+
+  async sendEventsSearchQuery(networkId: string, query: any): Promise<any> {
+    console.log("One LCD QUERY");
+    const lcdClient = new LCDClient(chains[networkId]);
+    console.log(query);
+    return this.addToQueue(() => lcdClient.tx.search(query));
   }
 }

@@ -16,7 +16,6 @@ import { InjectRedis } from "@liaoliaots/nestjs-redis";
 
 @Injectable()
 export class WebsocketListenerService {
-
   private readonly logger = new Logger(WebsocketListenerService.name);
   constructor(@InjectRedis("trade-publisher") private readonly redisPublisher: Redis) {
     // P2P Transaction tracker

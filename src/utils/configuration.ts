@@ -17,13 +17,18 @@ export const redisQueueConfig = registerAs("redisConfig", () => ({
   FLUSH_DB_ON_STARTUP: process.env.FLUSH_DB_ON_STARTUP == "true",
 }));
 
-export const NFTContentAPIConfig = registerAs("wallet-content-config", () => ({
+export const nftContentAPIConfig = registerAs("wallet-content-config", () => ({
   UPDATE_DESPITE_LOCK_TIME: parseInt(process.env.UPDATE_DESPITE_LOCK_TIME),
   IDLE_UPDATE_INTERVAL: parseInt(process.env.IDLE_UPDATE_INTERVAL),
   QUERY_TIMEOUT: parseInt(process.env.QUERY_TIMEOUT),
 
   // Database options
   DB_VERSION: process.env.DB_VERSION,
+}));
+
+export const nftTransferAPIConfig = registerAs("nft-transfer-config", () => ({
+  IDLE_UPDATE_INTERVAL: parseInt(process.env.NFT_TRANSFER_IDLE_UPDATE_INTERVAL),
+  TXHASH_SET_NAME: process.env.NFT_TRANSFER_TXHASH_SET_NAME,
 }));
 
 export const signingTerraConfig = registerAs("signing-terra-config", () => ({

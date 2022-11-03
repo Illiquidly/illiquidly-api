@@ -1,4 +1,4 @@
-  import { CW721Token, ValuedCoin, ValuedCW20Coin } from "../../utils-api/entities/nft-info.entity";
+import { CW721Token, ValuedCoin, ValuedCW20Coin } from "../../utils-api/entities/nft-info.entity";
 import {
   Column,
   Entity,
@@ -97,7 +97,7 @@ export class Raffle {
   @Column({
     type: "datetime",
     generatedType: "VIRTUAL",
-    asExpression: `DATE_ADD(raffle_start_date, INTERVAL raffle_duration second)`
+    asExpression: `DATE_ADD(raffle_start_date, INTERVAL raffle_duration second)`,
   })
   raffleEndDate?: Date;
 

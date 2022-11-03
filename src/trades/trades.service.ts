@@ -12,7 +12,6 @@ import { BlockChainTradeInfo } from "../utils/blockchain/dto/trade-info.dto";
 import { CounterTrade, Trade, TradeInfoORM } from "./entities/trade.entity";
 import { CW721Collection, ValuedCoin, ValuedCW20Coin } from "../utils-api/entities/nft-info.entity";
 import { formatNiceLuna } from "../utils/js/parseCoin";
-import { RedisLock, RedisLockService } from "../utils/lock";
 import {
   Asset,
   AssetResponse,
@@ -23,11 +22,6 @@ import {
   TokenResponse,
 } from "../utils-api/dto/nft.dto";
 const pMap = require("p-map");
-
-if (process.env.UPDATE_DESPITE_LOCK_TIME == undefined) {
-  process.env.UPDATE_DESPITE_LOCK_TIME = "120000";
-}
-const UPDATE_DESPITE_LOCK_TIME = parseInt(process.env.UPDATE_DESPITE_LOCK_TIME);
 
 @Injectable()
 export class TradesService {
@@ -40,7 +34,6 @@ export class TradesService {
     @InjectRepository(CW721Collection) private collectionRepository: Repository<CW721Collection>,
     private readonly utilsService: UtilsService,
     private readonly queryLimitService: QueryLimitService,
-    protected readonly lockService: RedisLockService,
   ) {
     this.tradeQuery = new BlockchainTradeQuery(
       this.queryLimitService.sendIndependentQuery.bind(this.queryLimitService),

@@ -7,7 +7,6 @@ import { BlockchainRaffleQuery } from "../utils/blockchain/raffleQuery";
 import { BlockchainNFTQuery } from "../utils/blockchain/nft_query";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { BlockChainTradeInfo } from "../utils/blockchain/dto/trade-info.dto";
 import {
   Raffle,
   RaffleFavorite,
@@ -15,13 +14,10 @@ import {
   NotificationStatus,
   Participant,
 } from "./entities/raffle.entity";
-import { CW721Collection, ValuedCoin, ValuedCW20Coin } from "../utils-api/entities/nft-info.entity";
+import { ValuedCoin, ValuedCW20Coin } from "../utils-api/entities/nft-info.entity";
 import { formatNiceLuna } from "../utils/js/parseCoin";
-import { Asset, AssetResponse, Coin, CW20Coin, CW721Coin, RawCoin } from "../utils-api/dto/nft.dto";
-import {
-  BlockChainRaffleInfo,
-  BlockChainRaffleResponse,
-} from "src/utils/blockchain/dto/raffle-info.dto";
+import { Asset, CW721Coin } from "../utils-api/dto/nft.dto";
+import { BlockChainRaffleResponse } from "src/utils/blockchain/dto/raffle-info.dto";
 import { RaffleInfoResponse, RaffleResponse, TicketPrice } from "./dto/getRaffles.dto";
 const pMap = require("p-map");
 const _ = require("lodash");
@@ -211,8 +207,6 @@ export class RafflesService {
     } else {
       raffleTicketPrice = {};
     }
-
-    console.log(raffle)
 
     const raffleInfo: RaffleInfoResponse = {
       id: raffle.id,

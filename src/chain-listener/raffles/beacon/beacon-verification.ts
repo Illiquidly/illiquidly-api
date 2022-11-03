@@ -1,12 +1,5 @@
 import * as bls from "@noble/bls12-381";
-import {
-  ChainedBeacon,
-  ChainInfo,
-  isChainedBeacon,
-  isUnchainedBeacon,
-  RandomnessBeacon,
-  UnchainedBeacon,
-} from "./index";
+import { ChainedBeacon, ChainInfo, isChainedBeacon, RandomnessBeacon } from "./index";
 
 async function verifyBeacon(chainInfo: ChainInfo, beacon: RandomnessBeacon): Promise<boolean> {
   const publicKey = chainInfo.public_key;
@@ -25,10 +18,6 @@ async function chainedBeaconMessage(beacon: ChainedBeacon): Promise<Uint8Array> 
   return await bls.utils.sha256(
     Buffer.concat([signatureBuffer(beacon.previous_signature), roundBuffer(beacon.round)]),
   );
-}
-
-async function unchainedBeaconMessage(beacon: UnchainedBeacon): Promise<Uint8Array> {
-  return await bls.utils.sha256(roundBuffer(beacon.round));
 }
 
 function signatureBuffer(sig: string) {

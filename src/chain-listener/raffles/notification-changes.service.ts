@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { asyncAction } from "../../utils/js/asyncAction";
 
 import { Network } from "../../utils/blockchain/dto/network.dto";
@@ -20,8 +20,7 @@ const pMap = require("p-map");
 const DATE_FORMAT = require("dateformat");
 
 @Injectable()
-export class RaffleNotificationChangesService extends ChangeListenerService { 
-  
+export class RaffleNotificationChangesService extends ChangeListenerService {
   constructor(
     @InjectRedis("raffle-notification-subscriber") readonly redisSubscriber: Redis,
     @InjectRedis("default-client") readonly redisDB: Redis,

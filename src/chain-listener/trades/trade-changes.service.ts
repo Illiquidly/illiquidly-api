@@ -8,8 +8,6 @@ import { InjectRedis } from "@liaoliaots/nestjs-redis";
 import Redis from "ioredis";
 import { TxLog } from "@terra-money/terra.js";
 import { TradesService } from "../../trades/trades.service";
-import { QueueMessage } from "../websocket-listener.service";
-import { sleep } from "../../utils/js/sleep";
 import { ConfigType } from "@nestjs/config";
 import { redisQueueConfig } from "../../utils/configuration";
 import { ChangeListenerService } from "../change-listener.service";

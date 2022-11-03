@@ -128,10 +128,10 @@ export class CW721TokenAttribute {
   @Column({ nullable: true })
   displayType: string;
 
-  @Column()
+  @Column({ nullable: true })
   traitType: string;
 
-  @Column()
+  @Column({ nullable: true })
   value: string;
 
   @ManyToOne(() => CW721TokenMetadata, metadata => metadata.attributes, {

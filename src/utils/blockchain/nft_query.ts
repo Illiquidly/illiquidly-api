@@ -37,7 +37,7 @@ export class BlockchainNFTQuery {
   }
 
   async getContractInfo(network: string, nftContractAddress: string): Promise<any> {
-    const nftInfo = await sendIndependentQuery(network, nftContractAddress, {
+    const nftInfo = await this.sendQueryFunction(network, nftContractAddress, {
       contract_info: {},
     });
 
@@ -45,7 +45,7 @@ export class BlockchainNFTQuery {
   }
 
   async getAllNFTInfo(network: string, nftContractAddress: string, tokenId: string): Promise<any> {
-    const nftInfo = await sendIndependentQuery(network, nftContractAddress, {
+    const nftInfo = await this.sendQueryFunction(network, nftContractAddress, {
       all_nft_info: {
         token_id: tokenId,
       },
@@ -55,7 +55,7 @@ export class BlockchainNFTQuery {
   }
 
   async getNumTokens(network: string, nftContractAddress: string): Promise<any> {
-    const nftInfo = await sendIndependentQuery(network, nftContractAddress, {
+    const nftInfo = await this.sendQueryFunction(network, nftContractAddress, {
       num_tokens: {},
     });
 
@@ -69,7 +69,7 @@ export class BlockchainNFTQuery {
     limit = 100,
     startAfter?: string,
   ): Promise<string[]> {
-    const { tokens } = await sendIndependentQuery(network, contractAddress, {
+    const { tokens } = await this.sendQueryFunction(network, contractAddress, {
       tokens: {
         owner: userAddress,
         ...(limit ? { limit } : {}),
@@ -85,7 +85,7 @@ export class BlockchainNFTQuery {
     limit?: number,
     startAfter?: string,
   ): Promise<string[]> {
-    const { tokens } = await sendIndependentQuery(network, contractAddress, {
+    const { tokens } = await this.sendQueryFunction(network, contractAddress, {
       all_tokens: {
         ...(limit ? { limit } : {}),
         ...(startAfter ? { start_after: startAfter } : {}),

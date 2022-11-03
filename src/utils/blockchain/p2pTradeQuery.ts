@@ -1,6 +1,5 @@
 import "dotenv/config";
-import { LCDClient } from "@terra-money/terra.js";
-import { chains, contracts } from "./chains";
+import { contracts } from "./chains";
 import { Network } from "./dto/network.dto";
 import { sendIndependentQuery } from "./sendIndependentQuery";
 import { BlockChainTradeInfo } from "./dto/trade-info.dto";
@@ -13,9 +12,8 @@ export class BlockchainTradeQuery {
   }
 
   async getTradeInfo(network: Network, tradeId: number): Promise<BlockChainTradeInfo> {
-    const terra = new LCDClient(chains[network]);
     return camelCaseObjectDeep(
-      await sendIndependentQuery(network, contracts[network].p2pTrade, {
+      await this.sendQueryFunction(network, contracts[network].p2pTrade, {
         trade_info: {
           trade_id: tradeId,
         },
@@ -24,9 +22,8 @@ export class BlockchainTradeQuery {
   }
 
   async getCounterTradeInfo(network: Network, tradeId: number, counterId: number): Promise<any> {
-    const terra = new LCDClient(chains[network]);
     return camelCaseObjectDeep(
-      await sendIndependentQuery(network, contracts[network].p2pTrade, {
+      await this.sendQueryFunction(network, contracts[network].p2pTrade, {
         counter_trade_info: {
           trade_id: tradeId,
           counter_id: counterId,

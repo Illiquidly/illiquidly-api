@@ -15,9 +15,18 @@ import {
   CW721TokenInCounterTradeCrudService,
   CW721TokenInTradeCrudService,
 } from "./cw721CrudService";
+import { RedLockService } from "../utils/lock.service";
+import { ConfigModule } from "@nestjs/config";
+import { nftContentAPIConfig } from "../utils/configuration";
+import { RawLCDQuery } from "../utils/blockchain/queryRawLCD.service";
 
 @Module({
-  imports: [TypeOrmModule.forFeature(Entities)],
+  imports: [
+    TypeOrmModule.forFeature(Entities),
+    ConfigModule.forRoot({
+      load: [nftContentAPIConfig],
+    }),
+  ],
   controllers: [
     UtilsController,
     CollectionsController,
@@ -27,11 +36,14 @@ import {
   providers: [
     UtilsService,
     QueryLimitService,
+    RedLockService,
     CW721CollectionCrudService,
     CW721TokenCrudService,
     CW721TokenInTradeCrudService,
     CW721TokenInCounterTradeCrudService,
+
+    RawLCDQuery,
   ],
-  exports: [UtilsService],
+  exports: [UtilsService, QueryLimitService, RedLockService, RawLCDQuery],
 })
 export class UtilsModule {}

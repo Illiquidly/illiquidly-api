@@ -1,5 +1,4 @@
 import { Network } from "../utils/blockchain/dto/network.dto";
-import { InjectRedis } from "@liaoliaots/nestjs-redis";
 import Redis from "ioredis";
 import { QueueMessage } from "./websocket-listener.service";
 import { sleep } from "../utils/js/sleep";

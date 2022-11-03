@@ -45,7 +45,7 @@ export class UtilsService {
       Object.entries(knownNfts).forEach(async ([key]: [string, any]) => {
         const [, newCollection] = await asyncAction(this.nftQuery.newCW721Contract(network, key));
         if (newCollection) {
-          await asyncAction(this.collectionRepository.save([newCollection]))
+          await asyncAction(this.collectionRepository.save([newCollection]));
         }
       });
     }
@@ -62,9 +62,47 @@ export class UtilsService {
     address: string,
     tokenId: string,
   ): Promise<CW721Token> {
-    // test with find
-    const [err, storedNFTInfo] = await asyncAction(
-      this.NFTTokenRepository.findOne({
+    // First we see if the collection exists in the contract
+    const [err, nftInfo] = await asyncAction(
+      this.findOneTokenInDB(network, address, tokenId),
+    );
+
+    // If this info has been found in the database and they have a collection Name we simply return it
+    if (!err && nftInfo) {
+      return nftInfo;
+    }
+
+    // Else we create a new Contract Info and save it to the database
+    const [newErr, newNFTInfo] = await asyncAction(
+      this.saveNewTokenInfo(network, address, tokenId),
+    );
+
+    // If there is no error, we return the saved object
+    if (!newErr) {
+      return newNFTInfo;
+    }
+
+    // If there is an error, we try to query the information one more time from the database (that may happen when the api saves two info at a time)
+    const [storedErr, storedNFTInfo] = await asyncAction(
+      this.findOneTokenInDB(network, address, tokenId),
+    );
+
+      return storedNFTInfo;
+  }
+
+  /// This function is used to load and cache Token info variables
+  async nftTokenInfo(network: Network, address: string, tokenId: string): Promise<TokenResponse> {
+    const nftInfo = await this.nftTokenInfoFromDB(network, address, tokenId);
+    return this.parseTokenDBToResponse(nftInfo);
+  }
+
+
+  async findOneTokenInDB(
+    network: Network,
+    address: string,
+    tokenId: string
+  ): Promise<CW721Token> {
+      return this.NFTTokenRepository.findOne({
         relations: {
           collection: true,
           metadata: {
@@ -77,24 +115,27 @@ export class UtilsService {
             collectionAddress: address,
           },
         },
-      }),
-    );
-    if (!err && storedNFTInfo) {
-      return storedNFTInfo;
-    }
+      })
+  }
 
+  async saveNewTokenInfo(
+    network: Network,
+    address: string,
+    tokenId: string,
+  ): Promise<CW721Token> {
     // Else we query it from the lcd
     const [error, { info: distantNFTInfo }]: [any, { info: BlockchainCW721Token }] =
       await asyncAction(this.nftQuery.getAllNFTInfo(network, address, tokenId));
-    if (error) {
-      throw new NotFoundException("Token not found");
+
+
+    if (error || !distantNFTInfo) {
+      throw new NotFoundException("Error when querying the token info");
     }
 
     // We parse it to fit in the database
     const tokenDBObject: CW721Token = await this.parseDistantTokenToDB(tokenId, distantNFTInfo);
     // Save it in the database with its collection ?
     tokenDBObject.collection = await this.collectionInfo(network, address);
-
     // We want to keep allNftInfo for general filtering
     const allNftInfo = _.cloneDeep(tokenDBObject);
     allNftInfo.metadata.attributes = allNftInfo.metadata.attributes.map(
@@ -105,48 +146,66 @@ export class UtilsService {
     );
 
     tokenDBObject.allNftInfo = JSON.stringify(allNftInfo);
-    await asyncAction(this.NFTTokenRepository.save([tokenDBObject]));
-    return tokenDBObject;
+    return this.NFTTokenRepository.save(tokenDBObject);
   }
 
-  /// This function is used to load and cache Token info variables
-  async nftTokenInfo(network: Network, address: string, tokenId: string): Promise<TokenResponse> {
-    const nftInfo = await this.nftTokenInfoFromDB(network, address, tokenId);
-    return this.parseTokenDBToResponse(nftInfo);
+  async findOneCollectionInDB(
+    network: Network,
+    collectionAddress: string,
+  ): Promise<CW721Collection> {
+    return this.collectionRepository.findOneBy({ network, collectionAddress });
   }
+
+  async saveNewCollectionInfo(
+    network: Network,
+    collectionAddress: string,
+    oldCollection: CW721Collection,
+  ): Promise<CW721Collection> {
+    // Else we create a new Contract Info and save it to the database
+    const [error, newCollection] = await asyncAction(
+      this.nftQuery.newCW721Contract(network, collectionAddress),
+    );
+
+    if (newCollection) {
+      newCollection.id = oldCollection?.id;
+      return this.collectionRepository.save(newCollection);
+    } else {
+      throw error;
+    }
+  }
+
 
   /// This function is used to load and cache NFT contract_info variables
   async collectionInfo(network: Network, collectionAddress: string): Promise<CW721Collection> {
     // First we see if the collection exists in the contract
     const [err, collection] = await asyncAction(
-      this.collectionRepository.findOneBy({ network, collectionAddress }),
+      this.findOneCollectionInDB(network, collectionAddress),
     );
 
     // If this info has been found in the database and they have a collection Name we simply return it
-    if (!err && collection?.collectionName != "" && collection?.collectionName != null) {
+    if (!err && collection?.collectionName && collection?.collectionName != "") {
       return collection;
     }
 
     // Else we create a new Contract Info and save it to the database
-    const [, newCollection] = await asyncAction(
-      this.nftQuery.newCW721Contract(network, collectionAddress),
+    const [newErr, newCollection] = await asyncAction(
+      this.saveNewCollectionInfo(network, collectionAddress, collection),
     );
 
-    // We save the new collection or get the one that has be saved in the meanwhile while updating
-
-    if (newCollection) {
-      newCollection.id = collection?.id;
-
-      const [err] = await asyncAction(this.collectionRepository.save(newCollection));
-
-      if (err) {
-        return await this.collectionRepository.findOneBy({ network, collectionAddress });
-      } else {
-        return newCollection;
-      }
+    // If there is no error, we return the saved object
+    if (!newErr) {
+      return newCollection;
     }
 
-    // If there was an error when creating the collection object, we simply return empty info (with null collectionName)
+    // If there is an error, we try to query the information one more time from the database (that may happen when the api saves two info at a time)
+    const [storedErr, storedCollection] = await asyncAction(
+      this.findOneCollectionInDB(network, collectionAddress),
+    );
+
+    if (!storedErr) {
+      return storedCollection;
+    }
+
     return {
       id: null,
       network,

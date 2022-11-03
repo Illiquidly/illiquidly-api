@@ -16,7 +16,7 @@ import { Network } from "./dto/network.dto";
 import { chains } from "./chains";
 
 // Wrapper for Query and Transaction objects (used to build a common Proxy on top of them)
-class LCDClientWrapper {
+abstract class LCDClientWrapper {
   terra: LCDClient;
   wallet: Wallet;
   contractAddress: string;
@@ -26,7 +26,7 @@ class LCDClientWrapper {
     this.contractAddress = contractAddress;
   }
   execute(msgName: string, msgArgs: any, otherArgs: any) {
-    console.log("execute not implemented");
+    console.log("execute not implemented", msgName, msgArgs, otherArgs);
   }
 }
 
@@ -196,7 +196,7 @@ export class Address {
 /// Allows the messages to be called via methods instead of wrapped objects
 function createWrapperProxy<T extends LCDClientWrapper>(wrapper: T): Interface {
   const handler = {
-    get: function (target: T, prop: string, receiver: any) {
+    get: function (target: T, prop: string) {
       if (!(prop in target))
         return function (args: any, otherArgs: any) {
           return target.execute(prop.toString(), args, otherArgs);

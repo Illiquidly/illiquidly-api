@@ -3,13 +3,7 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import { Raffle } from "../../raffles/entities/raffle.entity";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
-import {
-  HttpCachingChain,
-  HttpChainClient,
-  fetchBeacon,
-  ChainedBeacon,
-  isChainedBeacon,
-} from "./beacon";
+import { HttpCachingChain, HttpChainClient, fetchBeacon, ChainedBeacon } from "./beacon";
 import { MsgExecuteContract } from "@terra-money/terra.js";
 import { chains, contracts } from "../../utils/blockchain/chains";
 import { Network } from "../../utils/blockchain/dto/network.dto";
@@ -21,14 +15,14 @@ const pMap = require("p-map");
 
 @Injectable()
 export class RandomnessProviderService {
-  signingTerraConfig: typeof signingTerraConfig;
+  signingTerraConfig: ConfigType<typeof signingTerraConfig>;
   private readonly logger = new Logger(RandomnessProviderService.name);
 
   constructor(
     @InjectRepository(Raffle) private rafflesRepository: Repository<Raffle>,
     @Inject(signingTerraConfig.KEY) queueConfig: ConfigType<typeof signingTerraConfig>,
   ) {
-    this.signingTerraConfig = signingTerraConfig;
+    this.signingTerraConfig = queueConfig;
   }
 
   async getBeacon(): Promise<ChainedBeacon> {
@@ -61,7 +55,7 @@ export class RandomnessProviderService {
 
     // 2. We look for the latests randomness
     if (!nbRaffles) {
-      this.logger.log("No randomness to provide, sorry :/")
+      this.logger.log("No randomness to provide, sorry :/");
       return;
     }
 
@@ -99,11 +93,10 @@ export class RandomnessProviderService {
         });
       if (updateMessages.length) {
         const [error, response] = await asyncAction(handler.post(updateMessages));
-        if(error){
-          this.logger.error(error)
+        if (error) {
+          this.logger.error(error);
         }
         this.logger.log(`Posted transaction for raffle randomness : ${response}`);
-
       }
     });
   }

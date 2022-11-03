@@ -134,7 +134,7 @@ export class Trade {
     onDelete: "CASCADE",
     onUpdate: "CASCADE",
   })
-  @JoinColumn({ name: "UQ_TRADES" })
+  @JoinColumn()
   tradeInfo: TradeInfoORM;
 
   @OneToMany(() => CounterTrade, counterTrade => counterTrade.trade)
@@ -164,7 +164,7 @@ export class CounterTrade {
     onUpdate: "CASCADE",
     cascade: true,
   })
-  @JoinColumn({ name: "UQ_COUNTER_TRADES" })
+  @JoinColumn()
   tradeInfo: TradeInfoORM;
 }
 

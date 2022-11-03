@@ -5,9 +5,7 @@ import {
   RaffleNotificationController,
   RaffleFavoriteController,
 } from "./raffles.controller";
-import { UtilsService } from "../utils-api/utils.service";
 import { UtilsModule } from "../utils-api/utils.module";
-import { QueryLimitService } from "../utils/queryLimit.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import Entities from "../utils/entities";
 import {
@@ -21,11 +19,11 @@ import {
   controllers: [RafflesController, RaffleNotificationController, RaffleFavoriteController],
   providers: [
     RafflesService,
-    UtilsService,
-    QueryLimitService,
+
     RaffleCrudService,
     RaffleNotificationCrudService,
     RaffleFavoriteCrudService,
   ],
+  exports: [RafflesService],
 })
 export class RafflesModule {}

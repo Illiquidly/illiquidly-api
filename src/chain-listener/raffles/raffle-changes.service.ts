@@ -69,7 +69,6 @@ export class RaffleChangesService extends ChangeListenerService {
           return tx.logs
             .map((log: any): number[] => {
               const txLog = new TxLog(log.msg_index, log.log, log.events);
-              console.log(txLog.eventsByType.wasm);
               const raffleIds = txLog.eventsByType.wasm.raffle_id?.map((id: string) =>
                 parseInt(id),
               );
@@ -78,7 +77,6 @@ export class RaffleChangesService extends ChangeListenerService {
             .flat();
         })
         .flat();
-
 
       // Then we query the blockchain for raffle info and put it into the database
       await pMap(
@@ -98,7 +96,9 @@ export class RaffleChangesService extends ChangeListenerService {
           response.data.tx_responses.map((tx: any) => tx.txhash),
         );
       }
-      this.logger.log(`Raffle Update done for offset ${offset} for queue ${this.getSetName(network)}`);
+      this.logger.log(
+        `Raffle Update done for offset ${offset} for queue ${this.getSetName(network)}`,
+      );
 
       // If no transactions queried were a analyzed, we return
     } while (txToAnalyse.length);

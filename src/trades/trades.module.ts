@@ -6,9 +6,7 @@ import {
   TradesController,
   TradeFavoriteController,
 } from "./trades.controller";
-import { UtilsService } from "../utils-api/utils.service";
 import { UtilsModule } from "../utils-api/utils.module";
-import { QueryLimitService } from "../utils/queryLimit.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import Entities from "../utils/entities";
 import {
@@ -19,7 +17,6 @@ import {
 } from "./tradeCrud.service";
 import { TradeFavoritesService } from "./trades.favorites.service";
 import { TradeNotificationsService } from "./trades.notifications.service";
-import { RedisLockService } from "../utils/lock";
 
 @Module({
   imports: [UtilsModule, TypeOrmModule.forFeature(Entities)],
@@ -33,13 +30,12 @@ import { RedisLockService } from "../utils/lock";
     TradesService,
     TradeNotificationsService,
     TradeFavoritesService,
-    UtilsService,
-    QueryLimitService,
+
     TradeCrudService,
     CounterTradeCrudService,
     TradeNotificationCrudService,
     TradeFavoriteCrudService,
-    RedisLockService,
   ],
+  exports: [TradesService],
 })
 export class TradesModule {}

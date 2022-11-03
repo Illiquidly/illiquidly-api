@@ -1,9 +1,8 @@
-import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
+import { ForbiddenException, Inject, Injectable, Logger } from "@nestjs/common";
 import "dotenv/config";
 import { NFTContentResponse, UpdateMode } from "./dto/get-nft-content.dto";
 import { Network } from "../utils/blockchain/dto/network.dto";
 import { NftContentQuerierService } from "./nft-content-querier.service";
-import Redis from "ioredis";
 import {
   UpdateState,
   WalletContent,
@@ -12,35 +11,27 @@ import {
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { updateInteractedNfts } from "../utils/blockchain/fcdNftQuery";
-import { RedisLock, RedisLockService } from "../utils/lock";
+import { ConfigType } from "@nestjs/config";
+import { nftContentAPIConfig } from "../utils/configuration";
+import { RedLockService } from "../utils/lock.service";
 
 function toNFTKey(network: string, address: string) {
   return `nft:${address}@${network}_${process.env.DB_VERSION}`;
 }
 
-if (process.env.QUERY_TIMEOUT == undefined) {
-  process.env.QUERY_TIMEOUT = "100000";
-}
-const QUERY_TIMEOUT = parseInt(process.env.QUERY_TIMEOUT);
-if (process.env.UPDATE_DESPITE_LOCK_TIME == undefined) {
-  process.env.UPDATE_DESPITE_LOCK_TIME = "120000";
-}
-const UPDATE_DESPITE_LOCK_TIME = parseInt(process.env.UPDATE_DESPITE_LOCK_TIME);
-if (process.env.IDLE_UPDATE_INTERVAL == undefined) {
-  process.env.IDLE_UPDATE_INTERVAL = "20000";
-}
-const IDLE_UPDATE_INTERVAL = parseInt(process.env.IDLE_UPDATE_INTERVAL);
-
 @Injectable()
 export class NftContentService {
-  redisDB: Redis;
-
+  nftContentAPIConfig: ConfigType<typeof nftContentAPIConfig>;
   readonly logger = new Logger(NftContentService.name);
+
   constructor(
     private readonly nftContentQuerierService: NftContentQuerierService,
-    protected readonly lockService: RedisLockService,
     @InjectRepository(WalletContent) private walletContentRepository: Repository<WalletContent>,
-  ) {}
+    @Inject(nftContentAPIConfig.KEY) contentConfig: ConfigType<typeof nftContentAPIConfig>,
+    private readonly redlockService: RedLockService,
+  ) {
+    this.nftContentAPIConfig = contentConfig;
+  }
 
   async findNfts(network: Network, address: string): Promise<NFTContentResponse> {
     const currentData: WalletContent = await this.walletContentRepository.findOne({
@@ -81,7 +72,7 @@ export class NftContentService {
     }
     if (
       currentData?.lastUpdateStartTime &&
-      Date.now() < +currentData?.lastUpdateStartTime + IDLE_UPDATE_INTERVAL
+      Date.now() < +currentData?.lastUpdateStartTime + this.nftContentAPIConfig.IDLE_UPDATE_INTERVAL
     ) {
       throw new ForbiddenException("Too much requests my girl");
     }
@@ -97,19 +88,17 @@ export class NftContentService {
     return await this.nftContentQuerierService.mapWalletContentDBForResponse(network, currentData);
   }
 
-  @RedisLock(
-    (_target, network, address) =>
-      `${toNFTKey(network, address)}_updateLock_${process.env.DB_VERSION}`,
-    UPDATE_DESPITE_LOCK_TIME,
-    0,
-    1,
-  )
   async _internalUpdate(network: Network, address: string, data: WalletContent) {
-    // And we now start the actual update
-    await this.updateAddress(network, address, data);
+    const lockKey = `${toNFTKey(network, address)}_content-api_${process.env.DB_VERSION}`;
 
-    // We save the updated object to database for the last time
-    await this.walletContentRepository.save([data]);
+    await this.redlockService.doWithLock(lockKey, async () => {
+      // And we now start the actual update
+      await this.updateAddress(network, address, data);
+
+      // We save the updated object to database for the last time
+      await this.walletContentRepository.save([data]);
+      console.log("Finished");
+    });
   }
 
   async sleep(ms: number) {
@@ -124,7 +113,7 @@ export class NftContentService {
     const hasTimedOut = { timeout: false };
     const timeout = setTimeout(async () => {
       hasTimedOut.timeout = true;
-    }, QUERY_TIMEOUT);
+    }, this.nftContentAPIConfig.QUERY_TIMEOUT);
 
     const willQueryBefore = data.state != UpdateState.Full;
     // We awnt ot prevent multiple updates, so we update the internals

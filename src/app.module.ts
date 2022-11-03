@@ -7,24 +7,20 @@ import { RedisModule } from "@liaoliaots/nestjs-redis";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { typeOrmOptions } from "./utils/typeormOptions";
 import { ChainListenerModule } from "./chain-listener/chain-listener.module";
-import { RedisLockModule } from "./utils/lock";
 import { AppLoggerMiddleware } from "./utils/request-logger";
 import { RafflesModule } from "./raffles/raffle.module";
-import { ConfigModule } from "@nestjs/config";
-import { redisQueueConfig, NFTContentAPIConfig } from "./utils/configuration";
 import { ScheduleModule } from "@nestjs/schedule";
+import { NftTransferModule } from "./nft-transfers/nft-transfer.module";
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-    ConfigModule.forRoot({
-      load: [redisQueueConfig, NFTContentAPIConfig],
-    }),
     NftContentModule,
     UtilsModule,
     TradesModule,
     RafflesModule,
     ChainListenerModule,
+    NftTransferModule,
     KnexModule.forRoot({
       config: {
         client: "mysql2",
@@ -48,7 +44,6 @@ import { ScheduleModule } from "@nestjs/schedule";
         { namespace: "trade-publisher" },
       ],
     }),
-    RedisLockModule,
     TypeOrmModule.forRoot({
       ...typeOrmOptions,
       type: "mysql",
