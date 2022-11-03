@@ -63,9 +63,7 @@ export class UtilsService {
     tokenId: string,
   ): Promise<CW721Token> {
     // First we see if the collection exists in the contract
-    const [err, nftInfo] = await asyncAction(
-      this.findOneTokenInDB(network, address, tokenId),
-    );
+    const [err, nftInfo] = await asyncAction(this.findOneTokenInDB(network, address, tokenId));
 
     // If this info has been found in the database and they have a collection Name we simply return it
     if (!err && nftInfo) {
@@ -87,7 +85,7 @@ export class UtilsService {
       this.findOneTokenInDB(network, address, tokenId),
     );
 
-      return storedNFTInfo;
+    return storedNFTInfo;
   }
 
   /// This function is used to load and cache Token info variables
@@ -96,37 +94,27 @@ export class UtilsService {
     return this.parseTokenDBToResponse(nftInfo);
   }
 
-
-  async findOneTokenInDB(
-    network: Network,
-    address: string,
-    tokenId: string
-  ): Promise<CW721Token> {
-      return this.NFTTokenRepository.findOne({
-        relations: {
-          collection: true,
-          metadata: {
-            attributes: true,
-          },
+  async findOneTokenInDB(network: Network, address: string, tokenId: string): Promise<CW721Token> {
+    return this.NFTTokenRepository.findOne({
+      relations: {
+        collection: true,
+        metadata: {
+          attributes: true,
         },
-        where: {
-          tokenId,
-          collection: {
-            collectionAddress: address,
-          },
+      },
+      where: {
+        tokenId,
+        collection: {
+          collectionAddress: address,
         },
-      })
+      },
+    });
   }
 
-  async saveNewTokenInfo(
-    network: Network,
-    address: string,
-    tokenId: string,
-  ): Promise<CW721Token> {
+  async saveNewTokenInfo(network: Network, address: string, tokenId: string): Promise<CW721Token> {
     // Else we query it from the lcd
     const [error, { info: distantNFTInfo }]: [any, { info: BlockchainCW721Token }] =
       await asyncAction(this.nftQuery.getAllNFTInfo(network, address, tokenId));
-
 
     if (error || !distantNFTInfo) {
       throw new NotFoundException("Error when querying the token info");
@@ -173,7 +161,6 @@ export class UtilsService {
       throw error;
     }
   }
-
 
   /// This function is used to load and cache NFT contract_info variables
   async collectionInfo(network: Network, collectionAddress: string): Promise<CW721Collection> {

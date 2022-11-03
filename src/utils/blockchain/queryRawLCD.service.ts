@@ -37,8 +37,8 @@ export class RawLCDQuery {
     do {
       const transactions = await this.getOneTxResult(network, events, offset);
 
-      if(!transactions.txs){
-        console.error("Couldn't query transactions", transactions)  
+      if (!transactions.txs) {
+        console.error("Couldn't query transactions", transactions);
       }
 
       const filteredTransactions = await filterCallBack(transactions.txs);

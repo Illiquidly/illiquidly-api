@@ -8,6 +8,7 @@ import { NFTTransferTransaction } from "./entities/nft-transfer.entity";
 import { TypeOrmCrudService } from "@rewiko/crud-typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { NFTTransferResultInterceptor } from "./interceptors/nft-transfer.interceptor";
 
 @Injectable()
 export class NftTransferCrudService extends TypeOrmCrudService<NFTTransferTransaction> {
@@ -25,7 +26,7 @@ export class NftTransferCrudService extends TypeOrmCrudService<NFTTransferTransa
     limit: 10,
     sort: [],
     join: {
-       sentAssets: {
+      sentAssets: {
         eager: true,
       },
       "sentAssets.cw721Token": {
@@ -49,9 +50,11 @@ export class NftTransferCrudService extends TypeOrmCrudService<NFTTransferTransa
   routes: {
     getOneBase: {
       decorators: [],
+      interceptors: [NFTTransferResultInterceptor],
     },
     getManyBase: {
       decorators: [],
+      interceptors: [NFTTransferResultInterceptor],
     },
     only: ["getOneBase", "getManyBase"],
   },

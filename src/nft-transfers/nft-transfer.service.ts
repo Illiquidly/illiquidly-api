@@ -14,6 +14,7 @@ import { RawLCDQuery } from "../utils/blockchain/queryRawLCD.service";
 import { nftTransferAPIConfig } from "../utils/configuration";
 import { UtilsService } from "../utils-api/utils.service";
 import { asyncAction } from "../utils/js/asyncAction";
+import { NFTTransferResponse } from "./dto/get-nft-transfer.dto";
 const pMap = require("p-map");
 const _ = require("lodash");
 
@@ -23,7 +24,8 @@ export class NftTransferService {
   readonly logger = new Logger(NftTransferService.name);
 
   constructor(
-    @InjectRepository(NFTTransferTransaction) private nftTransferTransactionRepository: Repository<NFTTransferTransaction>,
+    @InjectRepository(NFTTransferTransaction)
+    private nftTransferTransactionRepository: Repository<NFTTransferTransaction>,
     @Inject(nftTransferAPIConfig.KEY) transferConfig: ConfigType<typeof nftTransferAPIConfig>,
     private readonly redlockService: RedLockService,
     @InjectRedis("default-client") readonly redisDB: Redis,
@@ -114,12 +116,12 @@ export class NftTransferService {
               if (err) {
                 return;
               }
-             
-             let transfer = new NFTTransfer();
-             transfer.sender = sender;
-             transfer.recipient = recipient;
-             transfer.cw721Token = token;
-             return transfer;
+
+              const transfer = new NFTTransfer();
+              transfer.sender = sender;
+              transfer.recipient = recipient;
+              transfer.cw721Token = token;
+              return transfer;
             });
           });
           if (!transfers.length) {
@@ -138,10 +140,9 @@ export class NftTransferService {
       );
 
       const transfersToSave = _.compact(nftTransfers.flat());
-      if(transfersToSave.length){
-        
-        console.log(`Save in progress, ${transfersToSave.length} record to save...`)
-        
+      if (transfersToSave.length) {
+        console.log(`Save in progress, ${transfersToSave.length} record to save...`);
+
         await this.nftTransferTransactionRepository.save(transfersToSave);
         /*
         await pMap(transfersToSave, async (tx) => {
@@ -151,11 +152,8 @@ export class NftTransferService {
           });
         })
         */
-        console.log("Save done.")
-        
-        
+        console.log("Save done.");
       }
-      
     };
 
     // OffsetCallBack --> We need to save the transaction hashes to a redis set and get the length of the hasset
@@ -190,7 +188,9 @@ export class NftTransferService {
     // We reset the redis Database
     await this.redisDB.del(this.getSetName(network));
     // We reset the mysql database
-    await this.nftTransferTransactionRepository.query("DROP TABLE nft_transfer_transaction,nft_transfer")
+    await this.nftTransferTransactionRepository.query(
+      "DROP TABLE nft_transfer_transaction,nft_transfer",
+    );
   }
   getSetName(network: Network) {
     return `${this.nftTransferAPIConfig.TXHASH_SET_NAME}-${network}`;
@@ -206,5 +206,22 @@ export class NftTransferService {
 
   async addTx(network: Network, txHashes: string[]) {
     return this.redisDB.sadd(this.getSetName(network), txHashes);
+  }
+
+  parseNFTTransferTransactionDBToResponse(tx: NFTTransferTransaction): NFTTransferResponse {
+    return {
+      id: tx.id,
+      network: tx.network,
+      blockHeight: tx.blockHeight,
+      date: tx.date.toISOString(),
+      txHash: tx.txHash,
+      memo: tx.memo,
+      sentAssets: tx.sentAssets.map(asset => ({
+        id: asset.id,
+        sender: asset.sender,
+        recipient: asset.recipient,
+        cw721Token: this.utilsService.parseTokenDBToResponse(asset.cw721Token),
+      })),
+    };
   }
 }
