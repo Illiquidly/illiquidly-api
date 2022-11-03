@@ -67,9 +67,10 @@ export class NftTransferController {
   async update(@Param() params: NetworkParam) {
     return this.nftTransferService.update(params.network);
   }
-
+  /*
   @Patch("reset/:network/")
   async reset(@Param() params: NetworkParam) {
     return this.nftTransferService.reset(params.network);
   }
+  */
 }
