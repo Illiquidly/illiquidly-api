@@ -141,15 +141,16 @@ export class NftTransferService {
       if(transfersToSave.length){
         
         console.log(`Save in progress, ${transfersToSave.length} record to save...`)
-        /*
+        
         await this.nftTransferTransactionRepository.save(transfersToSave);
-        */
+        /*
         await pMap(transfersToSave, async (tx) => {
           await this.nftTransferTransactionRepository.save(tx).catch((error) =>{
             console.log("problematic tx", tx, tx.sentAssets)
             throw error
           });
         })
+        */
         console.log("Save done.")
         
         
