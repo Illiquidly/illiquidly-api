@@ -10,14 +10,12 @@ export const chains: any = {
     //URL: "https://pisco-lcd.terra.dev/",
     URL: `https://lcd.pisco.terra.setten.io/${settenConfig.settenProject}/?key=${settenConfig.settenKey}`,
     chainID: "pisco-1",
-    /*
     axiosObject: {
       baseURL: `https://lcd.pisco.terra.setten.io/${settenConfig.settenProject}`,
       params: {
         key: settenConfig.settenKey,
       },
     },
-    */
   },
   classic: {
     URL: "https://columbus-lcd.terra.dev",
