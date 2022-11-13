@@ -84,8 +84,7 @@ export class RaffleChangesService extends ChangeListenerService {
         async (raffleId: number) => {
           // We update the tradeInfo and all its associated counter_trades in the database
           await this.rafflesService.updateRaffleAndParticipants(network, raffleId);
-        },
-        { concurrency: 1 },
+        }
       );
 
       // We add the transaction hashes to the redis set :

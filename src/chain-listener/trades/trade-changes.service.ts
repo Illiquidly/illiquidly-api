@@ -53,7 +53,7 @@ export class TradeChangesService extends ChangeListenerService {
 
       // If we get no lcd tx result
       if (err) {
-        this.logger.error(err);
+        this.logger.error(err.toJSON());
         return;
       }
 
@@ -94,8 +94,7 @@ export class TradeChangesService extends ChangeListenerService {
             // If a counterId is defined, we also update that specific counterId
             await this.tradesService.updateCounterTrade(network, tradeId, counterTradeId);
           }
-        },
-        { concurrency: 1 },
+        } 
       );
 
       // We add the transaction hashes to the redis set :

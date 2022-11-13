@@ -7,30 +7,34 @@ export const chains: any = {
     chainId: "localterra",
   },
   testnet: {
-    //URL: "https://pisco-lcd.terra.dev/",
-    URL: `https://lcd.pisco.terra.setten.io/${settenConfig.settenProject}/?key=${settenConfig.settenKey}`,
+    URL: "https://pisco-lcd.terra.dev/",
     chainID: "pisco-1",
+    /*
+    URL: `https://lcd.pisco.terra.setten.io/${settenConfig.settenProject}/?key=${settenConfig.settenKey}`,
     axiosObject: {
       baseURL: `https://lcd.pisco.terra.setten.io/${settenConfig.settenProject}`,
       params: {
         key: settenConfig.settenKey,
       },
     },
+    */
   },
   classic: {
     URL: "https://columbus-lcd.terra.dev",
     chainID: "columbus-5",
   },
   mainnet: {
-    // URL: 'https://phoenix-lcd.terra.dev',
-    URL: `https://lcd.phoenix.terra.setten.io/${settenConfig.settenProject}/?key=${settenConfig.settenKey}`,
+    URL: 'https://phoenix-lcd.terra.dev',
     chainID: "phoenix-1",
+    /*
+    URL: `https://lcd.phoenix.terra.setten.io/${settenConfig.settenProject}/?key=${settenConfig.settenKey}`,
     axiosObject: {
       baseURL: `https://lcd.phoenix.terra.setten.io/${settenConfig.settenProject}`,
       params: {
         key: settenConfig.settenKey,
       },
     },
+    */
   },
 };
 

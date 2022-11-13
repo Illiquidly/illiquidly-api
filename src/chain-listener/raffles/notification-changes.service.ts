@@ -109,7 +109,6 @@ export class RaffleNotificationChangesService extends ChangeListenerService {
               notifications.push(notification);
             }
           },
-          // No concurrency because we are querying the local db
         );
       });
 
