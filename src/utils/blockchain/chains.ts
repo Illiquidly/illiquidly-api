@@ -43,6 +43,7 @@ export interface Contracts {
   fee?: string;
   fee_distributor?: string;
   raffle?: string;
+  loan?: string;
 }
 
 export type AllContracts = {
@@ -56,6 +57,7 @@ export const contracts: AllContracts = {
     fee: "terra1uh0vx5eh5tu49g5hw98r622m805vg533j3kjf8c2mtqhz6qfyyxqms5tmw",
     fee_distributor: "terra1dnlq6uxmmqn56uspjh9wecc5mcu56hq5ckvzd90tmfqfn36paa6sfr6llq",
     raffle: "terra1vmrf7z6yr34rgpkkv2yk0t28hdlfzwunql9ldusum9cc8ef272ksy6kjgz",
+    loan:"terra196f7nl00a0kfa6ph3ycc5ws6q2lm73r3uv8ra92huptnd2a8v4kqv9tea2"
   },
   classic: {},
   mainnet: {
