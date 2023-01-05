@@ -7,49 +7,49 @@ import { chains, contracts } from "../../utils/blockchain/chains";
 import { InjectRedis } from "@liaoliaots/nestjs-redis";
 import Redis from "ioredis";
 import { TxLog } from "@terra-money/terra.js";
-import {
-  CounterTrade,
-  TradeNotification,
-  TradeNotificationType,
-} from "../../trades/entities/trade.entity";
 import { CW721TokenAttribute } from "../../utils-api/entities/nft-info.entity";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
-import { TradesService } from "../../trades/trades.service";
 import { redisQueueConfig } from "../../utils/configuration";
 import { ConfigType } from "@nestjs/config";
 import { ChangeListenerService } from "../change-listener.service";
+import { LoanNotification, LoanNotificationType } from "../../loans/entities/loan.entity";
+import { Offer } from "../../loans/entities/offer.entity";
+import { LoansService } from "../../loans/loans.service";
+import { UtilsService } from "../../utils-api/utils.service";
 const pMap = require("p-map");
 const DATE_FORMAT = require("dateformat");
 
 @Injectable()
 export class LoanNotificationChangesService extends ChangeListenerService {
   constructor(
-    @InjectRedis("trade-notification-subscriber") readonly redisSubscriber: Redis,
+    @InjectRedis("loan-notification-subscriber") readonly redisSubscriber: Redis,
     @InjectRedis("default-client") readonly redisDB: Redis,
-    @InjectRepository(TradeNotification)
-    private tradeNotificationRepository: Repository<TradeNotification>,
-    @InjectRepository(CounterTrade) private counterTradesRepository: Repository<CounterTrade>,
-    private readonly tradesService: TradesService,
+    @InjectRepository(LoanNotification)
+    private loanNotificationRepository: Repository<LoanNotification>,
+    @InjectRepository(Offer) private offersRepository: Repository<Offer>,
+    private readonly loansService: LoansService,
+    private readonly utilsService: UtilsService,
     @Inject(redisQueueConfig.KEY) queueConfig: ConfigType<typeof redisQueueConfig>,
   ) {
     super(
       redisSubscriber,
       redisDB,
       queueConfig.CONTRACT_UPDATE_QUEUE_NAME,
-      queueConfig.TRIGGER_P2P_TRADE_QUERY_MSG,
-      queueConfig.REDIS_TRADE_NOTIFICATION_TXHASH_SET,
+      queueConfig.TRIGGER_LOAN_QUERY_MSG,
+      queueConfig.REDIS_LOAN_NOTIFICATION_TXHASH_SET,
     );
   }
 
-  private async createNotification(network: Network, tradeId: number, tx: any) {
-    const notification: TradeNotification = new TradeNotification();
+  private async createNotification(network: Network, borrower: string, loanId: number, tx: any) {
+    const notification: LoanNotification = new LoanNotification();
     notification.network = network;
     notification.time = DATE_FORMAT(tx.timestamp, "yyyy-mm-dd HH:MM:ss");
-    const trade = await this.tradesService.updateTrade(network, tradeId);
-    notification.tradeId = tradeId;
+    const loan = await this.loansService.updateLoan(network, borrower, loanId);
+    notification.borrower = borrower;
+    notification.loanId = loanId;
     notification.notificationPreview =
-      (await this.tradesService.parseTokenPreview(network, trade.tradeInfo.tradePreview)) ?? {};
+      (await this.utilsService.parseTokenPreview(network, loan.loanPreview)) ?? {};
     // We need to make sure we don't send the Metadata back with the attribute
     notification.notificationPreview.cw721Coin.attributes =
       notification.notificationPreview.cw721Coin.attributes.map(
@@ -68,7 +68,7 @@ export class LoanNotificationChangesService extends ChangeListenerService {
       },
     );
 
-    // We loop query the lcd for new transactions on the p2p trade contract from the last one registered, until there is no tx left
+    // We loop query the lcd for new transactions on the p2p loan contract from the last one registered, until there is no tx left
     let txToAnalyse = [];
     do {
       // We start querying after we left off
@@ -76,7 +76,7 @@ export class LoanNotificationChangesService extends ChangeListenerService {
       const [err, response] = await asyncAction(
         lcd.get("/cosmos/tx/v1beta1/txs", {
           params: {
-            events: `wasm._contract_address='${contracts[network].p2pTrade}'`,
+            events: `wasm._contract_address='${contracts[network].loan}'`,
             "pagination.offset": offset,
           },
         }),
@@ -93,7 +93,7 @@ export class LoanNotificationChangesService extends ChangeListenerService {
       );
       txToAnalyse = response.data.tx_responses.filter((_: any, i: number) => txFilter[i]);
       // Then we iterate over the transactions and get the action it refers to and the necessary information
-      const notifications: TradeNotification[] = [];
+      const notifications: LoanNotification[] = [];
 
       await pMap(txToAnalyse, async (tx: any) => {
         await pMap(
@@ -101,90 +101,89 @@ export class LoanNotificationChangesService extends ChangeListenerService {
           async (log: any) => {
             const txLog = new TxLog(log.msg_index, log.log, log.events);
             const contractEvents = txLog.eventsByType.wasm;
-            // New counter_trade published
-            if (contractEvents?.action?.[0] == "confirm_counter_trade") {
-              // If there is a new counter_trade, we notify the owner of the trade
-              const tradeId = parseInt(contractEvents.trade_id?.[0] ?? contractEvents.trade?.[0]);
-              const notification = await this.createNotification(network, tradeId, tx);
-              notification.user = contractEvents.trader[0];
-              notification.counterTradeId = parseInt(
-                contractEvents.counter_id?.[0] ?? contractEvents.counter?.[0],
-              );
-              notification.notificationType = TradeNotificationType.newCounterTrade;
+            if (contractEvents?.action?.[0] == "make_offer") {
+              // If there is a new offer, we notify the owner of the loan
+              const loanId = parseInt(contractEvents.loan_id[0]);
+              const borrower = contractEvents.borrower[0];
+              const notification = await this.createNotification(network, borrower, loanId, tx);
+              notification.user = borrower;
+              notification.globalOfferId = contractEvents.global_offer_id[0];
+              notification.notificationType = LoanNotificationType.newOffer;
               notifications.push(notification);
-            } else if (contractEvents?.action?.[0] == "review_counter_trade") {
-              // If there is a new review of a counter_trade, we notify the owner of the counter trade
-              const tradeId = parseInt(contractEvents.trade_id?.[0] ?? contractEvents.trade?.[0]);
-              const notification = await this.createNotification(network, tradeId, tx);
-              notification.user = contractEvents.counter_trader[0];
-              notification.counterTradeId = parseInt(
-                contractEvents.counter_id?.[0] ?? contractEvents.counter?.[0],
-              );
-              notification.notificationType = TradeNotificationType.counterTradeReview;
+            } else if (contractEvents?.action?.[0] == "refuse_offer") {
+              // If an offer was refused, we notify the owner of the offer
+              const loanId = parseInt(contractEvents.loan_id[0]);
+              const borrower = contractEvents.borrower[0];
+              const notification = await this.createNotification(network, borrower, loanId, tx);
+              notification.user = contractEvents.lender[0];
+              notification.globalOfferId = contractEvents.global_offer_id[0];
+              notification.notificationType = LoanNotificationType.refuseOffer;
               notifications.push(notification);
-            } else if (contractEvents?.action?.[0] == "refuse_counter_trade") {
-              // If a counter_trade was refused, we notify the owner of the counter trade
-              const tradeId = parseInt(contractEvents.trade_id?.[0] ?? contractEvents.trade?.[0]);
-              const notification = await this.createNotification(network, tradeId, tx);
-              notification.user = contractEvents.counter_trader[0];
-              notification.counterTradeId = parseInt(
-                contractEvents.counter_id?.[0] ?? contractEvents.counter?.[0],
-              );
-              notification.notificationType = TradeNotificationType.refuseCounterTrade;
-              notifications.push(notification);
-            } else if (contractEvents?.action?.[0] == "accept_counter_trade") {
-              // If a counter_trade was accepted, we notify the owner of the counter trade
-              const acceptedCounterId: number = parseInt(
-                contractEvents.counter_id?.[0] ?? contractEvents.counter?.[0],
-              );
-              const tradeId = parseInt(contractEvents.trade_id?.[0] ?? contractEvents.trade?.[0]);
-              const notification = await this.createNotification(network, tradeId, tx);
-              notification.user = contractEvents.counter_trader[0];
-              notification.counterTradeId = acceptedCounterId;
-              notification.notificationType = TradeNotificationType.counterTradeAccepted;
+            } else if (contractEvents?.action?.[0] == "start_loan") {
+              const loanId = parseInt(contractEvents.loan_id[0]);
+              const borrower = contractEvents.borrower[0];
+              const globalOfferId = contractEvents.global_offer_id[0];
+              const notification = await this.createNotification(network, borrower, loanId, tx);
+              notification.globalOfferId = globalOfferId;
+
+              // This one can have two different notification type :
+              // 1. If the offer is accepted by the borrower
+              if (contractEvents?.action_type?.[0] == "accept_offer") {
+                notification.user = contractEvents.lender[0];
+                notification.notificationType = LoanNotificationType.offerAccepted;
+              }
+              // 2. If the loan is accepted by the lender
+              if (contractEvents?.action_type?.[0] == "accept_loan") {
+                notification.user = contractEvents.borrower[0];
+                notification.notificationType = LoanNotificationType.loanAccepted;
+              }
               notifications.push(notification);
 
-              // But we also notify all the other counter traders that their counter_trade is cancelled
-              const counterTrades: CounterTrade[] = await this.counterTradesRepository
-                .createQueryBuilder("counter_trade")
-                .innerJoinAndSelect("counter_trade.trade", "trade")
-                .innerJoinAndSelect("counter_trade.tradeInfo", "tradeInfo")
-                .where("counter_trade.network = :network", { network })
-                .where("trade.tradeId = :tradeId", { tradeId })
+              // But we also notify all the other potential lenders that their offer is cancelled
+              const offers: Offer[] = await this.offersRepository
+                .createQueryBuilder("offer")
+                .innerJoinAndSelect("offer.loan", "loan")
+                .where("offer.network = :network", { network })
+                .andWhere("loan.borrower = :borrower", { borrower })
+                .andWhere("loan.loanId = :loanId", { loanId })
                 .getMany();
 
               notifications.concat(
                 await pMap(
-                  counterTrades.filter(
-                    counterInfo => counterInfo.counterTradeId != acceptedCounterId,
-                  ),
-                  async counterInfo => {
-                    const notification = await this.createNotification(network, tradeId, tx);
-                    notification.user = counterInfo.tradeInfo.owner;
-                    notification.counterTradeId = counterInfo.counterTradeId;
-                    notification.notificationType = TradeNotificationType.otherCounterTradeAccepted;
+                  offers.filter(offer => offer.globalOfferId != globalOfferId),
+                  async (offer: Offer) => {
+                    const notification = await this.createNotification(
+                      network,
+                      borrower,
+                      loanId,
+                      tx,
+                    );
+                    notification.user = offer.lender;
+                    notification.globalOfferId = offer.globalOfferId;
+                    notification.notificationType = LoanNotificationType.otherOfferAccepted;
                     return notification;
                   },
                 ),
               );
-            } else if (contractEvents?.action?.[0] == "cancel_trade") {
-              // If a trade was cancelled, we notify the owner of all the counter trades
-              const tradeId = parseInt(contractEvents.trade_id?.[0] ?? contractEvents.trade?.[0]);
+            } else if (contractEvents?.action?.[0] == "withdraw_collateral") {
+              // If a loan was cancelled, we notify the owner of all the offers
+              const loanId = parseInt(contractEvents.loan_id[0]);
+              const borrower = contractEvents.borrower[0];
 
-              const counterTrades: CounterTrade[] = await this.counterTradesRepository
-                .createQueryBuilder("counter_trade")
-                .innerJoinAndSelect("counter_trade.trade", "trade")
-                .innerJoinAndSelect("counter_trade.tradeInfo", "tradeInfo")
-                .where("counter_trade.network = :network", { network })
-                .where("trade.tradeId = :tradeId", { tradeId })
+              const offers: Offer[] = await this.offersRepository
+                .createQueryBuilder("offer")
+                .innerJoinAndSelect("offer.loan", "loan")
+                .where("offer.network = :network", { network })
+                .andWhere("loan.borrower = :borrower", { borrower })
+                .andWhere("loan.loanId = :loanId", { loanId })
                 .getMany();
 
               notifications.concat(
-                await pMap(counterTrades, async counterInfo => {
-                  const notification = await this.createNotification(network, tradeId, tx);
-                  notification.user = counterInfo.tradeInfo.owner;
-                  notification.counterTradeId = counterInfo.counterTradeId;
-                  notification.notificationType = TradeNotificationType.tradeCancelled;
+                await pMap(offers, async (offer: Offer) => {
+                  const notification = await this.createNotification(network, borrower, loanId, tx);
+                  notification.user = offer.lender;
+                  notification.globalOfferId = offer.globalOfferId;
+                  notification.notificationType = LoanNotificationType.loanCancelled;
                   return notification;
                 }),
               );
@@ -193,8 +192,7 @@ export class LoanNotificationChangesService extends ChangeListenerService {
           // No concurrency because we are querying the local db
         );
       });
-
-      this.tradeNotificationRepository.save(notifications);
+      this.loanNotificationRepository.save(notifications);
 
       // We add the transaction hashes to the redis set :
       const txHashes = response.data.tx_responses.map((tx: any) => tx.txhash);

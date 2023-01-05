@@ -35,6 +35,7 @@ export class BlockChainCollateralInfo {
   activeOffer?: string;
   startBlock?: number;
   comment?: string;
+  loanPreview?: any;
 }
 
 export class BlockChainLoanResponse {

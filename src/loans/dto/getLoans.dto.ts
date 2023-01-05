@@ -41,6 +41,7 @@ export class LoanInfoResponse {
   activeOffer?: string;
   startBlock?: number;
   comment?: string;
+  loanPreview: AssetResponse;
 }
 
 export class LoanResponse {

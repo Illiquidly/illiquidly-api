@@ -89,7 +89,7 @@ export class LoansService {
     if (queryErr) {
       throw new NotFoundException("Offer Not Found");
     }
-    console.log(distantOfferInfo)
+    console.log(distantOfferInfo);
     // We save the new queried trade Info To the database
     return {
       id: null,
@@ -221,6 +221,7 @@ export class LoansService {
       loanFavorites: null,
       activeOfferId: loanInfo.collateral.activeOffer,
       comment: loanInfo.collateral.comment,
+      loanPreview: JSON.stringify(loanInfo.collateral.loanPreview),
     };
   }
 
@@ -239,6 +240,7 @@ export class LoansService {
       activeOffer: loan.activeOfferId,
       startBlock: loan.startBlock,
       comment: loan.comment,
+      loanPreview: await this.utilsService.parseTokenPreview(network, loan.loanPreview),
       terms: loan.terms ? termsToTermsResponse(loan.terms) : undefined,
     };
 

@@ -38,4 +38,5 @@ export const nftTransferAPIConfig = registerAs("nft-transfer-config", () => ({
 
 export const signingTerraConfig = registerAs("signing-terra-config", () => ({
   testnet: process.env.TERRA_TESTNET_MNEMONIC,
+  mainnet: process.env.TERRA_MAINNET_MNEMONIC,
 }));

@@ -81,7 +81,7 @@ export class Loan {
   @Column({ nullable: true })
   activeOfferId?: string;
 
-  @OneToMany(() => Offer, offer => offer.loan, )
+  @OneToMany(() => Offer, offer => offer.loan)
   offers: Offer[];
 
   @ManyToMany(() => CW721Token)
@@ -90,12 +90,18 @@ export class Loan {
 
   @Column({ type: "json" })
   cw1155Assets: any[];
+
+  @Column({ type: "text" })
+  loanPreview: string;
 }
 
-// TODO
 export enum LoanNotificationType {
-  newTicketBought = "new_ticket_bought",
-  raffleFinished = "raffle_finished",
+  newOffer = "new_offer",
+  offerAccepted = "offer_accepted",
+  loanAccepted = "loan_accepted",
+  otherOfferAccepted = "other_offer_accepted",
+  loanCancelled = "loan_cancelled",
+  refuseOffer = "offer_refused",
 }
 
 export enum NotificationStatus {
@@ -122,6 +128,9 @@ export class LoanNotification {
   user: string;
 
   @Column()
+  borrower: string;
+
+  @Column()
   loanId: number;
 
   @Column({ type: "json", default: null })
@@ -132,6 +141,9 @@ export class LoanNotification {
     enum: LoanNotificationType,
   })
   notificationType: LoanNotificationType;
+
+  @Column()
+  globalOfferId: string;
 
   @Column({
     type: "enum",

@@ -19,6 +19,7 @@ import { TradesService } from "../../trades/trades.service";
 import { redisQueueConfig } from "../../utils/configuration";
 import { ConfigType } from "@nestjs/config";
 import { ChangeListenerService } from "../change-listener.service";
+import { UtilsService } from "../../utils-api/utils.service";
 const pMap = require("p-map");
 const DATE_FORMAT = require("dateformat");
 
@@ -31,6 +32,7 @@ export class NotificationChangesService extends ChangeListenerService {
     private tradeNotificationRepository: Repository<TradeNotification>,
     @InjectRepository(CounterTrade) private counterTradesRepository: Repository<CounterTrade>,
     private readonly tradesService: TradesService,
+    private readonly utilsService: UtilsService,
     @Inject(redisQueueConfig.KEY) queueConfig: ConfigType<typeof redisQueueConfig>,
   ) {
     super(
@@ -49,7 +51,7 @@ export class NotificationChangesService extends ChangeListenerService {
     const trade = await this.tradesService.updateTrade(network, tradeId);
     notification.tradeId = tradeId;
     notification.notificationPreview =
-      (await this.tradesService.parseTokenPreview(network, trade.tradeInfo.tradePreview)) ?? {};
+      (await this.utilsService.parseTokenPreview(network, trade.tradeInfo.tradePreview)) ?? {};
     // We need to make sure we don't send the Metadata back with the attribute
     notification.notificationPreview.cw721Coin.attributes =
       notification.notificationPreview.cw721Coin.attributes.map(
@@ -158,7 +160,7 @@ export class NotificationChangesService extends ChangeListenerService {
                   counterTrades.filter(
                     counterInfo => counterInfo.counterTradeId != acceptedCounterId,
                   ),
-                  async counterInfo => {
+                  async (counterInfo: CounterTrade) => {
                     const notification = await this.createNotification(network, tradeId, tx);
                     notification.user = counterInfo.tradeInfo.owner;
                     notification.counterTradeId = counterInfo.counterTradeId;

@@ -45,7 +45,7 @@ export class Offer {
   depositedFunds?: Coin;
 
   @Column({
-    nullable: true
+    nullable: true,
   })
   comment?: string;
 }
