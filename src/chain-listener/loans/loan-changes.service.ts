@@ -7,27 +7,27 @@ import { chains, contracts } from "../../utils/blockchain/chains";
 import { InjectRedis } from "@liaoliaots/nestjs-redis";
 import Redis from "ioredis";
 import { TxLog } from "@terra-money/terra.js";
-import { TradesService } from "../../trades/trades.service";
 import { ConfigType } from "@nestjs/config";
 import { redisQueueConfig } from "../../utils/configuration";
 import { ChangeListenerService } from "../change-listener.service";
+import { LoansService } from "../../loans/loans.service";
 const pMap = require("p-map");
 const _ = require("lodash");
 
 @Injectable()
-export class TradeChangesService extends ChangeListenerService {
+export class LoanChangesService extends ChangeListenerService {
   constructor(
-    @InjectRedis("trade-subscriber") readonly redisSubscriber: Redis,
+    @InjectRedis("loan-subscriber") readonly redisSubscriber: Redis,
     @InjectRedis("default-client") readonly redisDB: Redis,
-    readonly tradesService: TradesService,
+    readonly loansService: LoansService,
     @Inject(redisQueueConfig.KEY) queueConfig: ConfigType<typeof redisQueueConfig>,
   ) {
     super(
       redisSubscriber,
       redisDB,
       queueConfig.CONTRACT_UPDATE_QUEUE_NAME,
-      queueConfig.TRIGGER_P2P_TRADE_QUERY_MSG,
-      queueConfig.REDIS_TRADE_TXHASH_SET,
+      queueConfig.TRIGGER_LOAN_QUERY_MSG,
+      queueConfig.REDIS_LOAN_TXHASH_SET,
     );
   }
 
@@ -45,7 +45,7 @@ export class TradeChangesService extends ChangeListenerService {
       const [err, response] = await asyncAction(
         lcd.get("/cosmos/tx/v1beta1/txs", {
           params: {
-            events: `wasm._contract_address='${contracts[network].p2pTrade}'`,
+            events: `wasm._contract_address='${contracts[network].loan}'`,
             "pagination.offset": offset,
           },
         }),
@@ -63,19 +63,19 @@ export class TradeChangesService extends ChangeListenerService {
       );
       txToAnalyse = response.data.tx_responses.filter((_1: any, i: number) => txFilter[i]);
 
-      // Then we iterate over the transactions and get the trade_id and/or (trade_id, counter_id)
-      const idsToQuery: number[][] = txToAnalyse
+      // Then we iterate over the transactions and get the (borrower, loan_id) and/or (trade_id, global_offer_id)
+      const idsToQuery: [string, number, string][] = txToAnalyse
         .map((tx: any) => {
           return tx.logs
-            .map((log: any): number[][] => {
+            .map((log: any): [string, number, string][] => {
               const txLog = new TxLog(log.msg_index, log.log, log.events);
-              const tradeIds = (
-                txLog.eventsByType.wasm.trade_id ?? txLog.eventsByType.wasm.trade
+              const borrowers = txLog.eventsByType.wasm.borrower;
+              const loanIds = (
+                txLog.eventsByType.wasm.loan_id ?? txLog.eventsByType.wasm.counter
               )?.map((id: string) => parseInt(id));
-              const counterTradeIds = (
-                txLog.eventsByType.wasm.counter_id ?? txLog.eventsByType.wasm.counter
-              )?.map((id: string) => parseInt(id));
-              return _.unzip([tradeIds, counterTradeIds]);
+
+              const globalOfferIds = txLog.eventsByType.wasm.global_offer_id;
+              return _.unzip([borrowers, loanIds, globalOfferIds]);
             })
             .flat();
         })
@@ -84,15 +84,18 @@ export class TradeChangesService extends ChangeListenerService {
       //this.logger.log("Trade Ids to update", _.uniqWith(_.compact(idsToQuery), _.isEqual));
 
       // The we query the blockchain for trade info and put it into the database
-      await pMap(_.uniqWith(_.compact(idsToQuery), _.isEqual), async (id: number[]) => {
-        const [tradeId, counterTradeId] = id;
-        // We update the tradeInfo and all its associated counter_trades in the database
-        await this.tradesService.updateTradeAndCounterTrades(network, tradeId);
-        if (counterTradeId != undefined) {
-          // If a counterId is defined, we also update that specific counterId
-          await this.tradesService.updateCounterTrade(network, tradeId, counterTradeId);
-        }
-      });
+      await pMap(
+        _.uniqWith(_.compact(idsToQuery), _.isEqual),
+        async (id: [string, number, string]) => {
+          const [borrower, loanId, globalOfferId] = id;
+          // We update the tradeInfo and all its associated counter_trades in the database
+          await this.loansService.updateLoanAndOffers(network, borrower, loanId);
+          if (globalOfferId != undefined) {
+            // If a counterId is defined, we also update that specific counterId
+            await this.loansService.updateOffer(network, globalOfferId);
+          }
+        },
+      );
 
       // We add the transaction hashes to the redis set :
       const txHashes = response.data.tx_responses.map((tx: any) => tx.txhash);
@@ -103,7 +106,7 @@ export class TradeChangesService extends ChangeListenerService {
         );
       }
 
-      // If no transactions queried were a analyzed, we return
+      // If no transactions queried were analyzed, we return
     } while (txToAnalyse.length);
     //this.logger.log("Trade Update finished");
   }

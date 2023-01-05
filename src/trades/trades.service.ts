@@ -267,23 +267,8 @@ export class TradesService {
       return nft;
     });
     tradeInfo.additionalInfo.nftsWanted = nftsWanted;
-    tradeInfo.additionalInfo.lookingFor = (tradeInfo.additionalInfo.tokensWanted ?? []).map(
-      (token): RawCoin => {
-        if (token.coin) {
-          if (token.coin.denom == "uluna") {
-            return formatNiceLuna(token.coin.amount);
-          }
-          return {
-            currency: token.coin.denom,
-            amount: token.coin.amount,
-          };
-        } else {
-          return {
-            currency: token.cw20Coin.address,
-            amount: token.cw20Coin.amount,
-          };
-        }
-      },
+    tradeInfo.additionalInfo.lookingFor = (tradeInfo.additionalInfo.tokensWanted ?? []).map(token =>
+      coinToRawCoin(token),
     );
     tradeInfo.additionalInfo.lookingFor = tradeInfo.additionalInfo.lookingFor.concat(nftsWanted);
 
@@ -403,6 +388,23 @@ export class TradesService {
       cw721Coin: {
         ...tokenInfo,
       },
+    };
+  }
+}
+
+export function coinToRawCoin(token: AssetResponse): RawCoin {
+  if (token.coin) {
+    if (token.coin.denom == "uluna") {
+      return formatNiceLuna(token.coin.amount);
+    }
+    return {
+      currency: token.coin.denom,
+      amount: token.coin.amount,
+    };
+  } else {
+    return {
+      currency: token.cw20Coin.address,
+      amount: token.cw20Coin.amount,
     };
   }
 }

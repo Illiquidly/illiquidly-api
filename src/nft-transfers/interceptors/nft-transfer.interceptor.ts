@@ -2,8 +2,6 @@ import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from "@nes
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { NftTransferService } from "../nft-transfer.service";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
 import { NFTTransferTransaction } from "../entities/nft-transfer.entity";
 import { NFTTransferResponse } from "../dto/get-nft-transfer.dto";
 import { UtilsService } from "../../utils-api/utils.service";

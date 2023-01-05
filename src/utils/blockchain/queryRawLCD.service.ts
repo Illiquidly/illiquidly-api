@@ -1,9 +1,6 @@
-import _ from "lodash";
 import { Network } from "./dto/network.dto.js";
 import { Injectable } from "@nestjs/common";
 import { QueryLimitService } from "../queryLimit.service.js";
-const camelCaseObjectDeep = require("camelcase-object-deep");
-const fs = require("fs");
 
 @Injectable()
 export class RawLCDQuery {

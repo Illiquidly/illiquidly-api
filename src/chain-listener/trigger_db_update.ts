@@ -48,8 +48,21 @@ export class TriggerDbUpdateService {
           this.queueConfig.CONTRACT_UPDATE_QUEUE_NAME,
           JSON.stringify(raffleMessage),
         );
+        this.logger.log(`Update asked for the raffle contract on ${network}`);
       }
-      this.logger.log(`Update asked for the raffle contract on ${network}`);
+
+      // We register a Loans Message
+      if (contracts?.[network]?.loan) {
+        const loanMessage: QueueMessage = {
+          message: this.queueConfig.TRIGGER_LOAN_QUERY_MSG,
+          network,
+        };
+        await this.redisPublisher.publish(
+          this.queueConfig.CONTRACT_UPDATE_QUEUE_NAME,
+          JSON.stringify(loanMessage),
+        );
+        this.logger.log(`Update asked for the loan contract on ${network}`);
+      }
     });
   }
 }

@@ -10,6 +10,6 @@ export const typeOrmOptions = {
   entities: Entities,
   autoLoadEntities: true,
   synchronize: true,
-  //logging: true,
+  logging: true,
   namingStrategy: new SnakeNamingStrategy(),
 };

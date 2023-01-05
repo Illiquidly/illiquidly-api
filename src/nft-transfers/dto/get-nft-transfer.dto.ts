@@ -1,7 +1,6 @@
 import { TokenResponse } from "src/utils-api/dto/nft.dto";
 import { Network } from "../../utils/blockchain/dto/network.dto";
 import { IsAddress } from "../../utils/nest/addressValidator";
-import { NFTTransferTransaction } from "../entities/nft-transfer.entity";
 
 export enum UpdateMode {
   UPDATE = "update",

@@ -18,11 +18,15 @@ import { redisQueueConfig, signingTerraConfig } from "../utils/configuration";
 import { RandomnessProviderService } from "./raffles/provide_randomness";
 import { TriggerDbUpdateService } from "./trigger_db_update";
 import { UtilsModule } from "../utils-api/utils.module";
+import { LoanChangesService } from "./loans/loan-changes.service";
+import { LoanNotificationChangesService } from "./loans/notification-changes.service";
+import { LoansModule } from "../loans/loan.module";
 
 @Module({
   imports: [
     TradesModule,
     RafflesModule,
+    LoansModule,
     TypeOrmModule.forFeature(Entities),
     ConfigModule.forRoot({
       load: [redisQueueConfig, signingTerraConfig],
@@ -39,6 +43,9 @@ import { UtilsModule } from "../utils-api/utils.module";
 
     TriggerDbUpdateService,
     RandomnessProviderService,
+
+    LoanChangesService,
+    LoanNotificationChangesService,
 
     WebsocketListenerService,
   ],

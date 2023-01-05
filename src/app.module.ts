@@ -41,6 +41,8 @@ import { NftTransferModule } from "./nft-transfers/nft-transfer.module";
         { namespace: "trade-notification-subscriber" },
         { namespace: "raffle-subscriber" },
         { namespace: "raffle-notification-subscriber" },
+        { namespace: "loan-subscriber" },
+        { namespace: "loan-notification-subscriber" },
         { namespace: "trade-publisher" },
       ],
     }),

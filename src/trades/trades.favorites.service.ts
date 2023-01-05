@@ -91,9 +91,12 @@ export class TradeFavoritesService {
     }
 
     // We update the trades
-    currentFavorite.trades = currentFavorite.trades.filter(
-      trade => !tradeId.includes(trade.tradeId),
+    currentFavorite.trades = _.differenceWith(
+      currentFavorite.trades,
+      tradeId,
+      (el1: Trade, el2: number) => el1.tradeId == el2,
     );
+
     await this.favoriteRepository.save(currentFavorite);
     return currentFavorite;
   }

@@ -78,10 +78,10 @@ export class UtilsService {
     // If there is no error, we return the saved object
     if (!newErr) {
       return newNFTInfo;
-    }
+    } 
 
     // If there is an error, we try to query the information one more time from the database (that may happen when the api saves two info at a time)
-    const [storedErr, storedNFTInfo] = await asyncAction(
+    const [_storedErr, storedNFTInfo] = await asyncAction(
       this.findOneTokenInDB(network, address, tokenId),
     );
 
