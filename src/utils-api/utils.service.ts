@@ -233,11 +233,11 @@ export class UtilsService {
   parseTokenDBToResponse(tokenInfo: CW721Token): TokenResponse {
     return {
       tokenId: tokenInfo?.tokenId,
-      collectionName: tokenInfo?.collection?.collectionName,
+      collectionName: _.truncate(tokenInfo?.collection?.collectionName, { length: 28 }),
       collectionAddress: tokenInfo?.collection?.collectionAddress,
       symbol: tokenInfo?.collection?.symbol,
       imageUrl: fromIPFSImageURLtoImageURL(tokenInfo?.metadata?.image),
-      name: tokenInfo?.metadata?.name,
+      name: _.truncate(tokenInfo?.metadata?.name, { length: 28 }),
       attributes: tokenInfo?.metadata?.attributes,
       description: tokenInfo?.metadata?.description,
       traits: (tokenInfo?.metadata?.attributes ?? []).map(

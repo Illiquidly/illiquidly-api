@@ -114,23 +114,7 @@ export class NftContentQuerierService {
   ): Promise<NFTContentResponse> {
     const ownedTokens: TokenResponse[] = await pMap(
       walletContent?.ownedTokens ?? [],
-      async token => {
-        const tokenNftInfo = camelCaseObjectDeep(token.metadata);
-        return {
-          tokenId: token.tokenId,
-          collectionAddress: token.collection?.collectionAddress,
-          collectionName: token.collection?.collectionName,
-          symbol: token.collection?.symbol,
-          allNFTInfo: token?.allNFTInfo,
-          imageUrl: fromIPFSImageURLtoImageURL(tokenNftInfo?.image),
-          description: tokenNftInfo?.description,
-          name: tokenNftInfo?.name,
-          attributes: tokenNftInfo?.attributes,
-          traits: (tokenNftInfo?.attributes ?? []).map(
-            ({ traitType, value }: { traitType: string; value: string }) => [traitType, value],
-          ),
-        };
-      },
+      async (token: CW721Token) => this.utilsService.parseTokenDBToResponse(token),
     );
     const ownedCollections = _.uniqBy(
       ownedTokens.map(token => ({
