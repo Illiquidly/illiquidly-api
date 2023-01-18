@@ -305,8 +305,7 @@ export class LoansService {
     }
     // We query the raffle informations
     const newLoan = await this.loansRepository.findOneBy({ network, borrower, loanId });
-
-    console.log(network, borrower, loanId)
+    
     if (newLoan) {
       currentFavorite.loans.push(newLoan);
     }
