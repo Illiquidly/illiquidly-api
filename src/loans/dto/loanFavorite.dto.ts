@@ -9,6 +9,7 @@ export class LoanFavoriteMessage {
   @IsAddress()
   user: string;
 
-  @Type(() => SimpleFavorite)
-  loanId: SimpleFavorite[];
+  borrower: string;
+
+  loanId: number;
 }

@@ -89,7 +89,6 @@ export class LoansService {
     if (queryErr) {
       throw new NotFoundException("Offer Not Found");
     }
-    console.log(distantOfferInfo);
     // We save the new queried trade Info To the database
     return {
       id: null,
@@ -125,7 +124,6 @@ export class LoansService {
     // We try to update the loan. If the loan already exists, we don't care
     // This is a workaround, because we don't have functionnal lock
     const test = await asyncAction(this.loansRepository.save(loanDBObject));
-    console.log("loan error", test[0]);
 
     return loanDBObject;
   }
@@ -176,9 +174,9 @@ export class LoansService {
         );
       }
     }
-    console.log("before offer error", offerDBObject);
+
     const test = await this.offerRepository.save(offerDBObject);
-    console.log("offer error", test);
+
 
     return offerDBObject;
   }
@@ -286,7 +284,7 @@ export class LoansService {
       .execute();
   }
 
-  async addFavoriteLoan(network: Network, user: string, loansToAdd: SimpleFavorite[]) {
+  async addFavoriteLoan(network: Network, user: string, borrower: string, loanId: number) {
     let currentFavorite: LoanFavorite = await this.favoriteRepository.findOne({
       relations: {
         loans: true,
@@ -306,47 +304,20 @@ export class LoansService {
       };
     }
     // We query the raffle informations
-    const loans = await pMap(loansToAdd, async ({ borrower, loanId }) =>
-      this.loansRepository.findOneBy({ network, borrower, loanId }),
-    );
+    const newLoan = await this.loansRepository.findOneBy({ network, borrower, loanId });
 
-    currentFavorite.loans = _.uniqBy(currentFavorite.loans.concat(loans), (loan: Loan) => loan.id);
-
-    // We save to the database
-    this.favoriteRepository.save(currentFavorite);
-    return currentFavorite;
-  }
-
-  async setFavoriteLoan(network: Network, user: string, loansToSet: SimpleFavorite[]) {
-    let currentFavorite: LoanFavorite = await this.favoriteRepository.findOne({
-      relations: {
-        loans: true,
-      },
-      where: {
-        network,
-        user,
-      },
-    });
-
-    if (!currentFavorite) {
-      currentFavorite = {
-        id: null,
-        network,
-        user,
-        loans: [],
-      };
+    if (newLoan) {
+      currentFavorite.loans.push(newLoan);
     }
-    // We query the raffle informations
-    currentFavorite.loans = await pMap(_.uniq(loansToSet), async ({ borrower, loanId }) =>
-      this.loansRepository.findOneBy({ network, borrower, loanId }),
-    );
+
+    currentFavorite.loans = _.uniqBy(currentFavorite.loans, (loan: Loan) => loan.id);
 
     // We save to the database
     this.favoriteRepository.save(currentFavorite);
     return currentFavorite;
   }
 
-  async removeFavoriteLoan(network: Network, user: string, loansToRemove: SimpleFavorite[]) {
+  async removeFavoriteLoan(network: Network, user: string, borrower: string, loanId: number) {
     const currentFavorite: LoanFavorite = await this.favoriteRepository.findOne({
       relations: {
         loans: true,
@@ -364,7 +335,12 @@ export class LoansService {
     // We update the raffles
     currentFavorite.loans = _.differenceWith(
       currentFavorite.loans,
-      loansToRemove,
+      [
+        {
+          borrower,
+          loanId,
+        },
+      ],
       (el1: Loan, el2: SimpleFavorite) => el1.borrower == el2.borrower && el1.loanId == el2.loanId,
     );
 

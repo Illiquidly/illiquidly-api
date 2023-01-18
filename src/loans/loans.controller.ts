@@ -185,16 +185,21 @@ export class LoanFavoriteController {
 
   @Patch("/add")
   async addFavoriteLoan(@Query() params: LoanFavoriteMessage) {
-    return await this.loansService.addFavoriteLoan(params.network, params.user, params.loanId);
-  }
-
-  @Patch("/set")
-  async setFavoriteLoan(@Query() params: LoanFavoriteMessage) {
-    return await this.loansService.setFavoriteLoan(params.network, params.user, params.loanId);
+    return await this.loansService.addFavoriteLoan(
+      params.network,
+      params.user,
+      params.borrower,
+      params.loanId,
+    );
   }
 
   @Patch("/remove")
   async removeFavoriteLoan(@Query() params: LoanFavoriteMessage) {
-    return await this.loansService.removeFavoriteLoan(params.network, params.user, params.loanId);
+    return await this.loansService.removeFavoriteLoan(
+      params.network,
+      params.user,
+      params.borrower,
+      params.loanId,
+    );
   }
 }
