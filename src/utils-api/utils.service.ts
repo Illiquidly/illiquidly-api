@@ -141,6 +141,7 @@ export class UtilsService {
     }catch(err){
       // Else, we save it in the database
       await this.NFTTokenRepository.update({tokenId, collectionId: tokenDBObject.collection.id}, tokenDBObject);
+      return tokenDBObject;
     }
   }
 
