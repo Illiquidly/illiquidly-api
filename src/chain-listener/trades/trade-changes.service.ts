@@ -84,18 +84,15 @@ export class TradeChangesService extends ChangeListenerService {
       //this.logger.log("Trade Ids to update", _.uniqWith(_.compact(idsToQuery), _.isEqual));
 
       // The we query the blockchain for trade info and put it into the database
-      await pMap(
-        _.uniqWith(_.compact(idsToQuery), _.isEqual),
-        async (id: number[]) => {
-          const [tradeId, counterTradeId] = id;
-          // We update the tradeInfo and all its associated counter_trades in the database
-          await this.tradesService.updateTradeAndCounterTrades(network, tradeId);
-          if (counterTradeId != undefined) {
-            // If a counterId is defined, we also update that specific counterId
-            await this.tradesService.updateCounterTrade(network, tradeId, counterTradeId);
-          }
-        } 
-      );
+      await pMap(_.uniqWith(_.compact(idsToQuery), _.isEqual), async (id: number[]) => {
+        const [tradeId, counterTradeId] = id;
+        // We update the tradeInfo and all its associated counter_trades in the database
+        await this.tradesService.updateTradeAndCounterTrades(network, tradeId);
+        if (counterTradeId != undefined) {
+          // If a counterId is defined, we also update that specific counterId
+          await this.tradesService.updateCounterTrade(network, tradeId, counterTradeId);
+        }
+      });
 
       // We add the transaction hashes to the redis set :
       const txHashes = response.data.tx_responses.map((tx: any) => tx.txhash);

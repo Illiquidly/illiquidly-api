@@ -79,13 +79,10 @@ export class RaffleChangesService extends ChangeListenerService {
         .flat();
 
       // Then we query the blockchain for raffle info and put it into the database
-      await pMap(
-        _.uniqWith(_.compact(idsToQuery), _.isEqual),
-        async (raffleId: number) => {
-          // We update the tradeInfo and all its associated counter_trades in the database
-          await this.rafflesService.updateRaffleAndParticipants(network, raffleId);
-        }
-      );
+      await pMap(_.uniqWith(_.compact(idsToQuery), _.isEqual), async (raffleId: number) => {
+        // We update the tradeInfo and all its associated counter_trades in the database
+        await this.rafflesService.updateRaffleAndParticipants(network, raffleId);
+      });
 
       // We add the transaction hashes to the redis set :
       const txHashes = response.data.tx_responses.map((tx: any) => tx.txhash);

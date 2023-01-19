@@ -94,22 +94,19 @@ export class RaffleNotificationChangesService extends ChangeListenerService {
       const notifications: RaffleNotification[] = [];
 
       await pMap(txToAnalyse, async (tx: any) => {
-        await pMap(
-          tx.logs,
-          async (log: any) => {
-            const txLog = new TxLog(log.msg_index, log.log, log.events);
-            const contractEvents = txLog.eventsByType.wasm;
-            // New counter_trade published
-            if (contractEvents?.action?.[0] == "buy_ticket") {
-              // If there is a new ticket that was bought
-              const raffleId = parseInt(contractEvents.raffle_id?.[0]);
-              const notification = await this.createNotification(network, raffleId, tx);
-              notification.user = contractEvents.owner[0];
-              notification.notificationType = RaffleNotificationType.newTicketBought;
-              notifications.push(notification);
-            }
-          },
-        );
+        await pMap(tx.logs, async (log: any) => {
+          const txLog = new TxLog(log.msg_index, log.log, log.events);
+          const contractEvents = txLog.eventsByType.wasm;
+          // New counter_trade published
+          if (contractEvents?.action?.[0] == "buy_ticket") {
+            // If there is a new ticket that was bought
+            const raffleId = parseInt(contractEvents.raffle_id?.[0]);
+            const notification = await this.createNotification(network, raffleId, tx);
+            notification.user = contractEvents.owner[0];
+            notification.notificationType = RaffleNotificationType.newTicketBought;
+            notifications.push(notification);
+          }
+        });
       });
 
       // We don't really care if this call fails
