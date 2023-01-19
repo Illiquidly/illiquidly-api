@@ -64,7 +64,7 @@ export class UtilsService {
     tokenId: string,
   ): Promise<CW721Token> {
     // First we see if the collection exists in the contract
-    const [err, nftInfo] = await asyncAction(this.findOneTokenInDB(network, address, tokenId));
+    const [err, nftInfo]: [any, CW721Token] = await asyncAction(this.findOneTokenInDB(network, address, tokenId));
 
     // If this info has been found in the database and they have a collection Name we simply return it
     if (!err && nftInfo) {
@@ -262,7 +262,7 @@ export class UtilsService {
       collectionName: _.truncate(tokenInfo?.collection?.collectionName, { length: 28 }),
       collectionAddress: tokenInfo?.collection?.collectionAddress,
       symbol: tokenInfo?.collection?.symbol,
-      imageUrl: fromIPFSImageURLtoImageURL(tokenInfo?.metadata?.image),
+      imageUrl: tokenInfo.metadata.image ? fromIPFSImageURLtoImageURL(tokenInfo?.metadata?.image): fromIPFSImageURLtoImageURL(tokenInfo?.metadata?.tokenUri),
       name: _.truncate(tokenInfo?.metadata?.name, { length: 28 }),
       attributes: tokenInfo?.metadata?.attributes,
       description: tokenInfo?.metadata?.description,
