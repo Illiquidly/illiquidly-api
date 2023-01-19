@@ -208,7 +208,7 @@ export class NftTransferService {
     return this.redisDB.sadd(this.getSetName(network), txHashes);
   }
 
-  parseNFTTransferTransactionDBToResponse(tx: NFTTransferTransaction): NFTTransferResponse {
+  async parseNFTTransferTransactionDBToResponse(tx: NFTTransferTransaction): Promise<NFTTransferResponse> {
     return {
       id: tx.id,
       network: tx.network,
@@ -216,11 +216,11 @@ export class NftTransferService {
       date: tx.date.toISOString(),
       txHash: tx.txHash,
       memo: tx.memo,
-      sentAssets: tx.sentAssets.map(asset => ({
+      sentAssets: await pMap(tx.sentAssets, async (asset) => ({
         id: asset.id,
         sender: asset.sender,
         recipient: asset.recipient,
-        cw721Token: this.utilsService.parseTokenDBToResponse(asset.cw721Token),
+        cw721Token: await this.utilsService.parseTokenDBToResponse(asset.cw721Token),
       })),
     };
   }

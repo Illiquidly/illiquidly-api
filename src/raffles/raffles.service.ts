@@ -211,10 +211,10 @@ export class RafflesService {
     const raffleInfo: RaffleInfoResponse = {
       id: raffle.id,
       owner: raffle.owner,
-      allAssociatedAssets: (raffle.cw721Assets ?? [])
-        .map(asset => {
+      allAssociatedAssets: await pMap((raffle.cw721Assets ?? []),
+        async (asset) => {
           return {
-            cw721Coin: this.utilsService.parseTokenDBToResponse(asset),
+            cw721Coin: await this.utilsService.parseTokenDBToResponse(asset),
           };
         })
         .concat(raffle.cw1155Assets ?? []),

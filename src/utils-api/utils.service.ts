@@ -15,7 +15,7 @@ import {
 } from "./entities/nft-info.entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
+import { fromIPFSImageURLtoImageURL, mapImageURL } from "../utils/blockchain/ipfs";
 
 import { BlockchainCW721Token, NFTAttribute, TokenResponse } from "./dto/nft.dto";
 import { ChangingNFTs } from "./NftWithRegularUpdates";
@@ -256,13 +256,13 @@ export class UtilsService {
     return tokenInfo;
   }
 
-  parseTokenDBToResponse(tokenInfo: CW721Token): TokenResponse {
+  async parseTokenDBToResponse(tokenInfo: CW721Token): Promise<TokenResponse> {
     return {
       tokenId: tokenInfo?.tokenId,
       collectionName: _.truncate(tokenInfo?.collection?.collectionName, { length: 28 }),
       collectionAddress: tokenInfo?.collection?.collectionAddress,
       symbol: tokenInfo?.collection?.symbol,
-      imageUrl: tokenInfo.metadata.image ? fromIPFSImageURLtoImageURL(tokenInfo?.metadata?.image): fromIPFSImageURLtoImageURL(tokenInfo?.metadata?.tokenUri),
+      imageUrl: await mapImageURL(tokenInfo?.metadata),
       name: _.truncate(tokenInfo?.metadata?.name, { length: 28 }),
       attributes: tokenInfo?.metadata?.attributes,
       description: tokenInfo?.metadata?.description,

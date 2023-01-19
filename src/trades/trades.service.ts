@@ -354,10 +354,10 @@ export class TradesService {
           };
         }),
     );
-    associatedAssets = associatedAssets.concat(
-      (tradeInfo.cw721Assets ?? []).map(asset => {
+    associatedAssets = associatedAssets.concat(pMap(
+      tradeInfo.cw721Assets ?? [], async (asset) => {
         return {
-          cw721Coin: this.utilsService.parseTokenDBToResponse(asset),
+          cw721Coin: await this.utilsService.parseTokenDBToResponse(asset),
         };
       }),
     );
