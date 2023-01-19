@@ -1,4 +1,4 @@
-import { registeredNftContracts } from "./chains.js";
+import { contracts, registeredNftContracts } from "./chains.js";
 import _ from "lodash";
 import { Network } from "./dto/network.dto.js";
 import { localNftList } from "./nft_list.js";
@@ -69,14 +69,14 @@ export class BlockchainNFTQuery {
     limit = 100,
     startAfter?: string,
   ): Promise<string[]> {
-    const { tokens } = await this.sendQueryFunction(network, contractAddress, {
+    const tokens = await this.sendQueryFunction(network, contractAddress, {
       tokens: {
         owner: userAddress,
         ...(limit ? { limit } : {}),
         ...(startAfter ? { start_after: startAfter } : {}),
       },
     });
-    return tokens;
+    return tokens.tokens ?? tokens.ids;
   }
 
   async getTokens(

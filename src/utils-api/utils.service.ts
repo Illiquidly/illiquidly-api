@@ -136,11 +136,14 @@ export class UtilsService {
 
     tokenDBObject.allNftInfo = JSON.stringify(allNftInfo);
     // We try to save the record
-    try{
-        return await this.NFTTokenRepository.save(tokenDBObject);
-    }catch(err){
+    try {
+      return await this.NFTTokenRepository.save(tokenDBObject);
+    } catch (err) {
       // Else, we save it in the database
-      await this.NFTTokenRepository.update({tokenId, collectionId: tokenDBObject.collection.id}, tokenDBObject);
+      await this.NFTTokenRepository.update(
+        { tokenId, collectionId: tokenDBObject.collection.id },
+        tokenDBObject,
+      );
       return tokenDBObject;
     }
   }
@@ -238,7 +241,10 @@ export class UtilsService {
     };
   }
 
-  async updateMetadataForChangingNFTs(network: Network, tokenInfo: CW721Token): Promise<CW721Token> {
+  async updateMetadataForChangingNFTs(
+    network: Network,
+    tokenInfo: CW721Token,
+  ): Promise<CW721Token> {
     // We only update for specific NFT addresses
     if (ChangingNFTs.includes(tokenInfo.collection.collectionAddress)) {
       return this.saveNewTokenInfo(

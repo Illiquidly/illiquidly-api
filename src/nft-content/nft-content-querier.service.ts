@@ -94,18 +94,23 @@ export class NftContentQuerierService {
     nfts: string[],
     address: string,
   ): Promise<void> {
-    await pMap(nfts, async (collectionAddress: string) => {
-      // We first remove all tokens associated with the collection
-      data.ownedTokens =
-        data?.ownedTokens?.filter(token => {
-          return token.collection?.collectionAddress != collectionAddress;
-        }) ?? [];
+    await pMap(
+      nfts,
+      async (collectionAddress: string) => {
+        // We first remove all tokens associated with the collection
+        data.ownedTokens =
+          data?.ownedTokens?.filter(token => {
+            return token.collection?.collectionAddress != collectionAddress;
+          }) ?? [];
 
-      // We then add all the tokens associated from the address
-      const newNfts = await this.parseTokensFromOneNft(network, address, collectionAddress);
-      data.ownedTokens = data.ownedTokens.concat(_.compact(newNfts));
-      data.ownedTokens = _.uniqBy(data.ownedTokens, token => `${token.id}-${token.collectionId}`);
-    });
+        // We then add all the tokens associated from the address
+        const newNfts = await this.parseTokensFromOneNft(network, address, collectionAddress);
+
+        data.ownedTokens = data.ownedTokens.concat(_.compact(newNfts));
+        data.ownedTokens = _.uniqBy(data.ownedTokens, token => `${token.id}-${token.collectionId}`);
+      },
+      { concurrency: 1 },
+    );
   }
 
   async mapWalletContentDBForResponse(
@@ -115,7 +120,6 @@ export class NftContentQuerierService {
     const ownedTokens: TokenResponse[] = await pMap(
       walletContent?.ownedTokens ?? [],
       async (token: CW721Token) => {
-        console.log(token.collection)
         token = await this.utilsService.updateMetadataForChangingNFTs(network, token);
         return this.utilsService.parseTokenDBToResponse(token);
       },
