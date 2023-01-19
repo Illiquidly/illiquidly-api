@@ -18,6 +18,7 @@ import { Repository } from "typeorm";
 import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
 
 import { BlockchainCW721Token, NFTAttribute, TokenResponse } from "./dto/nft.dto";
+import { NFTWithRegularUpdates } from "./NftWithRegularUpdates";
 const _ = require("lodash");
 
 @Injectable()
@@ -228,6 +229,18 @@ export class UtilsService {
       symbol: null,
       decimals: null,
     };
+  }
+
+  async updateMetadataIfNeeded(network: Network, tokenInfo: CW721Token): Promise<CW721Token> {
+    // We only update for specific NFT addresses
+    if (tokenInfo.collection.collectionAddress in NFTWithRegularUpdates) {
+      return this.saveNewTokenInfo(
+        network,
+        tokenInfo.collection.collectionAddress,
+        tokenInfo.tokenId,
+      );
+    }
+    return tokenInfo;
   }
 
   parseTokenDBToResponse(tokenInfo: CW721Token): TokenResponse {
