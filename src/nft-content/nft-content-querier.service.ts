@@ -115,7 +115,8 @@ export class NftContentQuerierService {
     const ownedTokens: TokenResponse[] = await pMap(
       walletContent?.ownedTokens ?? [],
       async (token: CW721Token) => {
-        token = await this.utilsService.updateMetadataIfNeeded(network, token);
+        console.log(token.collection)
+        token = await this.utilsService.updateMetadataForChangingNFTs(network, token);
         return this.utilsService.parseTokenDBToResponse(token);
       },
     );

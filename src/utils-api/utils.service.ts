@@ -18,7 +18,7 @@ import { Repository } from "typeorm";
 import { fromIPFSImageURLtoImageURL } from "../utils/blockchain/ipfs";
 
 import { BlockchainCW721Token, NFTAttribute, TokenResponse } from "./dto/nft.dto";
-import { NFTWithRegularUpdates } from "./NftWithRegularUpdates";
+import { ChangingNFTs } from "./NftWithRegularUpdates";
 const _ = require("lodash");
 
 @Injectable()
@@ -135,7 +135,13 @@ export class UtilsService {
     );
 
     tokenDBObject.allNftInfo = JSON.stringify(allNftInfo);
-    return this.NFTTokenRepository.save(tokenDBObject);
+    // We try to save the record
+    try{
+        return await this.NFTTokenRepository.save(tokenDBObject);
+    }catch(err){
+      // Else, we save it in the database
+      await this.NFTTokenRepository.update({tokenId, collectionId: tokenDBObject.collection.id}, tokenDBObject);
+    }
   }
 
   async findOneCollectionInDB(
@@ -231,9 +237,9 @@ export class UtilsService {
     };
   }
 
-  async updateMetadataIfNeeded(network: Network, tokenInfo: CW721Token): Promise<CW721Token> {
+  async updateMetadataForChangingNFTs(network: Network, tokenInfo: CW721Token): Promise<CW721Token> {
     // We only update for specific NFT addresses
-    if (tokenInfo.collection.collectionAddress in NFTWithRegularUpdates) {
+    if (ChangingNFTs.includes(tokenInfo.collection.collectionAddress)) {
       return this.saveNewTokenInfo(
         network,
         tokenInfo.collection.collectionAddress,
