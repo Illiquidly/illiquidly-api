@@ -354,8 +354,8 @@ export class TradesService {
           };
         }),
     );
-    associatedAssets = associatedAssets.concat(pMap(
-      tradeInfo.cw721Assets ?? [], async (asset) => {
+    associatedAssets = associatedAssets.concat(
+      await pMap(tradeInfo.cw721Assets ?? [], async asset => {
         return {
           cw721Coin: await this.utilsService.parseTokenDBToResponse(asset),
         };

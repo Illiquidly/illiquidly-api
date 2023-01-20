@@ -30,13 +30,11 @@ export async function mapImageURL(metadata: CW721TokenMetadata) {
             displayType: null,
             traitType: key,
             value,
-          })
+          }),
         ),
       };
     }
-  }  
-  
-  return talisMeta
-      ? [talisMeta?.media ?? ""]
-      : fromIPFSImageURLtoImageURL(metadata.image ?? "");
+  }
+
+  return talisMeta ? [talisMeta?.media ?? ""] : fromIPFSImageURLtoImageURL(metadata.image ?? "");
 }
