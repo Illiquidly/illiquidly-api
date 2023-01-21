@@ -82,8 +82,6 @@ export class LoanChangesService extends ChangeListenerService {
         })
         .flat();
 
-      //this.logger.log("Trade Ids to update", _.uniqWith(_.compact(idsToQuery), _.isEqual));
-
       // The we query the blockchain for trade info and put it into the database
       await pMap(
         _.uniqWith(_.compact(idsToQuery), _.isEqual),

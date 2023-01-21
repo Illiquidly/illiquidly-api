@@ -131,7 +131,6 @@ export class LoansService {
   async updateLoanAndOffers(network: Network, borrower: string, loanId: number) {
     // We start by updating the loan
     const loanInfo = await this.updateLoan(network, borrower, loanId);
-
     // Then we update every offer associated with the loan in the database
     await pMap(loanInfo.offers, async (offer: Offer) =>
       asyncAction(this.updateOffer(network, offer.globalOfferId)),

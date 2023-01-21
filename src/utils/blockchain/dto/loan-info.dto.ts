@@ -16,7 +16,7 @@ export enum LoanState {
   Started = "started",
   Defaulted = "defaulted",
   Ended = "ended",
-  AssetWithdrawn = "assets_withdrawn",
+  Inactive = "inactive",
 }
 
 export enum OfferState {
