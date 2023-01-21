@@ -54,6 +54,7 @@ export class LoanChangesService extends ChangeListenerService {
       // If we get no lcd tx result
       if (err) {
         this.logger.error(err.toJSON());
+        this.logger.error(err);
         return;
       }
 
