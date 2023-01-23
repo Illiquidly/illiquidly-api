@@ -101,7 +101,7 @@ export class LoansService {
       terms: distantOfferInfo.offerInfo.terms,
       state: distantOfferInfo.offerInfo.state,
       listDate: new Date(distantOfferInfo.offerInfo.listDate / 1000000),
-      depositedFunds: distantOfferInfo.offerInfo.depositedFunds,
+      depositedFunds: distantOfferInfo.offerInfo.depositedFunds ?? {amount: null, denom: null},
       comment: distantOfferInfo.offerInfo.comment,
     };
   }
@@ -173,9 +173,7 @@ export class LoansService {
         );
       }
     }
-
     const test = await this.offerRepository.save(offerDBObject);
-
 
     return offerDBObject;
   }
