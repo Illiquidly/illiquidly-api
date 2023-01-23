@@ -101,7 +101,7 @@ export class LoansService {
       terms: distantOfferInfo.offerInfo.terms,
       state: distantOfferInfo.offerInfo.state,
       listDate: new Date(distantOfferInfo.offerInfo.listDate / 1000000),
-      depositedFunds: distantOfferInfo.offerInfo.depositedFunds ?? {amount: null, denom: null},
+      depositedFunds: distantOfferInfo.offerInfo.depositedFunds ?? { amount: null, denom: null },
       comment: distantOfferInfo.offerInfo.comment,
     };
   }
@@ -256,7 +256,7 @@ export class LoansService {
       terms: termsToTermsResponse(offer.terms),
       state: offer.state,
       listDate: offer.listDate.toISOString(),
-      depositedFunds: offer.depositedFunds,
+      depositedFunds: offer.depositedFunds?.denom ? offer.depositedFunds : null,
       comment: offer.comment,
     };
 
@@ -302,7 +302,7 @@ export class LoansService {
     }
     // We query the raffle informations
     const newLoan = await this.loansRepository.findOneBy({ network, borrower, loanId });
-    
+
     if (newLoan) {
       currentFavorite.loans.push(newLoan);
     }
