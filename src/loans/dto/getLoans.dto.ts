@@ -38,7 +38,7 @@ export class LoanInfoResponse {
   listDate: string;
   state: LoanState;
   offerAmount: number;
-  activeOffer?: string;
+  activeOffer?: OfferResponse;
   startBlock?: number;
   comment?: string;
   loanPreview: AssetResponse;
