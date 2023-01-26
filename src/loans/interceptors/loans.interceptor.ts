@@ -7,6 +7,8 @@ import { LoansService } from "../loans.service";
 import { LoanResponse, OfferResponse } from "../dto/getLoans.dto";
 import { Loan } from "../entities/loan.entity";
 import { Offer } from "../entities/offer.entity";
+import { RawLCDQuery } from "../../utils/blockchain/queryRawLCD.service";
+import { Network } from "../../utils/blockchain/dto/network.dto";
 const pMap = require("p-map");
 
 @Injectable()
@@ -14,6 +16,7 @@ export class LoanResultInterceptor implements NestInterceptor {
   constructor(
     private readonly tradesService: LoansService,
     @InjectRepository(Loan) private loansRepository: Repository<Loan>,
+    private readonly queryService: RawLCDQuery,
   ) {}
 
   async getLoanInfo(context: ExecutionContext, data: Loan[]): Promise<LoanResponse[]> {
@@ -34,6 +37,21 @@ export class LoanResultInterceptor implements NestInterceptor {
            loan.terms_principle_amount = offer.terms_principle_amount,
            loan.terms_interest = offer.terms_interest
         WHERE offer.state = "accepted" AND loan.terms_interest IS NULL
+    `);
+
+    // We update the state of loans that are defaulted but have not been changed on the blockchain for now
+    // First we start by updating the state if raffles that have expired
+    // 1. We update raffles that come from the created state and that are after the raffle start timestamp
+
+    // We need to get the current blockheight for both networks
+    const mainnetHeight = await this.queryService.getBlockHeight(Network.mainnet);
+    const testnetHeight = await this.queryService.getBlockHeight(Network.testnet);
+    await this.loansRepository.query(`
+        UPDATE loan
+        SET state = 'pending_default'
+        WHERE (loan.network ='mainnet' AND loan.start_block + loan.terms_duration_in_blocks < ${mainnetHeight})
+          OR (loan.network ='testnet' AND loan.start_block + loan.terms_duration_in_blocks < ${testnetHeight})
+        AND state = 'started' 
     `);
 
     return next.handle().pipe(

@@ -14,6 +14,7 @@ export class Term {
 export enum LoanState {
   Published = "published",
   Started = "started",
+  PendingDefault = "pending_default",
   Defaulted = "defaulted",
   Ended = "ended",
   Inactive = "inactive",

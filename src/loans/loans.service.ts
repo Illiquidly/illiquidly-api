@@ -184,7 +184,7 @@ export class LoansService {
   }
 
   async getOfferById(network: Network, globalOfferId: string): Promise<OfferResponse> {
-    const offerDBObject = await this.updateOffer(network, globalOfferId);   
+    const offerDBObject = await this.updateOffer(network, globalOfferId);
 
     // Now we return the database response
     return await this.parseOfferDBToResponse(network, offerDBObject);
@@ -221,10 +221,10 @@ export class LoansService {
     };
   }
 
-  async parseLoanDBToResponse(network: Network, loan: Loan): Promise<LoanResponse> {  
-
-    let activeOffer = loan.activeOfferId != null ? await this.getOfferById(network, loan.activeOfferId) : null;
-    if(activeOffer){
+  async parseLoanDBToResponse(network: Network, loan: Loan): Promise<LoanResponse> {
+    let activeOffer =
+      loan.activeOfferId != null ? await this.getOfferById(network, loan.activeOfferId) : null;
+    if (activeOffer) {
       activeOffer.loan = null;
     }
     const loanInfo: LoanInfoResponse = {
