@@ -12,8 +12,9 @@ import {
   BlockChainCollateralInfo,
   BlockChainLoanResponse,
   BlockChainOfferResponse,
+  LoanState,
   Term,
-} from "src/utils/blockchain/dto/loan-info.dto";
+} from "../utils/blockchain/dto/loan-info.dto";
 import {
   Loan,
   LoanFavorite,
@@ -120,6 +121,16 @@ export class LoansService {
     // We assign the old id to the new object, to save it in place
     loanDBObject.id = loanInfo?.id;
     loanDBObject.offers = loanInfo?.offers ?? [];
+
+    // We verify the loan is not in the liquidation_pending state
+    const height = await this.queryLimitService.getBlockHeight(network);
+    if (
+      loanDBObject.state == LoanState.Started &&
+      loanDBObject.startBlock + loanDBObject.terms.durationInBlocks <
+        parseInt(height.block.header.height)
+    ) {
+      loanDBObject.state = LoanState.PendingDefault;
+    }
 
     // We try to update the loan. If the loan already exists, we don't care
     // This is a workaround, because we don't have functionnal lock
