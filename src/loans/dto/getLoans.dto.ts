@@ -29,6 +29,8 @@ export class SingleOfferParameters {
 export class TermsResponse {
   principle: RawCoin;
   interest: string;
+  totalAmountToRepay: string;
+  interestRate: string;
   durationInBlocks: number;
 }
 
@@ -49,7 +51,7 @@ export class LoanResponse {
   network: Network;
   borrower: string;
   loanId: number;
-  offers: Offer[];
+  offers: OfferResponse[];
   loanInfo: LoanInfoResponse;
 }
 

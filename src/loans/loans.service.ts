@@ -32,8 +32,10 @@ import {
 } from "./dto/getLoans.dto";
 import { Offer } from "./entities/offer.entity";
 import { coinToRawCoin } from "../trades/trades.service";
+import { formatDecimal } from "../utils/js/parseCoin";
 const pMap = require("p-map");
 const _ = require("lodash");
+import big from "big.js";
 
 @Injectable()
 export class LoansService {
@@ -198,7 +200,7 @@ export class LoansService {
     const offerDBObject = await this.updateOffer(network, globalOfferId);
 
     // Now we return the database response
-    return await this.parseOfferDBToResponse(network, offerDBObject);
+    return this.parseOfferDBToResponse(network, offerDBObject);
   }
 
   async mapDistantLoanToDB(network: Network, loanInfo: BlockChainLoanResponse): Promise<Loan> {
@@ -233,7 +235,7 @@ export class LoansService {
   }
 
   async parseLoanDBToResponse(network: Network, loan: Loan): Promise<LoanResponse> {
-    let activeOffer =
+    const activeOffer =
       loan.activeOfferId != null ? await this.getOfferById(network, loan.activeOfferId) : null;
     if (activeOffer) {
       activeOffer.loan = null;
@@ -262,12 +264,12 @@ export class LoansService {
       loanId: loan.loanId,
       id: loan.id,
       borrower: loan.borrower,
-      offers: loan.offers,
+      offers: loan.offers.map((offer) => this.parseOfferDBToResponse(network, offer)),
       loanInfo,
     };
   }
 
-  async parseOfferDBToResponse(network: Network, offer: Offer): Promise<OfferResponse> {
+  parseOfferDBToResponse(network: Network, offer: Offer): OfferResponse {
     const offerInfo: OfferInfoResponse = {
       lender: offer.lender,
       terms: termsToTermsResponse(offer.terms),
@@ -368,7 +370,13 @@ function termsToTermsResponse(terms: Term): TermsResponse {
     principle: coinToRawCoin({
       coin: terms.principle,
     }),
-    interest: terms.interest,
+    interest: formatDecimal(terms.interest),
+    totalAmountToRepay: big(terms.principle.amount).plus(terms.interest).toString(),
+    interestRate: big(terms.interest).mul(100).div(terms.principle.amount).round(2).toString(),
     durationInBlocks: terms.durationInBlocks,
   };
 }
+
+
+// ActiveOffer ? In offers ?
+// Interest Rate (interest/principle * 100) 2 decimals
