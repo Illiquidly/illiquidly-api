@@ -69,6 +69,7 @@ export class AssetResponse {
 export interface RawCoin {
   currency?: string;
   amount?: string;
+  rawAmount?: string;
 }
 
 export type Asset = Coin & CW20Coin & CW721Coin & CW1155Coin;

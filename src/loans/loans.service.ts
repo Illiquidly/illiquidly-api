@@ -376,7 +376,3 @@ function termsToTermsResponse(terms: Term): TermsResponse {
     durationInBlocks: terms.durationInBlocks,
   };
 }
-
-
-// ActiveOffer ? In offers ?
-// Interest Rate (interest/principle * 100) 2 decimals
