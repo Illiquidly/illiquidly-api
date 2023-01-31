@@ -21,5 +21,6 @@ export function formatNiceLuna(num: BigSource) {
   return {
     currency: "LUNA",
     amount: formatDecimal(num),
+    rawAmount: num.toString(),
   };
 }
