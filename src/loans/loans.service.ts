@@ -144,7 +144,8 @@ export class LoansService {
       console.log("should add offer active");
       loanDBObject.activeOffer = await this.updateOffer(network, loanDBObject.activeOfferOfferId);
     }
-
+    
+    // We check for the actual offer state
     if (
       loanDBObject.state == LoanState.Started &&
       loanDBObject.startBlock + loanDBObject?.activeOffer?.terms?.durationInBlocks <
