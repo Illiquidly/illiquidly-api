@@ -36,6 +36,7 @@ import { formatDecimal } from "../utils/js/parseCoin";
 const pMap = require("p-map");
 const _ = require("lodash");
 import big from "big.js";
+import { RedLockService } from "../utils/lock.service";
 
 @Injectable()
 export class LoansService {
@@ -50,6 +51,7 @@ export class LoansService {
     private favoriteRepository: Repository<LoanFavorite>,
     private readonly utilsService: UtilsService,
     private readonly queryLimitService: QueryLimitService,
+    private readonly redlockService: RedLockService,
   ) {
     this.loanQuery = new BlockchainLoanQuery(
       this.queryLimitService.sendIndependentQuery.bind(this.queryLimitService),
@@ -125,18 +127,40 @@ export class LoansService {
     loanDBObject.offers = loanInfo?.offers ?? [];
 
     // We verify the loan is not in the liquidation_pending state
-    const height = await this.queryLimitService.getBlockHeight(network);
+    const block = await this.queryLimitService.getBlockHeight(network);
+
+    // We try to update the loan. If the loan already exists, we don't care
+    // This is a workaround, because we don't have functionnal lock
+
+    await this.redlockService.doWithLock(
+      `update_offer_${loanDBObject.loanId}-${loanDBObject.borrower}`,
+      async () => {
+        return asyncAction(this.loansRepository.save(loanDBObject));
+      },
+    );
+
+    // After it's saved, we add the activeOffer if necessary
+    if (loanDBObject.activeOfferOfferId) {
+      console.log("should add offer active");
+      loanDBObject.activeOffer = await this.updateOffer(network, loanDBObject.activeOfferOfferId);
+    }
+
     if (
       loanDBObject.state == LoanState.Started &&
-      loanDBObject.startBlock + loanDBObject.terms.durationInBlocks <
-        parseInt(height.block.header.height)
+      loanDBObject.startBlock + loanDBObject?.activeOffer?.terms?.durationInBlocks <
+        parseInt(block.block.header.height)
     ) {
       loanDBObject.state = LoanState.PendingDefault;
     }
 
-    // We try to update the loan. If the loan already exists, we don't care
-    // This is a workaround, because we don't have functionnal lock
-    const test = await asyncAction(this.loansRepository.save(loanDBObject));
+    await this.redlockService.doWithLock(
+      `update_offer_${loanDBObject.loanId}-${loanDBObject.borrower}`,
+      async () => {
+        return asyncAction(this.loansRepository.save(loanDBObject));
+      },
+    );
+
+    // We save it again
 
     return loanDBObject;
   }
@@ -151,44 +175,47 @@ export class LoansService {
   }
 
   async updateOffer(network: Network, globalOfferId: string): Promise<Offer> {
-    const [, offerInfo] = await asyncAction(
-      this.offerRepository.findOne({
-        relations: { loan: true },
-        where: { network, globalOfferId },
-      }),
-    );
 
-    const offerDBObject: Offer = await this.queryDistantOfferAndParseForDB(network, globalOfferId);
-
-    // We assign the old id to the new object, to save it in place
-    offerDBObject.id = offerInfo?.id;
-    offerDBObject.loan = offerInfo?.loan;
-
-    // We try to get the associated trade if it exists in the database
-    if (!offerDBObject?.loan) {
-      // We query the database to look for the corresponding trade
-      const [, loanInfo] = await asyncAction(
-        this.loansRepository.findOneBy({
-          network,
-          borrower: offerDBObject.borrower,
-          loanId: offerDBObject.loanId,
-        }),
-      );
-      if (loanInfo) {
-        // If it was already registered, we can simply save it
-        offerDBObject.loan = loanInfo;
-      } else {
-        // If it was not in the database, we have to look else-where
-        offerDBObject.loan = await this.updateLoan(
-          network,
-          offerDBObject.borrower,
-          offerDBObject.loanId,
+    return await this.redlockService.doWithLock(
+      `update_offer_${globalOfferId}`, async () => {
+        const [, offerInfo] = await asyncAction(
+          this.offerRepository.findOne({
+            relations: { loan: true },
+            where: { network, globalOfferId },
+          }),
         );
-      }
-    }
-    const test = await this.offerRepository.save(offerDBObject);
 
-    return offerDBObject;
+        const offerDBObject: Offer = await this.queryDistantOfferAndParseForDB(network, globalOfferId);
+
+        // We assign the old id to the new object, to save it in place
+        offerDBObject.id = offerInfo?.id;
+        offerDBObject.loan = offerInfo?.loan;
+
+        // We try to get the associated trade if it exists in the database
+        if (!offerDBObject?.loan) {
+          // We query the database to look for the corresponding trade
+          const [, loanInfo] = await asyncAction(
+            this.loansRepository.findOneBy({
+              network,
+              borrower: offerDBObject.borrower,
+              loanId: offerDBObject.loanId,
+            }),
+          );
+          if (loanInfo) {
+            // If it was already registered, we can simply save it
+            offerDBObject.loan = loanInfo;
+          } else {
+            // If it was not in the database, we have to look else-where
+            offerDBObject.loan = await this.updateLoan(
+              network,
+              offerDBObject.borrower,
+              offerDBObject.loanId,
+            );
+          }
+        }
+        return this.offerRepository.save(offerDBObject);
+      },
+    );
   }
 
   async getLoanById(network: Network, borrower: string, loanId: number): Promise<LoanResponse> {
@@ -228,18 +255,18 @@ export class LoansService {
       offerAmount: loanInfo.collateral.offerAmount,
       offers: undefined,
       loanFavorites: null,
-      activeOfferId: loanInfo.collateral.activeOffer,
+      activeOfferOfferId: loanInfo.collateral.activeOffer,
       comment: loanInfo.collateral.comment,
       loanPreview: JSON.stringify(loanInfo.collateral.loanPreview),
     };
   }
 
   async parseLoanDBToResponse(network: Network, loan: Loan): Promise<LoanResponse> {
-    const activeOffer =
-      loan.activeOfferId != null ? await this.getOfferById(network, loan.activeOfferId) : null;
-    if (activeOffer) {
-      activeOffer.loan = null;
+
+    if(loan.activeOffer){
+      loan.activeOffer.loan = null;
     }
+
     const loanInfo: LoanInfoResponse = {
       associatedAssets: (loan.cw721Assets ?? [])
         .map(asset => {
@@ -251,7 +278,7 @@ export class LoansService {
       listDate: loan.listDate.toISOString(),
       state: loan.state,
       offerAmount: loan.offerAmount,
-      activeOffer,
+      activeOffer: loan.activeOffer ? this.parseOfferDBToResponse(network, loan.activeOffer): null,
       startBlock: loan.startBlock,
       comment: loan.comment,
       loanPreview: await this.utilsService.parseTokenPreview(network, loan.loanPreview),
@@ -264,7 +291,7 @@ export class LoansService {
       loanId: loan.loanId,
       id: loan.id,
       borrower: loan.borrower,
-      offers: loan.offers.map((offer) => this.parseOfferDBToResponse(network, offer)),
+      offers: loan.offers.map(offer => this.parseOfferDBToResponse(network, offer)),
       loanInfo,
     };
   }

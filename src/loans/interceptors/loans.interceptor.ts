@@ -2,7 +2,7 @@ import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from "@nes
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Brackets, Repository } from "typeorm";
 import { LoansService } from "../loans.service";
 import { LoanResponse, OfferResponse } from "../dto/getLoans.dto";
 import { Loan } from "../entities/loan.entity";
@@ -46,13 +46,22 @@ export class LoanResultInterceptor implements NestInterceptor {
     // We need to get the current blockheight for both networks
     const mainnetHeight = await this.queryService.getBlockHeight(Network.mainnet);
     const testnetHeight = await this.queryService.getBlockHeight(Network.testnet);
+    
     await this.loansRepository.query(`
-        UPDATE loan
-        SET state = 'pending_default'
-        WHERE (loan.network ='mainnet' AND loan.start_block + loan.terms_duration_in_blocks < ${mainnetHeight})
-          OR (loan.network ='testnet' AND loan.start_block + loan.terms_duration_in_blocks < ${testnetHeight})
-        AND state = 'started' 
+      UPDATE loan
+      SET state = 'pending_default' 
+      WHERE loan.id IN (
+        SELECT sub_loan.id AS loan_id FROM (SELECT * FROM loan) as sub_loan
+        LEFT JOIN offer as activeOffer ON activeOffer.id = sub_loan.active_offer_id 
+        WHERE (
+          sub_loan.network ='mainnet' AND sub_loan.start_block + activeOffer.terms_duration_in_blocks < ${mainnetHeight} 
+            OR 
+          sub_loan.network ='testnet' AND sub_loan.start_block + activeOffer.terms_duration_in_blocks < ${testnetHeight}
+        ) 
+        AND sub_loan.state='started'
+      )
     `);
+  
 
     return next.handle().pipe(
       map(async res => {

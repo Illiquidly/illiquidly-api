@@ -2,9 +2,11 @@ import { CW721Token } from "../../utils-api/entities/nft-info.entity";
 import {
   Column,
   Entity,
+  JoinColumn,
   JoinTable,
   ManyToMany,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   Unique,
 } from "typeorm";
@@ -78,8 +80,11 @@ export class Loan {
   })
   comment?: string;
 
-  @Column({ nullable: true })
-  activeOfferId?: string;
+  activeOfferOfferId: string; // This column is not saved in the DB, it simply comes from the chain
+
+  @OneToOne(() => Offer)
+  @JoinColumn()
+  activeOffer?: Offer;
 
   @OneToMany(() => Offer, offer => offer.loan)
   offers: Offer[];
