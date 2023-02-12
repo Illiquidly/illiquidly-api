@@ -144,7 +144,7 @@ export class LoansService {
       console.log("should add offer active");
       loanDBObject.activeOffer = await this.updateOffer(network, loanDBObject.activeOfferOfferId);
     }
-    
+
     // We check for the actual offer state
     if (
       loanDBObject.state == LoanState.Started &&
@@ -176,47 +176,47 @@ export class LoansService {
   }
 
   async updateOffer(network: Network, globalOfferId: string): Promise<Offer> {
+    return await this.redlockService.doWithLock(`update_offer_${globalOfferId}`, async () => {
+      const [, offerInfo] = await asyncAction(
+        this.offerRepository.findOne({
+          relations: { loan: true },
+          where: { network, globalOfferId },
+        }),
+      );
 
-    return await this.redlockService.doWithLock(
-      `update_offer_${globalOfferId}`, async () => {
-        const [, offerInfo] = await asyncAction(
-          this.offerRepository.findOne({
-            relations: { loan: true },
-            where: { network, globalOfferId },
+      const offerDBObject: Offer = await this.queryDistantOfferAndParseForDB(
+        network,
+        globalOfferId,
+      );
+
+      // We assign the old id to the new object, to save it in place
+      offerDBObject.id = offerInfo?.id;
+      offerDBObject.loan = offerInfo?.loan;
+
+      // We try to get the associated trade if it exists in the database
+      if (!offerDBObject?.loan) {
+        // We query the database to look for the corresponding trade
+        const [, loanInfo] = await asyncAction(
+          this.loansRepository.findOneBy({
+            network,
+            borrower: offerDBObject.borrower,
+            loanId: offerDBObject.loanId,
           }),
         );
-
-        const offerDBObject: Offer = await this.queryDistantOfferAndParseForDB(network, globalOfferId);
-
-        // We assign the old id to the new object, to save it in place
-        offerDBObject.id = offerInfo?.id;
-        offerDBObject.loan = offerInfo?.loan;
-
-        // We try to get the associated trade if it exists in the database
-        if (!offerDBObject?.loan) {
-          // We query the database to look for the corresponding trade
-          const [, loanInfo] = await asyncAction(
-            this.loansRepository.findOneBy({
-              network,
-              borrower: offerDBObject.borrower,
-              loanId: offerDBObject.loanId,
-            }),
+        if (loanInfo) {
+          // If it was already registered, we can simply save it
+          offerDBObject.loan = loanInfo;
+        } else {
+          // If it was not in the database, we have to look else-where
+          offerDBObject.loan = await this.updateLoan(
+            network,
+            offerDBObject.borrower,
+            offerDBObject.loanId,
           );
-          if (loanInfo) {
-            // If it was already registered, we can simply save it
-            offerDBObject.loan = loanInfo;
-          } else {
-            // If it was not in the database, we have to look else-where
-            offerDBObject.loan = await this.updateLoan(
-              network,
-              offerDBObject.borrower,
-              offerDBObject.loanId,
-            );
-          }
         }
-        return this.offerRepository.save(offerDBObject);
-      },
-    );
+      }
+      return this.offerRepository.save(offerDBObject);
+    });
   }
 
   async getLoanById(network: Network, borrower: string, loanId: number): Promise<LoanResponse> {
@@ -263,8 +263,7 @@ export class LoansService {
   }
 
   async parseLoanDBToResponse(network: Network, loan: Loan): Promise<LoanResponse> {
-
-    if(loan.activeOffer){
+    if (loan.activeOffer) {
       loan.activeOffer.loan = null;
     }
 
@@ -279,7 +278,7 @@ export class LoansService {
       listDate: loan.listDate.toISOString(),
       state: loan.state,
       offerAmount: loan.offerAmount,
-      activeOffer: loan.activeOffer ? this.parseOfferDBToResponse(network, loan.activeOffer): null,
+      activeOffer: loan.activeOffer ? this.parseOfferDBToResponse(network, loan.activeOffer) : null,
       startBlock: loan.startBlock,
       comment: loan.comment,
       loanPreview: await this.utilsService.parseTokenPreview(network, loan.loanPreview),

@@ -65,6 +65,7 @@ export const contracts: AllContracts = {
     fee: "terra14j02llvrly27dzw9zqumfql9uw5ea3kl0f0wujp42p8uq7g8w67srcyfdw",
     fee_distributor: "terra1vjyhmjnj79xlzk2s3n6k06wxmg0h8djkq27cwvmduhq62qcqq4tq4ff3t8",
     raffle: "terra1655tux08qla5rsl7w55xwx9nu4km9wuguy90ghqjxmcuh0c3zksq6jae9v",
+    loan: "terra1ymhtlmsvmglmsf4r47n2yy4xhjvyxtlhyxws46chc6evk0r80s7qw0sumk",
   },
 };
 

@@ -46,7 +46,7 @@ export class LoanResultInterceptor implements NestInterceptor {
     // We need to get the current blockheight for both networks
     const mainnetHeight = await this.queryService.getBlockHeight(Network.mainnet);
     const testnetHeight = await this.queryService.getBlockHeight(Network.testnet);
-    
+
     await this.loansRepository.query(`
       UPDATE loan
       SET state = 'pending_default' 
@@ -61,7 +61,6 @@ export class LoanResultInterceptor implements NestInterceptor {
         AND sub_loan.state='started'
       )
     `);
-  
 
     return next.handle().pipe(
       map(async res => {

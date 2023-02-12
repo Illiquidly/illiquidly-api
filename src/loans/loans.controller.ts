@@ -53,8 +53,8 @@ import { LoansService } from "./loans.service";
         select: false,
       },
       activeOffer: {
-        eager: true
-      }
+        eager: true,
+      },
     },
   },
   routes: {

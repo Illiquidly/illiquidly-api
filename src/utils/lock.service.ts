@@ -22,7 +22,7 @@ export class RedLockService {
   async acquireLock(lockString: string) {
     return this.redisLock.acquire([lockString], this.nftContentAPIConfig.UPDATE_DESPITE_LOCK_TIME, {
       retryCount: 5,
-      retryDelay: 500
+      retryDelay: 500,
     });
   }
 
