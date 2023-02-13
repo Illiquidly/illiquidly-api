@@ -10,12 +10,12 @@ import { TxLog } from "@terra-money/terra.js";
 import { CW721TokenAttribute } from "../../utils-api/entities/nft-info.entity";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
-import { TradesService } from "../../trades/trades.service";
 import { ConfigType } from "@nestjs/config";
 import { RafflesService } from "../../raffles/raffles.service";
 import { RaffleNotification, RaffleNotificationType } from "../../raffles/entities/raffle.entity";
 import { redisQueueConfig } from "../../utils/configuration";
 import { ChangeListenerService } from "../change-listener.service";
+import { UtilsService } from "../../utils-api/utils.service";
 const pMap = require("p-map");
 const DATE_FORMAT = require("dateformat");
 
@@ -26,7 +26,7 @@ export class RaffleNotificationChangesService extends ChangeListenerService {
     @InjectRedis("default-client") readonly redisDB: Redis,
     @InjectRepository(RaffleNotification)
     private raffleNotificationRepository: Repository<RaffleNotification>,
-    private readonly tradesService: TradesService,
+    private readonly utilsService: UtilsService,
     private readonly rafflesService: RafflesService,
     @Inject(redisQueueConfig.KEY) queueConfig: ConfigType<typeof redisQueueConfig>,
   ) {
@@ -47,7 +47,7 @@ export class RaffleNotificationChangesService extends ChangeListenerService {
     notification.raffleId = raffleId;
     notification.user = raffle.owner;
     notification.notificationPreview =
-      (await this.tradesService.parseTokenPreview(network, raffle.rafflePreview)) ?? {};
+      (await this.utilsService.parseTokenPreview(network, raffle.rafflePreview)) ?? {};
     // We need to make sure we don't send the Metadata back with the attribute
     notification.notificationPreview.cw721Coin.attributes =
       notification.notificationPreview.cw721Coin.attributes.map(

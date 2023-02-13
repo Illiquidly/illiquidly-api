@@ -1,13 +1,15 @@
-import _ from "lodash";
 import { Network } from "./dto/network.dto.js";
 import { Injectable } from "@nestjs/common";
 import { QueryLimitService } from "../queryLimit.service.js";
-const camelCaseObjectDeep = require("camelcase-object-deep");
-const fs = require("fs");
 
 @Injectable()
 export class RawLCDQuery {
   constructor(private readonly queryLimitService: QueryLimitService) {}
+
+  async getBlockHeight(network: Network) {
+    const blockInfo = await this.queryLimitService.getBlockHeight(network);
+    return blockInfo.block.header.height;
+  }
 
   async getOneTxResult(network: Network, events: any[], offset: number | undefined) {
     return this.queryLimitService.sendEventsSearchQuery(network, {

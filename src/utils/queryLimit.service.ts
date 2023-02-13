@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { waitForSignals } from "wait-for-signals";
 import { chains } from "./blockchain/chains.js";
-import { LCDClient } from "@terra-money/terra.js";
+import { BlockInfo, LCDClient } from "@terra-money/terra.js";
 import PQueue from "p-queue";
 
 @Injectable()
@@ -53,5 +53,10 @@ export class QueryLimitService {
     const lcdClient = new LCDClient(chains[networkId]);
     console.log(query);
     return this.addToQueue(() => lcdClient.tx.search(query));
+  }
+
+  async getBlockHeight(networkId: string): Promise<BlockInfo> {
+    const lcdClient = new LCDClient(chains[networkId]);
+    return this.addToQueue(() => lcdClient.tendermint.blockInfo());
   }
 }

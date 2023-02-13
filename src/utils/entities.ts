@@ -24,6 +24,8 @@ import {
   RaffleNotification,
 } from "../raffles/entities/raffle.entity";
 import { NFTTransfer, NFTTransferTransaction } from "../nft-transfers/entities/nft-transfer.entity";
+import { Loan, LoanFavorite, LoanNotification } from "../loans/entities/loan.entity";
+import { Offer } from "../loans/entities/offer.entity";
 
 export default [
   Trade,
@@ -31,6 +33,7 @@ export default [
   TradeInfoORM,
   TradeNotification,
   TradeFavorite,
+
   ValuedCoin,
   CW20Coin,
   ValuedCW20Coin,
@@ -41,10 +44,16 @@ export default [
   CW1155Collection,
   CW1155Token,
   WalletContent,
+
   Raffle,
   Participant,
   RaffleNotification,
   RaffleFavorite,
+
+  Loan,
+  Offer,
+  LoanNotification,
+  LoanFavorite,
 
   NFTTransfer,
   NFTTransferTransaction,

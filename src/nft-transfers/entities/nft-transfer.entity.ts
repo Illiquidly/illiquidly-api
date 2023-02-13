@@ -1,15 +1,5 @@
 import { CW721Token } from "../../utils-api/entities/nft-info.entity";
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  JoinTable,
-  ManyToMany,
-  ManyToOne,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  Unique,
-} from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Network } from "../../utils/blockchain/dto/network.dto";
 
 export enum UpdateState {

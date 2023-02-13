@@ -63,13 +63,11 @@ export class RandomnessProviderService {
     const beacon = await this.getBeacon();
 
     pMap(Object.keys(chains), async (network: Network) => {
-      let mnemonic: string;
-      let handler: Address;
-
-      if (this.signingTerraConfig[network] != "") {
-        mnemonic = this.signingTerraConfig[network];
-        handler = new Address(mnemonic, network);
+      if (!this.signingTerraConfig[network] || this.signingTerraConfig[network] == "") {
+        return;
       }
+      const mnemonic = this.signingTerraConfig[network];
+      const handler = new Address(mnemonic, network);
 
       const updateMessages = closedRaffles
         .filter(raffle => raffle.network == network)

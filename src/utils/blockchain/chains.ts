@@ -57,7 +57,7 @@ export const contracts: AllContracts = {
     fee: "terra1uh0vx5eh5tu49g5hw98r622m805vg533j3kjf8c2mtqhz6qfyyxqms5tmw",
     fee_distributor: "terra1dnlq6uxmmqn56uspjh9wecc5mcu56hq5ckvzd90tmfqfn36paa6sfr6llq",
     raffle: "terra1vmrf7z6yr34rgpkkv2yk0t28hdlfzwunql9ldusum9cc8ef272ksy6kjgz",
-    loan: "terra196f7nl00a0kfa6ph3ycc5ws6q2lm73r3uv8ra92huptnd2a8v4kqv9tea2",
+    loan: "terra1md0gr59dy0fuzf6qqllz550evqqamr0f0q38gcfy2cnrc70y2rtqduxpmq",
   },
   classic: {},
   mainnet: {
@@ -65,6 +65,7 @@ export const contracts: AllContracts = {
     fee: "terra14j02llvrly27dzw9zqumfql9uw5ea3kl0f0wujp42p8uq7g8w67srcyfdw",
     fee_distributor: "terra1vjyhmjnj79xlzk2s3n6k06wxmg0h8djkq27cwvmduhq62qcqq4tq4ff3t8",
     raffle: "terra1655tux08qla5rsl7w55xwx9nu4km9wuguy90ghqjxmcuh0c3zksq6jae9v",
+    loan: "terra1ymhtlmsvmglmsf4r47n2yy4xhjvyxtlhyxws46chc6evk0r80s7qw0sumk",
   },
 };
 

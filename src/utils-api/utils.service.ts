@@ -84,7 +84,7 @@ export class UtilsService {
     }
 
     // If there is an error, we try to query the information one more time from the database (that may happen when the api saves two info at a time)
-    const [storedErr, storedNFTInfo] = await asyncAction(
+    const [_storedErr, storedNFTInfo] = await asyncAction(
       this.findOneTokenInDB(network, address, tokenId),
     );
 
@@ -320,5 +320,31 @@ export class UtilsService {
       .limit(10)
       .getMany();
     //.map(this.parseTokenDBToResponse)
+  }
+
+  // Allows to parse a token preview (address, token_id) object to it's metadata
+  async parseTokenPreview(
+    network: Network,
+    preview: string,
+  ): Promise<{ cw721Coin: TokenResponse }> {
+    let parsedPreview = JSON.parse(preview);
+
+    // And now we add the metadata do the same for the preview NFT
+    if (parsedPreview?.cw721Coin) {
+      parsedPreview = await this.addCW721Info(network, parsedPreview);
+    }
+    return parsedPreview;
+  }
+
+  async addCW721Info(network: Network, asset): Promise<{ cw721Coin: TokenResponse }> {
+    const address = asset.cw721Coin.address;
+    const tokenId = asset.cw721Coin.tokenId;
+
+    const tokenInfo = await this.nftTokenInfo(network, address, tokenId);
+    return {
+      cw721Coin: {
+        ...tokenInfo,
+      },
+    };
   }
 }

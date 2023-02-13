@@ -14,6 +14,11 @@ export const redisQueueConfig = registerAs("redisConfig", () => ({
   REDIS_RAFFLE_TXHASH_SET: process.env.REDIS_RAFFLE_TXHASH_SET,
   REDIS_RAFFLE_NOTIFICATION_TXHASH_SET: process.env.REDIS_RAFFLE_NOTIFICATION_TXHASH_SET,
 
+  // For Loans
+  TRIGGER_LOAN_QUERY_MSG: process.env.TRIGGER_LOAN_QUERY_MSG,
+  REDIS_LOAN_TXHASH_SET: process.env.REDIS_LOAN_TXHASH_SET,
+  REDIS_LOAN_NOTIFICATION_TXHASH_SET: process.env.REDIS_LOAN_NOTIFICATION_TXHASH_SET,
+
   FLUSH_DB_ON_STARTUP: process.env.FLUSH_DB_ON_STARTUP == "true",
 }));
 
@@ -33,4 +38,5 @@ export const nftTransferAPIConfig = registerAs("nft-transfer-config", () => ({
 
 export const signingTerraConfig = registerAs("signing-terra-config", () => ({
   testnet: process.env.TERRA_TESTNET_MNEMONIC,
+  mainnet: process.env.TERRA_MAINNET_MNEMONIC,
 }));

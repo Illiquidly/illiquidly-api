@@ -267,23 +267,8 @@ export class TradesService {
       return nft;
     });
     tradeInfo.additionalInfo.nftsWanted = nftsWanted;
-    tradeInfo.additionalInfo.lookingFor = (tradeInfo.additionalInfo.tokensWanted ?? []).map(
-      (token): RawCoin => {
-        if (token.coin) {
-          if (token.coin.denom == "uluna") {
-            return formatNiceLuna(token.coin.amount);
-          }
-          return {
-            currency: token.coin.denom,
-            amount: token.coin.amount,
-          };
-        } else {
-          return {
-            currency: token.cw20Coin.address,
-            amount: token.cw20Coin.amount,
-          };
-        }
-      },
+    tradeInfo.additionalInfo.lookingFor = (tradeInfo.additionalInfo.tokensWanted ?? []).map(token =>
+      coinToRawCoin(token),
     );
     tradeInfo.additionalInfo.lookingFor = tradeInfo.additionalInfo.lookingFor.concat(nftsWanted);
 
@@ -313,20 +298,6 @@ export class TradesService {
       trade: counterTrade.trade,
       tradeInfo,
     };
-  }
-
-  // Allows to parse a token preview (address, token_id) object to it's metadata
-  async parseTokenPreview(
-    network: Network,
-    preview: string,
-  ): Promise<{ cw721Coin: TokenResponse }> {
-    let parsedPreview = JSON.parse(preview);
-
-    // And now we add the metadata do the same for the preview NFT
-    if (parsedPreview?.cw721Coin) {
-      parsedPreview = await this.addCW721Info(network, parsedPreview);
-    }
-    return parsedPreview;
   }
 
   private async parseTradeDBToResponseInfo(
@@ -364,7 +335,7 @@ export class TradesService {
     associatedAssets = associatedAssets.concat(JSON.parse(tradeInfo.cw1155Assets) ?? []);
     // We don't want all the collections NFTs here, that's a bit heavy
     const tokensWanted = JSON.parse(tradeInfo.tokensWanted);
-    const tradePreview = await this.parseTokenPreview(network, tradeInfo.tradePreview);
+    const tradePreview = await this.utilsService.parseTokenPreview(network, tradeInfo.tradePreview);
 
     return {
       acceptedInfo: {
@@ -391,18 +362,21 @@ export class TradesService {
       whitelistedUsers: JSON.parse(tradeInfo.whitelistedUsers),
     };
   }
+}
 
-  // We get the collection name
-
-  async addCW721Info(network: Network, asset): Promise<{ cw721Coin: TokenResponse }> {
-    const address = asset.cw721Coin.address;
-    const tokenId = asset.cw721Coin.tokenId;
-
-    const tokenInfo = await this.utilsService.nftTokenInfo(network, address, tokenId);
+export function coinToRawCoin(token: AssetResponse): RawCoin {
+  if (token.coin) {
+    if (token.coin.denom == "uluna") {
+      return formatNiceLuna(token.coin.amount);
+    }
     return {
-      cw721Coin: {
-        ...tokenInfo,
-      },
+      currency: token.coin.denom,
+      amount: token.coin.amount,
+    };
+  } else {
+    return {
+      currency: token.cw20Coin.address,
+      amount: token.cw20Coin.amount,
     };
   }
 }

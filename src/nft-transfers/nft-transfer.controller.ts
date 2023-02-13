@@ -1,9 +1,8 @@
-import { Controller, Get, Patch, Param, Injectable } from "@nestjs/common";
+import { Controller, Patch, Param, Injectable } from "@nestjs/common";
 import { NftTransferService } from "./nft-transfer.service";
 import { Crud } from "@rewiko/crud";
-import { IsEnum } from "class-validator";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Network, NetworkParam } from "../utils/blockchain/dto/network.dto";
+import { ApiTags } from "@nestjs/swagger";
+import { NetworkParam } from "../utils/blockchain/dto/network.dto";
 import { NFTTransferTransaction } from "./entities/nft-transfer.entity";
 import { TypeOrmCrudService } from "@rewiko/crud-typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
