@@ -268,13 +268,13 @@ export class LoansService {
     }
 
     const loanInfo: LoanInfoResponse = {
-      associatedAssets: (loan.cw721Assets ?? [])
-        .map(asset => {
+      associatedAssets: (
+        await pMap(loan.cw721Assets ?? [], async asset => {
           return {
-            cw721Coin: this.utilsService.parseTokenDBToResponse(asset),
+            cw721Coin: await this.utilsService.parseTokenDBToResponse(asset),
           };
         })
-        .concat(loan.cw1155Assets ?? []),
+      ).concat(loan.cw1155Assets ?? []),
       listDate: loan.listDate.toISOString(),
       state: loan.state,
       offerAmount: loan.offerAmount,

@@ -49,7 +49,9 @@ export class RandomnessProviderService {
     const closedRaffles = await this.rafflesRepository
       .createQueryBuilder()
       .where("state = 'closed' AND randomness_owner IS NULL")
-      .orWhere("NOW() > DATE_ADD(raffle_start_date, INTERVAL raffle_duration second) AND state = 'started' AND randomness_owner IS NULL")
+      .orWhere(
+        "NOW() > DATE_ADD(raffle_start_date, INTERVAL raffle_duration second) AND state = 'started' AND randomness_owner IS NULL",
+      )
       .getMany();
 
     const nbRaffles = closedRaffles.length;
