@@ -6,6 +6,14 @@ import { QueryLimitService } from "../queryLimit.service.js";
 export class RawLCDQuery {
   constructor(private readonly queryLimitService: QueryLimitService) {}
 
+  async sendIndependentQuery(
+    networkId: string,
+    contractAddress: string,
+    query: object,
+  ): Promise<any> {
+    return this.queryLimitService.sendIndependentQuery(networkId, contractAddress, query);
+  }
+
   async getBlockHeight(network: Network) {
     const blockInfo = await this.queryLimitService.getBlockHeight(network);
     return blockInfo.block.header.height;

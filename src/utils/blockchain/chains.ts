@@ -44,6 +44,7 @@ export interface Contracts {
   fee_distributor?: string;
   raffle?: string;
   loan?: string;
+  multicall?: string;
 }
 
 export type AllContracts = {
@@ -58,6 +59,7 @@ export const contracts: AllContracts = {
     fee_distributor: "terra1dnlq6uxmmqn56uspjh9wecc5mcu56hq5ckvzd90tmfqfn36paa6sfr6llq",
     raffle: "terra1vmrf7z6yr34rgpkkv2yk0t28hdlfzwunql9ldusum9cc8ef272ksy6kjgz",
     loan: "terra1md0gr59dy0fuzf6qqllz550evqqamr0f0q38gcfy2cnrc70y2rtqduxpmq",
+    multicall: "terra1s2crcfhahev6dclcv6wyeg3sd0c5nj3jrtv40nf0wpey6elk6pvqt2r562",
   },
   classic: {},
   mainnet: {
@@ -66,6 +68,7 @@ export const contracts: AllContracts = {
     fee_distributor: "terra1vjyhmjnj79xlzk2s3n6k06wxmg0h8djkq27cwvmduhq62qcqq4tq4ff3t8",
     raffle: "terra1655tux08qla5rsl7w55xwx9nu4km9wuguy90ghqjxmcuh0c3zksq6jae9v",
     loan: "terra1ymhtlmsvmglmsf4r47n2yy4xhjvyxtlhyxws46chc6evk0r80s7qw0sumk",
+    multicall: "terra1g5puatcgawc58d95rflj9sxrl8wsted6n66yp6pndy69rc40k39snsefs3",
   },
 };
 

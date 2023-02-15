@@ -114,7 +114,7 @@ export enum NotificationStatus {
   read = "read",
 }
 
-@Unique("UQ_NOTIFICATION_TYPE", ["network", "user", "loanId", "notificationType", "status"])
+//@Unique("UQ_NOTIFICATION_TYPE", ["network", "user", "loanId", "notificationType", "status"])
 @Entity()
 export class LoanNotification {
   @PrimaryGeneratedColumn()
