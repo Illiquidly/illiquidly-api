@@ -21,88 +21,9 @@ export class LoanResultInterceptor implements NestInterceptor {
     private readonly queryService: RawLCDQuery,
   ) {}
 
-  async getOwnershipResultFor(
-    network: Network,
-    ownerShip: {
-      address: string;
-      data: string;
-      network: Network;
-      tokenId: string;
-    }[],
-  ) {
-    const networkOwnership = ownerShip.filter(v => v.network == network);
-    const networkOwnershipResult = await this.queryService
-      .sendIndependentQuery(Network.testnet, contracts[network].multicall, {
-        try_aggregate: {
-          require_success: false,
-          include_cause: false,
-          queries: networkOwnership,
-        },
-      })
-      .then(response => {
-        return response.return_data.map(e => {
-          return e.length == 0 || e.data.length == 0
-            ? null
-            : JSON.parse(Buffer.from(e.data, "base64").toString());
-        });
-      });
-
-    // We return the initial object with an additional field
-    return ownerShip.map((nft, i) => ({
-      ...nft,
-      hasApproval: networkOwnershipResult[i] != null,
-    }));
-  }
-
   async getLoanInfo(context: ExecutionContext, data: Loan[]): Promise<LoanResponse[]> {
-    // 1. We need to parse the DB object to a response for the frontend
-    const ownerShip = data
-      .map(loan => {
-        return loan.cw721Assets.map(nft => {
-          // We turn the object into a query :
-          const msg = {
-            approval: {
-              token_id: nft.tokenId,
-              spender: contracts[loan.network].loan,
-              include_expired: false,
-            },
-          };
-          return {
-            address: nft.collection.collectionAddress,
-            tokenId: nft.tokenId,
-            data: Buffer.from(JSON.stringify(msg)).toString("base64"),
-            network: loan.network,
-          };
-        });
-      })
-      .flat();
-
-    // We do 2 queries, 1 for mainnet, one for testnet
-    const testnetOwnership = await this.getOwnershipResultFor(Network.testnet, ownerShip);
-    const mainnetOwnership = await this.getOwnershipResultFor(Network.testnet, ownerShip);
-
-    const allOwnerShips = [...testnetOwnership, ...mainnetOwnership];
-
-    // For published loans with no approval, we pass the status to inactive
-    const dataWithRightStatus = data.map(loan => {
-      const hasAllApprovals = loan.cw721Assets.map(nft => {
-        //We check the nft status
-        return allOwnerShips.find(
-          ownership =>
-            ownership.address == nft.collection.collectionAddress &&
-            ownership.network == loan.network &&
-            ownership.tokenId == nft.tokenId,
-        )?.hasApproval;
-      });
-      if (loan.state == LoanState.Published && !hasAllApprovals) {
-        console.log("One has not all approvals");
-        loan.state = LoanState.Inactive;
-      }
-      return loan;
-    });
-
     return pMap(
-      dataWithRightStatus,
+      data,
       async (loan: Loan): Promise<LoanResponse> =>
         this.tradesService.parseLoanDBToResponse(loan.network, loan),
     );

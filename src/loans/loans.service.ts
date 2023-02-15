@@ -37,6 +37,7 @@ const pMap = require("p-map");
 const _ = require("lodash");
 import big from "big.js";
 import { RedLockService } from "../utils/lock.service";
+import { UpdateStateWithApprovals } from "./updateStateWithApprovals";
 
 @Injectable()
 export class LoansService {
@@ -52,6 +53,7 @@ export class LoansService {
     private readonly utilsService: UtilsService,
     private readonly queryLimitService: QueryLimitService,
     private readonly redlockService: RedLockService,
+    private readonly updateStateWithApprovals: UpdateStateWithApprovals,
   ) {
     this.loanQuery = new BlockchainLoanQuery(
       this.queryLimitService.sendIndependentQuery.bind(this.queryLimitService),
@@ -221,6 +223,11 @@ export class LoansService {
 
   async getLoanById(network: Network, borrower: string, loanId: number): Promise<LoanResponse> {
     const loanDBObject = await this.updateLoan(network, borrower, loanId);
+    const newStateObject = await this.updateStateWithApprovals.updateOwnershipStatusFor(network, [loanDBObject]);
+    if(newStateObject?.[0]){
+      loanDBObject.state = newStateObject[0].state;
+    }
+    console.log(newStateObject)
     return await this.parseLoanDBToResponse(network, loanDBObject);
   }
 
