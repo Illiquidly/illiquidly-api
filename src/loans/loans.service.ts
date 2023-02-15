@@ -227,7 +227,6 @@ export class LoansService {
     if(newStateObject?.[0]){
       loanDBObject.state = newStateObject[0].state;
     }
-    console.log(newStateObject)
     return await this.parseLoanDBToResponse(network, loanDBObject);
   }
 
