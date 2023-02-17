@@ -86,7 +86,11 @@ export class Loan {
   @JoinColumn()
   activeOffer?: Offer;
 
-  @OneToMany(() => Offer, offer => offer.loan)
+  @OneToMany(() => Offer, offer => offer.loan, 
+    {
+      cascade: ['insert', 'update'],
+    }
+  )
   offers: Offer[];
 
   @ManyToMany(() => CW721Token)
