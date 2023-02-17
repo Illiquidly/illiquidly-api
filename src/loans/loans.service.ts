@@ -100,7 +100,7 @@ export class LoansService {
       network,
       globalOfferId,
       borrower: distantOfferInfo.offerInfo.borrower,
-      loanChainId: distantOfferInfo.offerInfo.loanId,
+      loanId: distantOfferInfo.offerInfo.loanId,
       lender: distantOfferInfo.offerInfo.lender,
       loan: null,
       terms: distantOfferInfo.offerInfo.terms,
@@ -200,7 +200,7 @@ export class LoansService {
           this.loansRepository.findOneBy({
             network,
             borrower: offerDBObject.borrower,
-            loanId: offerDBObject.loanChainId,
+            loanId: offerDBObject.loanId,
           }),
         );
         if (loanInfo) {
@@ -211,7 +211,7 @@ export class LoansService {
           offerDBObject.loan = await this.updateLoan(
             network,
             offerDBObject.borrower,
-            offerDBObject.loanChainId,
+            offerDBObject.loanId,
           );
         }
       }
@@ -310,7 +310,7 @@ export class LoansService {
       id: offer.id,
       network,
       borrower: offer.borrower,
-      loanId: offer.loanChainId,
+      loanId: offer.loanId,
       globalOfferId: offer.globalOfferId,
       loan: offer.loan,
       offerInfo,
