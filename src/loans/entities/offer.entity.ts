@@ -14,7 +14,7 @@ export class Offer {
   })
   network: Network;
 
-  @Column({ unique: true })
+  @Column()
   globalOfferId: string;
 
   @Column()
