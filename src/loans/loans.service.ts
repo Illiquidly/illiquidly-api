@@ -194,6 +194,7 @@ export class LoansService {
       // We assign the old id to the new object, to save it in place
       offerDBObject.id = offerInfo?.id;
       offerDBObject.loan = offerInfo?.loan;
+      console.log(offerDBObject, offerInfo);
 
       // We try to get the associated trade if it exists in the database
       if (!offerDBObject?.loan) {
