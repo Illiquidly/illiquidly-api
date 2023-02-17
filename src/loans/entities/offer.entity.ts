@@ -21,7 +21,7 @@ export class Offer {
   borrower: string;
 
   @Column()
-  loanId: number;
+  loanChainId: number;
 
   @Column()
   lender: string;
