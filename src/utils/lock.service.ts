@@ -32,7 +32,7 @@ export class RedLockService {
     try {
       [error, response] = await asyncAction(callback());
     } finally {
-      await lock.release();
+      await lock?.release();
     }
     if (error) {
       throw error;
