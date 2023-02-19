@@ -184,8 +184,8 @@ export class UpdateStateWithApprovals {
     return contracts[network].multicall;
   }
 
-  //@Cron(CronExpression.EVERY_10_MINUTES)
-  @Cron(CronExpression.EVERY_10_SECONDS)
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  //@Cron(CronExpression.EVERY_10_SECONDS)
   async updateOwnershipStatus() {
     const [err] = await asyncAction(
       pMap(Object.values(Network), async (network: Network) => {
