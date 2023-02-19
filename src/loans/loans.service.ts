@@ -222,9 +222,11 @@ export class LoansService {
 
   async getLoanById(network: Network, borrower: string, loanId: number): Promise<LoanResponse> {
     const loanDBObject = await this.updateLoan(network, borrower, loanId);
-    const newStateObject = await this.updateStateWithApprovals.updateOwnershipStatusFor(network, [loanDBObject]);
-    if(newStateObject?.[0]){
-      loanDBObject.state = newStateObject[0].state;
+    if(loanDBObject.state == LoanState.Published){
+      const newStateObject = await this.updateStateWithApprovals.updateOwnershipStatusFor(network, [loanDBObject]);
+      if(newStateObject?.[0]){
+        loanDBObject.state = newStateObject[0].state;
+      }
     }
     return await this.parseLoanDBToResponse(network, loanDBObject);
   }
