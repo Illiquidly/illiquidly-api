@@ -44,14 +44,20 @@ export class RandomnessProviderService {
     return fetchBeacon(client);
   }
 
-  @Cron(CronExpression.EVERY_30_SECONDS)
+  @Cron(CronExpression.EVERY_10_SECONDS)
   async provideRandomness() {
     // 1. We query all raffles with a closed status and no randomness in the database
 
-    const closedRaffles = await this.rafflesRepository
-      .createQueryBuilder()
+    const closedRaffles: {
+      raffle_id: string,
+      network: Network
+    }[] = await this.rafflesRepository
+      .createQueryBuilder("raffle")
+      .select("raffle.raffle_id, raffle.network ")
       .where("state = 'closed' AND randomness_owner IS NULL")
-      .getMany();
+      .innerJoin("raffle.participants","participants")
+      .distinct(true)
+      .getRawMany()
 
     const nbRaffles = closedRaffles.length;
 
@@ -75,7 +81,7 @@ export class RandomnessProviderService {
         .map(raffle => {
           const executeMsg = {
             update_randomness: {
-              raffle_id: raffle.raffleId,
+              raffle_id: raffle.raffle_id,
               randomness: {
                 round: beacon.round,
                 signature: Buffer.from(beacon.signature, "hex").toString("base64"),
@@ -98,11 +104,11 @@ export class RandomnessProviderService {
 
           // If there is an error, we need to update the raffle
           return pMap(closedRaffles, (raffle)=>{
-            return this.rafflesService.updateRaffleAndParticipants(network, raffle.raffleId)
+            return this.rafflesService.updateRaffleAndParticipants(network, raffle.raffle_id)
 
           })
         }
-        this.logger.log(`Posted transaction for raffle randomness : ${response}`);
+        this.logger.log(`Posted transaction for raffle randomness : ${JSON.stringify(response)}`);
       }
     });
   }
