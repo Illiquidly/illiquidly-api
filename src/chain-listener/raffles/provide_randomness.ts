@@ -11,7 +11,7 @@ import { Address } from "../../utils/blockchain/terra_utils";
 import { signingTerraConfig } from "../../utils/configuration";
 import { ConfigType } from "@nestjs/config";
 import { asyncAction } from "../../utils/js/asyncAction";
-import { RafflesService } from "src/raffles/raffles.service";
+import { RafflesService } from "../../raffles/raffles.service";
 const pMap = require("p-map");
 
 @Injectable()
