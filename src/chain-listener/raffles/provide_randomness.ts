@@ -11,6 +11,7 @@ import { Address } from "../../utils/blockchain/terra_utils";
 import { signingTerraConfig } from "../../utils/configuration";
 import { ConfigType } from "@nestjs/config";
 import { asyncAction } from "../../utils/js/asyncAction";
+import { RafflesService } from "src/raffles/raffles.service";
 const pMap = require("p-map");
 
 @Injectable()
@@ -20,6 +21,7 @@ export class RandomnessProviderService {
 
   constructor(
     @InjectRepository(Raffle) private rafflesRepository: Repository<Raffle>,
+    private readonly rafflesService: RafflesService,
     @Inject(signingTerraConfig.KEY) queueConfig: ConfigType<typeof signingTerraConfig>,
   ) {
     this.signingTerraConfig = queueConfig;
@@ -93,6 +95,12 @@ export class RandomnessProviderService {
         const [error, response] = await asyncAction(handler.post(updateMessages));
         if (error) {
           this.logger.error(error);
+
+          // If there is an error, we need to update the raffle
+          return pMap(closedRaffles, (raffle)=>{
+            return this.rafflesService.updateRaffleAndParticipants(network, raffle.raffleId)
+
+          })
         }
         this.logger.log(`Posted transaction for raffle randomness : ${response}`);
       }
