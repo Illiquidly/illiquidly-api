@@ -16,7 +16,6 @@ import {
   LoanNotificationCrudService,
   OfferCrudService,
 } from "./loanCrud.service";
-import { UpdateStateWithApprovals } from "./updateStateWithApprovals";
 
 @Module({
   imports: [UtilsModule, TypeOrmModule.forFeature(Entities)],
@@ -28,12 +27,10 @@ import { UpdateStateWithApprovals } from "./updateStateWithApprovals";
   ],
   providers: [
     LoansService,
-
     LoanCrudService,
     OfferCrudService,
     LoanNotificationCrudService,
     LoanFavoriteCrudService,
-    UpdateStateWithApprovals,
   ],
   exports: [LoansService],
 })

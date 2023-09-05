@@ -1,0 +1,26 @@
+version: "3.7"
+services:
+  redis_service:
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - illiqudly_redisdata:/data
+  msql_service:
+    container_name: illiquidly_mysql_db
+    image: mysql
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+    environment:
+      - MYSQL_DATABASE=ILLIQUIDLY
+      - MYSQL_USER=illiquidly
+      - MYSQL_PASSWORD=illiquidly
+      - MYSQL_ROOT_PASSWORD=illiquidly
+    volumes:
+      - illiqudly_msqldata:/var/lib/mysql
+volumes:
+  illiqudly_msqldata:
+  illiqudly_redisdata:
